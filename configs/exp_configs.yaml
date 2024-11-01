@@ -1,0 +1,19 @@
+"optimizer_instances":
+  "1":
+    "optimizer": "RandomSearch"
+    "hyperparameters": {}
+  "2":
+    "optimizer": "SMAC_Optimizer" 
+    "hyperparameters": {}
+  "3":
+    "optimizer": "SMAC_BO"
+    "hyperparameters": {"xi": 0.01}
+  "4":
+    "optimizer": "SMAC_Hyperband"
+    "hyperparameters": {"eta": 3}
+  "5":
+    "optimizer": "SMAC_Hyperband"
+    "hyperparameters": {"eta": 2}
+  "6":
+    "optimizer": "OptunaOptimizer"
+    "hyperparameters": {"sampler": "TPESampler"}

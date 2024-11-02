@@ -9,7 +9,7 @@ dependencies = [
   "more_itertools",
   "pyyaml",
   "ConfigSpace",
-  "hpoglue @ file:///home/soham/repos/HPOSuite_restructuring/hpoglue?editable=true"
+  "hpoglue @ file:///home/soham/repos/hpoglue?editable=true"
   ]
 authors = [
   { name = "Soham Basu", email = "soham.basu07@gmail.com" },

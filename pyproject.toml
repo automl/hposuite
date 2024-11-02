@@ -8,7 +8,8 @@ dependencies = [
   "tqdm", 
   "more_itertools",
   "pyyaml",
-  "ConfigSpace",
+  "pyarrow",
+  "ConfigSpace>=1.0",
   "hpoglue @ file:///home/soham/repos/hpoglue?editable=true"
   ]
 authors = [
@@ -46,9 +47,9 @@ optuna = ["optuna"]
 yahpo-gym = ["yahpo-gym"]
 smac = ["smac"]
 dehb = ["dehb"]
-syne-tune = ["syne-tune[basic]", "syne-tune[gpsearchers]"]     # TODO(eddiebergman): Do we need more here?
-mfpbench_main = ["mf-prior-bench"]
 pymoo = ["pymoo"]
+mfpbench_main = ["mf-prior-bench"]        # NOTE: doesn't install by itself. Install separately and then upgrade ConfigSpace
+syne-tune = ["syne-tune[basic]", "syne-tune[gpsearchers]"]     # NOTE: install separately, throws PYYAML build errors
 
 [project.urls]
 source = "https://github.com/automl/hposuite/"

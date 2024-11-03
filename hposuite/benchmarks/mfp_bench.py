@@ -29,7 +29,6 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 import numpy as np
-
 from hpoglue.benchmark import BenchmarkDescription, SurrogateBenchmark, TabularBenchmark
 from hpoglue.env import Env
 from hpoglue.fidelity import RangeFidelity
@@ -65,8 +64,11 @@ def _get_surrogate_benchmark(
 
 
 def _mfpbench_surrogate_query_function(query: Query, benchmark: mfpbench.Benchmark) -> Result:
-    assert isinstance(query.fidelity, tuple)
-    _, fid_value = query.fidelity
+    if query.fidelity is not None:
+        assert isinstance(query.fidelity, tuple)
+        _, fid_value = query.fidelity
+    else:
+        fid_value = None
     return Result(
         query=query,
         values=benchmark.query(

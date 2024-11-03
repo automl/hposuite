@@ -5,7 +5,6 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 from ConfigSpace import ConfigurationSpace
-
 from hpoglue.config import Config
 from hpoglue.env import Env
 from hpoglue.optimizer import Optimizer

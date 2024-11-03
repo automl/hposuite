@@ -35,7 +35,7 @@ class OptunaOptimizer(Optimizer):
         tabular=False,
     )
 
-    mem_req_mb = 100
+    mem_req_mb = 1024
 
     def __init__(
         self,

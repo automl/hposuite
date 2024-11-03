@@ -7,15 +7,14 @@ from typing import TYPE_CHECKING
 from typing_extensions import Any, override
 
 import ConfigSpace as CS  # noqa: N817
-
 from hpoglue.config import Config
 from hpoglue.optimizer import Optimizer
 from hpoglue.problem import Problem
 from hpoglue.query import Query
 
 if TYPE_CHECKING:
-    from skopt.space.space import Space
     from hpoglue.result import Result
+    from skopt.space.space import Space
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
@@ -39,6 +38,8 @@ class SkoptOptimizer(Optimizer):
         tabular=False,
     )
 
+    mem_req_mb = 1024
+
     def __init__(
         self,
         *,
@@ -51,6 +52,7 @@ class SkoptOptimizer(Optimizer):
         """Create an Skopt Optimizer instance for a given problem statement."""
         import skopt
 
+        self.config_space = config_space
         self._space: list[Space]
         match config_space:
             case CS.ConfigurationSpace():
@@ -59,7 +61,7 @@ class SkoptOptimizer(Optimizer):
                 raise NotImplementedError("# TODO: Tabular not yet implemented for Scikit_Optimize!")
             case _:
                 raise TypeError("Config space must be a list or a ConfigurationSpace!")
-            
+
         base_estimator = kwargs.get("base_estimator", "GP")
         assert base_estimator in base_estimators, f"base_estimator must be one of {base_estimators}!"
 
@@ -94,9 +96,9 @@ class SkoptOptimizer(Optimizer):
         match self.problem.fidelity:
             case None:
                 config = self.optimizer.ask()
-                config_values = {hp.name: value for hp, value in zip(self.configspace.get_hyperparameters(), config, strict=False)}
-                assert list(config_values.keys()) == list(self.configspace.get_hyperparameter_names())
-                assert list(config_values.keys()) == [hp.name for hp in self.skopt_space]
+                config_values = {hp.name: value for hp, value in zip(self.config_space.get_hyperparameters(), config, strict=False)}
+                assert list(config_values.keys()) == list(self.config_space.get_hyperparameter_names())
+                assert list(config_values.keys()) == [hp.name for hp in self._space]
                 name = f"trial_{self.trial_counter}"
                 self.trial_counter += 1
                 return Query(
@@ -131,8 +133,8 @@ class SkoptOptimizer(Optimizer):
             case _:
                 raise TypeError("Cost must be None or a mapping!")
 
-        _ = self.solver.tell(
-            list(result.query.config.values), 
+        _ = self.optimizer.tell(
+            list(result.query.config.values.values()),
             _values
         )
 

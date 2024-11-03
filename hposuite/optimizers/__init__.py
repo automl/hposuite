@@ -5,6 +5,7 @@ from typing import TYPE_CHECKING
 from hposuite.optimizers.dehb import DEHB_Optimizer
 from hposuite.optimizers.optuna import OptunaOptimizer
 from hposuite.optimizers.random_search import RandomSearch
+from hposuite.optimizers.scikit_optimize import SkoptOptimizer
 from hposuite.optimizers.smac import SMAC_BO, SMAC_Hyperband
 from hposuite.optimizers.synetune import SyneTuneBO, SyneTuneBOHB
 
@@ -18,6 +19,7 @@ OPTIMIZERS: dict[str, type[Optimizer]] = {
     SMAC_Hyperband.name: SMAC_Hyperband,
     SyneTuneBO.name: SyneTuneBO,
     SyneTuneBOHB.name: SyneTuneBOHB,
+    SkoptOptimizer.name: SkoptOptimizer,
     OptunaOptimizer.name: OptunaOptimizer,
 }
 

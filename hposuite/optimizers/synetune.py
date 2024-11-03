@@ -9,20 +9,18 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any, Literal
 
 import ConfigSpace as CS  # noqa: N817
-
-from hpoglue.env import Env
 from hpoglue.config import Config
+from hpoglue.env import Env
 from hpoglue.optimizer import Optimizer
 from hpoglue.problem import Problem
 from hpoglue.query import Query
 
 if TYPE_CHECKING:
+    from hpoglue.result import Result
     from syne_tune.config_space import (
         Domain,
     )
     from syne_tune.optimizer.scheduler import TrialScheduler
-
-    from hpoglue.result import Result
 
 
 class SyneTuneOptimizer(Optimizer):
@@ -108,7 +106,9 @@ class SyneTuneBO(SyneTuneOptimizer):
         tabular=False,
     )
 
-    def __init__(
+    mem_req_mb = 1024
+
+    def __init__(  # noqa: C901, PLR0912
         self,
         *,
         problem: Problem,
@@ -134,7 +134,6 @@ class SyneTuneBO(SyneTuneOptimizer):
             case tuple():
                 clsname = self.__class__.__name__
                 # raise ValueError(f"{clsname} does not multi-fidelity spaces")
-                pass
             case Mapping():
                 clsname = self.__class__.__name__
                 raise NotImplementedError(f"{clsname} does not support many-fidelity")
@@ -200,7 +199,9 @@ class SyneTuneBOHB(SyneTuneOptimizer):
         tabular=False,
     )
 
-    def __init__(
+    mem_req_mb = 1024
+
+    def __init__(  # noqa: C901, PLR0912
         self,
         *,
         problem: Problem,
@@ -263,7 +264,7 @@ class SyneTuneBOHB(SyneTuneOptimizer):
                 raise ValueError("SyneTuneBO does not support tabular benchmarks")
             case _:
                 raise TypeError("config_space must be of type ConfigSpace.ConfigurationSpace")
-            
+
         if isinstance(problem.fidelity, tuple):
             synetune_cs[problem.fidelity[0]] = problem.fidelity[1]  # TODO: Check this
 
@@ -285,7 +286,7 @@ class SyneTuneBOHB(SyneTuneOptimizer):
         )
 
 
-def configspace_to_synetune_configspace(
+def configspace_to_synetune_configspace(  # noqa: C901
     config_space: CS.ConfigurationSpace,
 ) -> dict[str, Domain | Any]:
     """Convert ConfigSpace to SyneTune config_space."""

@@ -15,6 +15,8 @@ def glue_study(  # noqa: D103, PLR0913
     seeds: list,
     num_seeds: int,
     budget: int,
+    n_objectives: int,
+    n_fidelities: int | None,
     exp_name: str,
     output_dir: Path,
     exec_type: str,
@@ -34,6 +36,8 @@ def glue_study(  # noqa: D103, PLR0913
         seeds=seeds,
         num_seeds=num_seeds,
         budget=budget,
+        n_objectives=n_objectives,
+        n_fidelities=n_fidelities,
         precision=precision,
         overwrite=overwrite,
         continuations=continuations,
@@ -96,6 +100,17 @@ if __name__ == "__main__":
         help="Budget to use",
     )
     parser.add_argument(
+        "--n_objectives", "-no",
+        type=int,
+        default=1,
+        help="Number of objectives",
+    )
+    parser.add_argument(
+        "--n_fidelities", "-nf",
+        type=int,
+        help="Number of fidelities",
+    )
+    parser.add_argument(
         "--overwrite", "-ow",
         action="store_true",
         help="Overwrite existing results",
@@ -142,6 +157,8 @@ if __name__ == "__main__":
             seeds=config.get("seeds"),
             num_seeds=config.get("num_seeds", 1),
             budget=config.get("budget", 50),
+            n_objectives=config.get("n_objectives", 1),
+            n_fidelities=config.get("n_fidelities"),
             precision=config.get("precision"),
             exp_name=config.get("exp_name"),
             output_dir=config.get("output_dir"),
@@ -158,6 +175,8 @@ if __name__ == "__main__":
             seeds=args.seeds,
             num_seeds=args.num_seeds,
             budget=args.budget,
+            n_objectives=args.n_objectives,
+            n_fidelities=args.n_fidelities,
             precision=args.precision,
             exp_name=args.exp_name,
             output_dir = args.output_dir,

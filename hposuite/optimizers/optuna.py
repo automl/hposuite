@@ -7,16 +7,15 @@ from typing import TYPE_CHECKING
 from typing_extensions import Any, override
 
 import ConfigSpace as CS  # noqa: N817
-
+import optuna
 from hpoglue.config import Config
 from hpoglue.optimizer import Optimizer
 from hpoglue.problem import Problem
 from hpoglue.query import Query
 
 if TYPE_CHECKING:
-    from optuna.distributions import BaseDistribution
-
     from hpoglue.result import Result
+    from optuna.distributions import BaseDistribution
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
@@ -35,6 +34,8 @@ class OptunaOptimizer(Optimizer):
         cost_awareness=(None,),
         tabular=False,
     )
+
+    mem_req_mb = 100
 
     def __init__(
         self,

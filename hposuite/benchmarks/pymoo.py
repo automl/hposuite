@@ -93,6 +93,7 @@ _pymoo_so = [
 def pymoo_so_problems() -> Iterator[BenchmarkDescription]:
     env = Env(
         name="py310-pymoo-0.6.1.3",
+        python_version="3.10",
         requirements=("pymoo==0.6.1.3"),
         post_install=None
     )

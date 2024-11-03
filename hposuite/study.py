@@ -32,6 +32,7 @@ smac_logger = logging.getLogger("smac")
 smac_logger.setLevel(logging.ERROR)
 
 
+
 OptWithHps: TypeAlias = tuple[type[Optimizer], Mapping[str, Any]]
 
 GLOBAL_SEED = 42

@@ -5,7 +5,6 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any, NoReturn
 
 from ConfigSpace import ConfigurationSpace
-
 from hpoglue.budget import CostBudget, TrialBudget
 from hpoglue.config import Config
 from hpoglue.env import Env
@@ -14,11 +13,10 @@ from hpoglue.problem import Problem
 from hpoglue.query import Query
 
 if TYPE_CHECKING:
-    from smac.facade import AbstractFacade
-    from smac.runhistory import TrialInfo
-
     from hpoglue.problem import Fidelity
     from hpoglue.result import Result
+    from smac.facade import AbstractFacade
+    from smac.runhistory import TrialInfo
 
 
 def _dummy_target_function(*args: Any, budget: int | float, seed: int) -> NoReturn:

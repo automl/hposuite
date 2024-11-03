@@ -81,7 +81,7 @@ class Study:
         budget: BudgetType | int,
         seeds: Iterable[int] | None = None,
         num_seeds: int = 1,
-        fidelities: int = 0,
+        fidelities: int | None = None,
         objectives: int = 1,
         costs: int = 0,
         multi_objective_generation: Literal["mix_metric_cost", "metric_only"] = "mix_metric_cost",
@@ -153,6 +153,17 @@ class Study:
         _problems: list[Problem] = []
         for (opt, hps), bench in product(_optimizers, _benchmarks):
             try:
+                if fidelities is None:
+                    match opt.support.fidelities[0]:
+                        case "single":
+                            fidelities = 1
+                        case "many":
+                            fidelities = len(bench.fidelities) if bench.fidelities else None
+                        case None:
+                            fidelities = None
+                        case _:
+                            raise ValueError("Invalid fidelity support")
+
                 _problem = Problem.problem(
                     optimizer=opt,
                     optimizer_hyperparameters=hps,
@@ -338,6 +349,8 @@ class Study:
         seeds: Iterable[int] | int | None = None,
         num_seeds: int = 1,
         budget: int = 50,
+        n_objectives: int = 1,
+        n_fidelities: int | None = None,
         precision: int | None = None,
         exec_type: Literal["sequential", "parallel", "dump"] = "sequential",
         group_by: Literal["opt", "bench", "opt_bench", "seed", "mem"] | None = None,
@@ -357,6 +370,10 @@ class Study:
             num_seeds: The number of seeds to generate.
 
             budget: The budget for the experiment.
+
+            n_objectives: The number of objectives to use.
+
+            n_fidelities: The number of fidelities to use.
 
             precision: The precision of the optimization run(s).
 
@@ -413,8 +430,8 @@ class Study:
             budget=budget,
             seeds=seeds,
             num_seeds=num_seeds,
-            fidelities=1,
-            objectives=1,
+            fidelities=n_fidelities,
+            objectives=n_objectives,
             on_error=on_error,
             precision=precision,
             continuations=continuations

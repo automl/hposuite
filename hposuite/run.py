@@ -234,7 +234,7 @@ class Run:
                 problem=self.problem,
                 seed=self.seed,
                 run_name=self.name,
-                on_error=on_error,
+                on_error="raise",
                 progress_bar=progress_bar,
                 continuations=self.continuations,
             )
@@ -242,6 +242,13 @@ class Run:
             self.set_state(Run.State.CRASHED, err_tb=(e, traceback.format_exc()))
             logger.exception(e)
             logger.error(f"Error in Run {self.name}: {e}")
+            match on_error:
+                case "raise":
+                    raise e
+                case "continue":
+                    raise NotImplementedError("Continue not yet implemented!") from e
+                case _:
+                    raise RuntimeError(f"Invalid value for `on_error`: {on_error}") from e
         logger.info(f"COMPLETED running {self.name}")
         logger.info(f"Saving {self.name} at {self.working_dir}")
         logger.info(f"Results dumped at {self.df_path.absolute()}")

@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from hposuite.optimizers.dehb import DEHB_Optimizer
+from hposuite.optimizers.nevergrad import NevergradOptimizer
 from hposuite.optimizers.optuna import OptunaOptimizer
 from hposuite.optimizers.random_search import RandomSearch
 from hposuite.optimizers.scikit_optimize import SkoptOptimizer
@@ -15,6 +16,7 @@ if TYPE_CHECKING:
 OPTIMIZERS: dict[str, type[Optimizer]] = {
     RandomSearch.name: RandomSearch,
     DEHB_Optimizer.name: DEHB_Optimizer,
+    NevergradOptimizer.name: NevergradOptimizer,
     SMAC_BO.name: SMAC_BO,
     SMAC_Hyperband.name: SMAC_Hyperband,
     SyneTuneBO.name: SyneTuneBO,

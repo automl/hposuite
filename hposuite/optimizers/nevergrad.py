@@ -7,21 +7,20 @@ from typing import TYPE_CHECKING
 from typing_extensions import Any, override
 
 import ConfigSpace as CS  # noqa: N817
-
+import nevergrad as ng
+import numpy as np
 from hpoglue.config import Config
 from hpoglue.optimizer import Optimizer
 from hpoglue.problem import Problem
 from hpoglue.query import Query
-import nevergrad as ng
+from nevergrad.parametrization import parameter
 
 if TYPE_CHECKING:
+    from hpoglue.result import Result
     from nevergrad.optimization.base import (
         ConfiguredOptimizer as ConfNGOptimizer,
         Optimizer as NGOptimizer,
     )
-    from nevergrad.parametrization import parameter
-
-    from hpoglue.result import Result
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
@@ -44,11 +43,13 @@ class NevergradOptimizer(Optimizer):
 
     name = "Nevergrad"
     support = Problem.Support(
-        fidelities=(None,),  # TODO: Implement fidelity support
+        fidelities=(None,),
         objectives=("single", "many"),
         cost_awareness=(None,),
         tabular=False,
     )
+
+    mem_req_mb = 1024
 
     def __init__(
         self,
@@ -59,8 +60,7 @@ class NevergradOptimizer(Optimizer):
         config_space: list[Config] | CS.ConfigurationSpace,
         **kwargs: Any,
     ) -> None:
-        """Create a Nevergrad Optimizer instance for a given problem statement."""
-
+        """Create a Nevergrad Optimizer instance for a given Problem."""
         self._parametrization: dict[str, parameter.Parameter]
         match config_space:
             case CS.ConfigurationSpace():
@@ -69,33 +69,35 @@ class NevergradOptimizer(Optimizer):
                 raise NotImplementedError("# TODO: Tabular not yet implemented for Nevergrad!")
             case _:
                 raise TypeError("Config space must be a list or a ConfigurationSpace!")
-            
+
+        self.seed = seed
         self.problem = problem
         self.working_directory = working_directory
-            
-        optimizer_name = kwargs.get("optimizer", "NGOpt10")
-        if kwargs["optimizer"] not in ext_opts or kwargs["optimizer"] not in opt_list:
-            raise ValueError(f"Unknown optimizer: {kwargs['optimizer']}")
+
+        optimizer_name = kwargs.get("optimizer", "NGOpt")
+        if optimizer_name not in list(ext_opts.keys()) + opt_list:
+            raise ValueError(f"Unknown optimizer: {optimizer_name}!")
 
         self.optimizer: NGOptimizer | ConfNGOptimizer
         match problem.objective:
-            case (_, objective):
+            case tuple():
                 if optimizer_name in ext_opts:
                     if optimizer_name == "Hyperopt":
                         ng_opt = ext_opts["Hyperopt"]
                     else:
                         ng_opt = ext_opts[optimizer_name]()
-                    ng_opt = ng_opt(
+                    self.optimizer = ng_opt(
                         parametrization=self._parametrization,
-                        budget=self.problem.budget, # TODO: Check this
+                        budget=self.problem.budget.total, # TODO: Check this
                         num_workers=1,
                     )
                 else:
-                    ng_opt = opt_list[optimizer_name](
+                    self.optimizer = ng.optimizers.registry[optimizer_name](
                         parametrization=self._parametrization,
-                        budget=self.problem.budget, # TODO: Check this
+                        budget=self.problem.budget.total, # TODO: Check this
                         num_workers=1,
                     )
+                self.optimizer.parametrization.random_state = np.random.RandomState(seed)
             case Mapping():
                 raise NotImplementedError("# TODO: Multi-objective not yet implemented for Nevergrad!")
             case _:
@@ -109,7 +111,7 @@ class NevergradOptimizer(Optimizer):
         match self.problem.fidelity:
             case None:
                 config: parameter.Parameter = self.optimizer.ask()
-                name = f"{self.counter}_{config.value}_{self.nevergrad_cfg.seed}"
+                name = f"{self.counter}_{config.value}_{self.seed}"
                 self.history[name] = (config, None)
                 self.counter += 1
                 return Query(

@@ -7,7 +7,6 @@ from typing import TYPE_CHECKING
 
 import numpy as np
 from ConfigSpace import ConfigurationSpace
-
 from hpoglue.config import Config
 from hpoglue.optimizer import Optimizer
 from hpoglue.problem import Problem
@@ -25,11 +24,13 @@ class RandomSearch(Optimizer):
     # NOTE(eddiebergman): Random search doesn't directly use any of this
     # information but we allow it to be used as it's a common baseline.
     support = Problem.Support(
-        fidelities=(None, "single", "many"),
+        fidelities=(None,),
         objectives=("single", "many"),
         cost_awareness=(None, "single", "many"),
         tabular=False,
     )
+
+    mem_req_mb = 100  # noqa: N815
 
     def __init__(
         self,

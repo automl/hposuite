@@ -230,7 +230,7 @@ class Run:
         _hist: list[Result] = []
         try:
             self.set_state(self.State.RUNNING)
-            _, _hist = _run(
+            _hist = _run(
                 problem=self.problem,
                 seed=self.seed,
                 run_name=self.name,

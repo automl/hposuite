@@ -74,7 +74,7 @@ class NevergradOptimizer(Optimizer):
         self.problem = problem
         self.working_directory = working_directory
 
-        optimizer_name = kwargs.get("optimizer", "NGOpt")
+        optimizer_name = kwargs.get("opt", "NGOpt")
         if optimizer_name not in list(ext_opts.keys()) + opt_list:
             raise ValueError(f"Unknown optimizer: {optimizer_name}!")
 
@@ -100,6 +100,8 @@ class NevergradOptimizer(Optimizer):
                 self.optimizer.parametrization.random_state = np.random.RandomState(seed)
             case _:
                 raise ValueError("Objective must be a string or a list of strings!")
+
+        logger.info(f"Initialized Nevergrad Optimizer with {self.optimizer.name}!")
 
         self.history: dict[str, tuple[ng.p.Parameter, float | list[float] | None]] = {}
         self.counter = 0

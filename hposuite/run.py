@@ -132,10 +132,6 @@ class Run:
             self.problem.name,
             f"seed={self.seed}",
         ]
-        if len(self.optimizer_hyperparameters) > 0:
-            name_parts.append(
-                ",".join(f"{k}={v}" for k, v in self.optimizer_hyperparameters.items())
-            )
         self.name = ".".join(name_parts)
         self.optimizer.support.check_opt_support(who=self.optimizer.name, problem=self.problem)
 
@@ -682,7 +678,7 @@ class Run:
                         _rparts["result.objective.1.value"] = _r.values[_name]
                     case Mapping():
                         for i, name in enumerate(problem.objective, start=1):
-                            _rparts[f"result.cost.{i}.value"] = _r.values[name]
+                            _rparts[f"result.objective.{i}.value"] = _r.values[name]
 
                 match problem.fidelity:
                     case None:

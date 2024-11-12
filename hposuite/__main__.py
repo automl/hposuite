@@ -48,7 +48,7 @@ def glue_study(  # noqa: D103, PLR0913
 
 def _get_from_yaml_config(config_path: Path) -> dict:
     with config_path.open() as file:
-        return yaml.safe_load(file)
+        return yaml.load(file, Loader=yaml.FullLoader)  # noqa: S506
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()

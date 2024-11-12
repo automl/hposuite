@@ -80,7 +80,7 @@ class NevergradOptimizer(Optimizer):
 
         self.optimizer: NGOptimizer | ConfNGOptimizer
         match problem.objective:
-            case tuple():
+            case tuple() | Mapping():
                 if optimizer_name in ext_opts:
                     if optimizer_name == "Hyperopt":
                         ng_opt = ext_opts["Hyperopt"]
@@ -98,8 +98,6 @@ class NevergradOptimizer(Optimizer):
                         num_workers=1,
                     )
                 self.optimizer.parametrization.random_state = np.random.RandomState(seed)
-            case Mapping():
-                raise NotImplementedError("# TODO: Multi-objective not yet implemented for Nevergrad!")
             case _:
                 raise ValueError("Objective must be a string or a list of strings!")
 

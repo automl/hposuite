@@ -38,7 +38,7 @@ def _pymoo_query_function(
     config_vals = np.array(list(query.config.values.values()))
     values = benchmark.evaluate(config_vals).tolist()    #TODO: Test multiobjective
     if len(values) > 1:
-        values = {f"value{i}": val for i, val in enumerate(values)}
+        values = {f"value{i}": val for i, val in enumerate(values, start=1)}
     else:
         values = {"value": values[0]}
     return Result(

@@ -1,0 +1,10 @@
+optimizers: 
+- SMAC_Hyperband
+- DEHB_Optimizer
+benchmarks:
+- mfh3_good
+- mfh6_good
+seeds: 1
+budget: 100
+overwrite: True
+group_by: memory

@@ -1,0 +1,9 @@
+optimizers:
+- !!python/tuple [Nevergrad, opt: EvolutionStrategy] # uses NSGA2 by default
+benchmarks:
+- pymoo-zdt1
+seeds: 
+- 1
+n_objectives: 2
+budget: 100
+overwrite: True

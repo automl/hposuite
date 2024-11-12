@@ -1,0 +1,6 @@
+optimizers: SMAC_Hyperband
+benchmarks: mfh3_good
+seeds: 1
+budget: 100
+overwrite: True
+continuations: True

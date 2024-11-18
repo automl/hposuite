@@ -357,7 +357,7 @@ if __name__ == "__main__":
         "--results_dir",
         type=Path,
         help="Location of the results directory",
-        default="../hpo-glue-output"
+        default="../hpo-suite-output"
     )
 
     parser.add_argument(

@@ -54,7 +54,7 @@ class Study:
         """
         self.name = name
         if output_dir is None:
-            output_dir = Path.cwd().absolute().parent / "hpo-glue-output"
+            output_dir = Path.cwd().absolute().parent / "hpo-suite-output"
         self.output_dir = output_dir
 
     @classmethod
@@ -477,7 +477,7 @@ def create_study(
     ) -> Study:
     """Create a Study object."""
     if output_dir is None:
-        output_dir = Path.cwd().absolute().parent / "hpo-glue-output"
+        output_dir = Path.cwd().absolute().parent / "hpo-suite-output"
     """Create a Study object."""
     if name is None:
         name = f"glue_study_{datetime.now().strftime('%Y%m%d_%H%M%S')}"

@@ -4,13 +4,11 @@ import logging
 import shutil
 import subprocess
 import traceback
-import warnings
 from collections.abc import Hashable, Iterable, Mapping, Sequence
 from dataclasses import dataclass, field
 from enum import Enum
-from itertools import product
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Literal, TypeAlias, TypeVar
+from typing import Any, Literal, TypeAlias, TypeVar
 
 import numpy as np
 import pandas as pd
@@ -30,10 +28,6 @@ from hpoglue.optimizer import Optimizer
 from hpoglue.problem import Problem
 from hpoglue.query import Query
 from hpoglue.result import Result
-
-if TYPE_CHECKING:
-    from hpoglue.budget import BudgetType
-
 
 OptWithHps: TypeAlias = tuple[type[Optimizer], Mapping[str, Any]]
 
@@ -151,7 +145,7 @@ class Run:
         self.complete_flag = self.working_dir / "complete.flag"
         self.error_file = self.working_dir / "error.txt"
         self.running_flag = self.working_dir / "running.flag"
-        self.df_path = self.expdir / "dfs" / f"{self.name}.parquet"
+        self.df_path = self.working_dir / f"{self.name}.parquet"
         self.venv_requirements_file = self.working_dir / "venv_requirements.txt"
         self.queue_flag = self.working_dir / "queue.flag"
         self.requirements_ran_with_file = self.working_dir / "requirements_ran_with.txt"
@@ -453,150 +447,6 @@ class Run:
             case _:
                 raise ValueError(f"Unknown state {state}")
 
-
-    @classmethod
-    def generate_seeds(
-        cls,
-        num_seeds: int,
-    ):
-        """Generate a set of seeds using a Global Seed."""
-        cls._rng = np.random.default_rng(GLOBAL_SEED)
-        return cls._rng.integers(0, 2 ** 30 - 1, size=num_seeds)
-
-
-    @classmethod
-    def generate(  # noqa: C901, PLR0912, PLR0913, PLR0915
-        cls,
-        optimizers: (
-            type[Optimizer]
-            | OptWithHps
-            | list[type[Optimizer]]
-            | list[OptWithHps | type[Optimizer]]
-        ),
-        benchmarks: BenchmarkDescription | Iterable[BenchmarkDescription],
-        *,
-        expdir: Path | str = DEFAULT_RELATIVE_EXP_DIR,
-        budget: BudgetType | int,
-        seeds: Iterable[int] | None = None,
-        num_seeds: int = 1,
-        fidelities: int = 0,
-        objectives: int = 1,
-        costs: int = 0,
-        multi_objective_generation: Literal["mix_metric_cost", "metric_only"] = "mix_metric_cost",
-        on_error: Literal["warn", "raise", "ignore"] = "warn",
-        continuations: bool = False,
-        precision: int | None = None
-    ) -> list[Run]:
-        """Generate a set of problems for the given optimizer and benchmark.
-
-        If there is some incompatibility between the optimizer, the benchmark and the requested
-        amount of objectives, fidelities or costs, a ValueError will be raised.
-
-        Args:
-            optimizers: The optimizer class to generate problems for.
-                Can provide a single optimizer or a list of optimizers.
-                If you wish to provide hyperparameters for the optimizer, provide a tuple with the
-                optimizer.
-            benchmarks: The benchmark to generate problems for.
-                Can provide a single benchmark or a list of benchmarks.
-            expdir: Which directory to store experiment results into.
-            budget: The budget to use for the problems. Budget defaults to a n_trials budget
-                where when multifidelty is enabled, fractional budget can be used and 1 is
-                equivalent a full fidelity trial.
-            seeds: The seed or seeds to use for the problems.
-            num_seeds: The number of seeds to generate. Only used if seeds is None.
-            fidelities: The number of fidelities to generate problems for.
-            objectives: The number of objectives to generate problems for.
-            costs: The number of costs to generate problems for.
-            multi_objective_generation: The method to generate multiple objectives.
-            on_error: The method to handle errors.
-
-                * "warn": Log a warning and continue.
-                * "raise": Raise an error.
-                * "ignore": Ignore the error and continue.
-            continuations: Whether to use continuations for the run.
-            precision: The precision to use for the HP configs.
-        """
-        # Generate seeds
-        match seeds:
-            case None:
-                seeds = cls.generate_seeds(num_seeds).tolist()
-            case Iterable():
-                pass
-            case int():
-                seeds = [seeds]
-
-        _benchmarks: list[BenchmarkDescription] = []
-        match benchmarks:
-            case BenchmarkDescription():
-                _benchmarks = [benchmarks]
-            case Iterable():
-                _benchmarks = list(benchmarks)
-            case _:
-                raise TypeError(
-                    "Expected BenchmarkDescription or Iterable[BenchmarkDescription],"
-                    f" got {type(benchmarks)}"
-                )
-
-        _optimizers: list[OptWithHps]
-        match optimizers:
-            case tuple():
-                _opt, hps = optimizers
-                _optimizers = [(_opt, hps)]
-            case list():
-                _optimizers = [o if isinstance(o, tuple) else (o, {}) for o in optimizers]
-            case _:
-                _optimizers = [(optimizers, {})]
-
-        _problems: list[Problem] = []
-        for (opt, hps), bench in product(_optimizers, _benchmarks):
-            try:
-                _problem = Problem.problem(
-                    optimizer=opt,
-                    optimizer_hyperparameters=hps,
-                    benchmark=bench,
-                    objectives=objectives,
-                    budget=budget,
-                    fidelities=fidelities,
-                    costs=costs,
-                    multi_objective_generation=multi_objective_generation,
-                    precision=precision
-                )
-                _problems.append(_problem)
-            except ValueError as e:
-                match on_error:
-                    case "raise":
-                        raise e
-                    case "ignore":
-                        continue
-                    case "warn":
-                        warnings.warn(f"{e}\nTo ignore this, set `on_error='ignore'`", stacklevel=2)
-                        continue
-
-        _runs_per_problem: list[Run] = []
-        for _problem, _seed in product(_problems, seeds):
-            try:
-                if "single" not in _problem.optimizer.support.fidelities:
-                    continuations = False
-                _runs_per_problem.append(
-                    Run(
-                        problem=_problem,
-                        seed=_seed,
-                        expdir=Path(expdir),
-                        continuations=continuations
-                    )
-                )
-            except ValueError as e:
-                match on_error:
-                    case "raise":
-                        raise e
-                    case "ignore":
-                        continue
-                    case "warn":
-                        warnings.warn(f"{e}\nTo ignore this, set `on_error='ignore'`", stacklevel=2)
-                        continue
-
-        return _runs_per_problem
 
     class State(str, Enum):
         """The state of a problem."""

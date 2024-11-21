@@ -324,9 +324,8 @@ class Run:
         return {
             "problem": self.problem.to_dict(),
             "seed": self.seed,
-            "optimizer": self.optimizer.name,
-            "optimizer_hyperparameters": self.optimizer_hyperparameters,
             "expdir": str(self.expdir),
+            "continuations": self.continuations,
         }
 
     @classmethod

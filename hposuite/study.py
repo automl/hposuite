@@ -69,7 +69,6 @@ class Study:
         seeds = []
         for run in runs:
             run_dict = run.to_dict()
-            print(run_dict)
             optimizers.append(
                 {
                     "name": run_dict["problem"]["optimizer"],

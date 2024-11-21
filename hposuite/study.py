@@ -405,7 +405,14 @@ class Study:
             | list[OptWithHps]
             | list[type[Optimizer]]
         ),
-        benchmarks: list[str],
+        benchmarks: (
+            str
+            | BenchmarkDescription
+            | FunctionalBenchmark
+            | list[str]
+            | list[BenchmarkDescription]
+            | list[FunctionalBenchmark]
+        ),
         *,
         seeds: Iterable[int] | int | None = None,
         num_seeds: int = 1,
@@ -478,12 +485,23 @@ class Study:
                 raise TypeError(f"Unknown Optimizer type {type(optimizers[0])}")
 
         _benchmarks = []
-        for benchmark in benchmarks:
-            assert benchmark in BENCHMARKS, f"Benchmark must be one of {BENCHMARKS.keys()}"
-            if not isinstance(BENCHMARKS[benchmark], FunctionalBenchmark):
-                _benchmarks.append(BENCHMARKS[benchmark])
-            else:
-                _benchmarks.append(BENCHMARKS[benchmark].description)
+        match benchmarks[0]:
+            case str():
+                for benchmark in benchmarks:
+                    assert benchmark in BENCHMARKS, f"Benchmark must be one of {BENCHMARKS.keys()}"
+                    if not isinstance(BENCHMARKS[benchmark], FunctionalBenchmark):
+                        _benchmarks.append(BENCHMARKS[benchmark])
+                    else:
+                        _benchmarks.append(BENCHMARKS[benchmark].description)
+            case BenchmarkDescription():
+                for benchmark in benchmarks:
+                    _benchmarks.append(benchmark)
+            case FunctionalBenchmark():
+                for benchmark in benchmarks:
+                    _benchmarks.append(benchmark.description)
+            case _:
+                raise TypeError(f"Unknown Benchmark type {type(benchmarks[0])}")
+
 
         self.experiments = Study.generate(
             optimizers=_optimizers,

@@ -54,7 +54,7 @@ class Study:
         """
         self.name = name
         if output_dir is None:
-            output_dir = Path.cwd().absolute().parent / "hpo-suite-output"
+            output_dir = Path.cwd().absolute().parent / "hposuite-output"
         self.output_dir = output_dir / name
         self.study_yaml_path = self.output_dir / "study_config.yaml"
 
@@ -69,13 +69,16 @@ class Study:
         seeds = []
         for run in runs:
             run_dict = run.to_dict()
-            optimizers.append(
-                {
-                    "name": run_dict["problem"]["optimizer"],
-                    "hyperparameters": run_dict["problem"]["optimizer_hyperparameters"],
-                }
-            )
-            benchmarks.append(run_dict["problem"]["benchmark"])
+            opt_keys = [opt["name"] for opt in optimizers if optimizers]
+            if not opt_keys or run.optimizer.name not in opt_keys:
+                optimizers.append(
+                    {
+                        "name": run.optimizer.name,
+                        "hyperparameters": run.optimizer_hyperparameters or {},
+                    }
+                )
+            if run.benchmark.name not in benchmarks:
+                benchmarks.append(run.benchmark.name)
             if run_dict["seed"] not in seeds:
                 seeds.append(run_dict["seed"])
             n_objectives = len(run_dict["problem"]["objective"])

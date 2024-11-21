@@ -85,17 +85,19 @@ def plot_results(  # noqa: PLR0915
             results = report[instance][seed]["results"]
             cost_list = results[SINGLE_OBJ_COL].values.astype(np.float64)
 
-            # Automatically set budget to TrialBudget if Non-Multifidelity Optimizers are used
-            if (
-                np.all(results[FIDELITY_COL].to_numpy() == results[FIDELITY_COL].iloc[0])
-                or
-                results[FIDELITY_COL].iloc[0] is None
-            ):
-                budget_type = "TrialBudget"
+            if FIDELITY_COL in results.columns:
 
-            # Automatically set budget to FidelityBudget if Multifidelity Optimizers are used
-            if results[FIDELITY_COL].iloc[0] is not None:
-                budget_type = "FidelityBudget"
+                # Automatically set budget to TrialBudget if Non-Multifidelity Optimizers are used
+                if (
+                    np.all(results[FIDELITY_COL].to_numpy() == results[FIDELITY_COL].iloc[0])
+                    or
+                    results[FIDELITY_COL].iloc[0] is None
+                ):
+                    budget_type = "TrialBudget"
+
+                # Automatically set budget to FidelityBudget if Multifidelity Optimizers are used
+                if results[FIDELITY_COL].iloc[0] is not None:
+                    budget_type = "FidelityBudget"
             match budget_type:
                 case "FidelityBudget":
                     budget_list = results[FIDELITY_COL].values.astype(np.float64)
@@ -107,7 +109,11 @@ def plot_results(  # noqa: PLR0915
                 case _:
                     raise NotImplementedError(f"Budget type {budget_type} not implemented")
 
-            if not pd.isna(results[CONTINUATIONS_COL].iloc[0]):
+            if (
+                CONTINUATIONS_COL in results.columns
+                and
+                not pd.isna(results[CONTINUATIONS_COL].iloc[0])
+            ):
                 continuations = True
                 continuations_list = results[CONTINUATIONS_COL].values.astype(np.float64)
                 continuations_list = np.cumsum(continuations_list)
@@ -202,7 +208,10 @@ def plot_results(  # noqa: PLR0915
     plt.savefig(save_dir / f"{benchmarks_name}_performance.png")
 
 
-def agg_data(exp_dir: str | Path) -> None:
+def agg_data(
+    study_dir: Path,
+    save_dir: Path
+) -> None:
     """Aggregate the data from the run directory for plotting."""
     df_agg = defaultdict(lambda: defaultdict(lambda: defaultdict(dict)))
     budget_type: str | None = None
@@ -210,12 +219,12 @@ def agg_data(exp_dir: str | Path) -> None:
     objective: str | None = None
     minimize = True
     benchmarks_in_dir = [
-        (f.name.split(".")[0].split("benchmark=")[-1])
-        for f in exp_dir.iterdir() if f.is_dir() and "benchmark=" in f.name]
+        (f.name.split("benchmark=")[-1].split(".")[0])
+        for f in study_dir.iterdir() if f.is_dir() and "benchmark=" in f.name]
     benchmarks_in_dir = list(set(benchmarks_in_dir))
     logger.info(f"Found benchmarks: {benchmarks_in_dir}")
     for benchmark in benchmarks_in_dir:
-        for file in exp_dir.rglob("*.parquet"):
+        for file in study_dir.rglob("*.parquet"):
             if benchmark not in file.name:
                 continue
             res_df = pd.read_parquet(file)
@@ -233,12 +242,24 @@ def agg_data(exp_dir: str | Path) -> None:
                 [
                     SINGLE_OBJ_COL,
                     BUDGET_USED_COL,
-                    FIDELITY_COL,
-                    CONTINUATIONS_COL,
-                    FIDELITY_MIN_COL,
-                    FIDELITY_MAX_COL
                 ]
             ]
+            if FIDELITY_COL in res_df.columns:
+                res_df = pd.concat(
+                    [
+                        res_df,
+                        res_df[FIDELITY_COL].to_frame().T,
+                        res_df[FIDELITY_MIN_COL].to_frame().T,
+                        res_df[FIDELITY_MAX_COL].to_frame().T,
+                    ]
+                )
+            if CONTINUATIONS_COL in res_df.columns:
+                res_df = pd.concat(
+                    [
+                        res_df,
+                        res_df[CONTINUATIONS_COL].to_frame().T,
+                    ]
+                )
             df_agg[instance][int(seed)] = {"results": res_df}
             assert budget_type is not None
             assert budget is not None
@@ -249,7 +270,7 @@ def agg_data(exp_dir: str | Path) -> None:
             budget=budget,
             objective=objective,
             minimize=minimize,
-            save_dir=exp_dir / "plots",
+            save_dir=save_dir,
             benchmarks_name=benchmark,
         )
 
@@ -352,23 +373,30 @@ if __name__ == "__main__":
     parser.add_argument(
         "--root_dir", type=Path, help="Location of the root directory", default=Path("./")
     )
-
     parser.add_argument(
-        "--results_dir",
+        "--output_dir",
         type=Path,
-        help="Location of the results directory",
-        default="../hpo-suite-output"
+        help="Location of the main directory where all studies are stored",
+        default=Path.cwd().absolute().parent / "hposuite-output"
     )
-
     parser.add_argument(
-        "--exp_dir", type=str, help="Location of the Experiment directory", default=None
+        "--study_dir",
+        type=str, 
+        help="Name of the study directory from where to plot the results",
+        default=None
     )
-
-    parser.add_argument("--save_dir", type=str, help="Directory to save the plots", default="plots")
-
+    parser.add_argument(
+        "--save_dir",
+        type=str,
+        help="Directory to save the plots",
+        default="plots"
+    )
     args = parser.parse_args()
 
-    if args.results_dir is None:
-        raise ValueError("Results directory not specified")
+    study_dir = args.output_dir / args.study_dir
+    save_dir = study_dir / args.save_dir
 
-    agg_data(args.results_dir)
+    agg_data(
+        study_dir=study_dir,
+        save_dir=save_dir
+    )

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 import logging
 import warnings
 from collections.abc import Iterable, Mapping
@@ -9,14 +10,12 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any, Literal, TypeAlias
 
 import numpy as np
-from hpoglue.benchmark import BenchmarkDescription
+from hpoglue import BenchmarkDescription, FunctionalBenchmark, Optimizer, Problem
 from hpoglue.constants import DEFAULT_RELATIVE_EXP_DIR
 from hpoglue.env import (
     GLUE_PYPI,
     get_current_installed_hpoglue_version,
 )
-from hpoglue.optimizer import Optimizer
-from hpoglue.problem import Problem
 
 from hposuite.benchmarks import BENCHMARKS
 from hposuite.optimizers import OPTIMIZERS
@@ -50,12 +49,12 @@ class Study:
 
         Args:
             name: The name of the study.
-            output_dir: The directory to store the experiment results.
+            output_dir: The main directory to store the results of the hposuite studies.
         """
         self.name = name
         if output_dir is None:
             output_dir = Path.cwd().absolute().parent / "hpo-suite-output"
-        self.output_dir = output_dir
+        self.output_dir = output_dir / name
 
     @classmethod
     def generate_seeds(
@@ -357,7 +356,7 @@ class Study:
         group_by: Literal["opt", "bench", "opt_bench", "seed", "mem"] | None = None,
         overwrite: bool = False,
         continuations: bool = False,
-        on_error: Literal["warn", "raise", "ignore"] = "warn",
+        on_error: Literal["warn", "raise", "ignore"] = "warn"
     ) -> None:
         """Execute multiple atomic runs using a list of Optimizers and a list of Benchmarks.
 
@@ -420,14 +419,15 @@ class Study:
         _benchmarks = []
         for benchmark in benchmarks:
             assert benchmark in BENCHMARKS, f"Benchmark must be one of {BENCHMARKS.keys()}"
-            _benchmarks.append(BENCHMARKS[benchmark])
-
-        exp_dir = self.output_dir
+            if not isinstance(BENCHMARKS[benchmark], FunctionalBenchmark):
+                _benchmarks.append(BENCHMARKS[benchmark])
+            else:
+                _benchmarks.append(BENCHMARKS[benchmark].description)
 
         self.experiments = Study.generate(
             optimizers=_optimizers,
             benchmarks=_benchmarks,
-            expdir=exp_dir,
+            expdir=self.output_dir,
             budget=budget,
             seeds=seeds,
             num_seeds=num_seeds,
@@ -456,7 +456,7 @@ class Study:
                     logger.info("Dumping experiments")
                     self._dump_runs(
                         group_by=group_by,
-                        exp_dir=exp_dir,
+                        exp_dir=self.output_dir,
                         overwrite=overwrite,
                         precision=precision,
                     )
@@ -476,9 +476,7 @@ def create_study(
         name: str | None = None,
     ) -> Study:
     """Create a Study object."""
-    if output_dir is None:
-        output_dir = Path.cwd().absolute().parent / "hpo-suite-output"
-    """Create a Study object."""
     if name is None:
-        name = f"glue_study_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+        date_hash = hashlib.sha256(datetime.now().strftime("%Y%m%d_%H%M%S").encode()).hexdigest()
+        name = f"glue_study_{date_hash[:8]}"
     return Study(name, output_dir)

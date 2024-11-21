@@ -10,6 +10,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any, Literal, TypeAlias
 
 import numpy as np
+import yaml
 from hpoglue import BenchmarkDescription, FunctionalBenchmark, Optimizer, Problem
 from hpoglue.constants import DEFAULT_RELATIVE_EXP_DIR
 from hpoglue.env import (
@@ -55,6 +56,67 @@ class Study:
         if output_dir is None:
             output_dir = Path.cwd().absolute().parent / "hpo-suite-output"
         self.output_dir = output_dir / name
+        self.study_yaml_path = self.output_dir / "study_config.yaml"
+
+
+    def to_dict(
+        self,
+        runs: list[Run],
+    ) -> dict[str, Any]:
+        """Convert the study to a dictionary."""
+        optimizers = []
+        benchmarks = []
+        seeds = []
+        for run in runs:
+            run_dict = run.to_dict()
+            print(run_dict)
+            optimizers.append(
+                {
+                    "name": run_dict["problem"]["optimizer"],
+                    "hyperparameters": run_dict["problem"]["optimizer_hyperparameters"],
+                }
+            )
+            benchmarks.append(run_dict["problem"]["benchmark"])
+            if run_dict["seed"] not in seeds:
+                seeds.append(run_dict["seed"])
+            n_objectives = len(run_dict["problem"]["objective"])
+            n_fidelities = (
+                len(run_dict["problem"]["fidelity"])
+                if run_dict["problem"]["fidelity"]
+                else 0
+            )
+            n_costs = (
+                len(run_dict["problem"]["cost"])
+                if run_dict["problem"]["cost"]
+                else 0
+            )
+            budget = run_dict["problem"]["budget"]["total"]
+            precision = run_dict["problem"]["precision"]
+            continuations = run_dict["continuations"]
+
+        return {
+            "name": self.name,
+            "optimizers": optimizers,
+            "benchmarks": benchmarks,
+            "seeds": seeds,
+            "n_objectives": n_objectives,
+            "n_fidelities": n_fidelities,
+            "n_costs": n_costs,
+            "budget": budget,
+            "precision": precision,
+            "continuations": continuations,
+        }
+
+
+    def write_yaml(
+        self,
+        runs: list[Run],
+    ) -> None:
+        """Write the study config to a YAML file."""
+        self.study_yaml_path.parent.mkdir(parents=True, exist_ok=True)
+        with self.study_yaml_path.open("w") as file:
+            yaml.dump(self.to_dict(runs), file, sort_keys=False)
+
 
     @classmethod
     def generate_seeds(
@@ -437,6 +499,9 @@ class Study:
             precision=precision,
             continuations=continuations
         )
+
+        self.write_yaml(self.experiments)
+
         for run in self.experiments:
             run.write_yaml()
 
@@ -478,5 +543,5 @@ def create_study(
     """Create a Study object."""
     if name is None:
         date_hash = hashlib.sha256(datetime.now().strftime("%Y%m%d_%H%M%S").encode()).hexdigest()
-        name = f"glue_study_{date_hash[:8]}"
+        name = f"hposuite_study_{date_hash[:8]}"
     return Study(name, output_dir)

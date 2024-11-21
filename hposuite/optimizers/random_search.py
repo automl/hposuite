@@ -7,13 +7,10 @@ from typing import TYPE_CHECKING
 
 import numpy as np
 from ConfigSpace import ConfigurationSpace
-from hpoglue.config import Config
-from hpoglue.optimizer import Optimizer
-from hpoglue.problem import Problem
-from hpoglue.query import Query
+from hpoglue import Config, Optimizer, Problem, Query
 
 if TYPE_CHECKING:
-    from hpoglue.result import Result
+    from hpoglue import Result
 
 
 class RandomSearch(Optimizer):
@@ -38,9 +35,9 @@ class RandomSearch(Optimizer):
         problem: Problem,
         seed: int,
         working_directory: Path,  # noqa: ARG002
-        config_space: ConfigurationSpace | list[Config],
     ):
         """Create a Random Search Optimizer instance for a given problem statement."""
+        config_space = problem.config_space
         match config_space:
             case ConfigurationSpace():
                 self.config_space = copy.deepcopy(config_space)

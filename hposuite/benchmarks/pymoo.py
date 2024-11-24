@@ -66,7 +66,7 @@ def _get_pymoo_problems(
             from pymoo.problems.multi.sympart import SYMPART
             bench = SYMPART()
         case "sympart_rotated":
-            from pymoo.problems.multi.sympart_rotated import SYMPARTRotated
+            from pymoo.problems.multi.sympart import SYMPARTRotated
             bench = SYMPARTRotated()
         case _:
             bench = pymoo.problems.get_problem(function_name, **kwargs)
@@ -91,6 +91,7 @@ _pymoo_so = [
 ]
 
 def pymoo_so_problems() -> Iterator[BenchmarkDescription]:
+    import pymoo.problems
     env = Env(
         name="py310-pymoo-0.6.1.3",
         python_version="3.10",
@@ -100,6 +101,7 @@ def pymoo_so_problems() -> Iterator[BenchmarkDescription]:
     for prob_name in _pymoo_so:
         yield BenchmarkDescription(
             name=f"pymoo-{prob_name}",
+            config_space=get_pymoo_space(pymoo.problems.get_problem(prob_name)),
             env=env,
             load = partial(_get_pymoo_problems, function_name=prob_name),
             has_conditionals=False,
@@ -110,11 +112,8 @@ def pymoo_so_problems() -> Iterator[BenchmarkDescription]:
             mem_req_mb=1024,
         )
 
-_pymoo_mo = [
+_pymoo_default_mo = [
     "kursawe",
-    "omnitest",
-    "sympart",
-    "sympart_rotated",
     "zdt1",
     "zdt2",
     "zdt3",
@@ -123,15 +122,23 @@ _pymoo_mo = [
     "zdt6",
 ]
 
-def pymoo_mo_problems() -> Iterator[BenchmarkDescription]:
+_pymoo_mo_exra = [
+    "omnitest",
+    "sympart",
+    "sympart_rotated",
+]
+
+def pymoo_default_mo_problems() -> Iterator[BenchmarkDescription]:
+    import pymoo.problems
     env = Env(
         name="py310-pymoo-0.6.1.3",
         requirements=("pymoo==0.6.1.3"),
         post_install=None
     )
-    for prob_name in _pymoo_mo:
+    for prob_name in _pymoo_default_mo:
         yield BenchmarkDescription(
             name=f"pymoo-{prob_name}",
+            config_space=get_pymoo_space(pymoo.problems.get_problem(prob_name)),
             env=env,
             load = partial(_get_pymoo_problems, function_name=prob_name),
             has_conditionals=False,
@@ -143,6 +150,40 @@ def pymoo_mo_problems() -> Iterator[BenchmarkDescription]:
             mem_req_mb=1024,
         )
 
+def pymoo_extra_mo_problems() -> Iterator[BenchmarkDescription]:
+    import pymoo.problems
+    env = Env(
+        name="py310-pymoo-0.6.1.3",
+        requirements=("pymoo==0.6.1.3"),
+        post_install=None
+    )
+    for prob_name in _pymoo_mo_exra:
+        match prob_name:
+            case "omnitest":
+                from pymoo.problems.multi.omnitest import OmniTest
+                bench = OmniTest()
+            case "sympart":
+                from pymoo.problems.multi.sympart import SYMPART
+                bench = SYMPART()
+            case "sympart_rotated":
+                from pymoo.problems.multi.sympart import SYMPARTRotated
+                bench = SYMPARTRotated()
+        yield BenchmarkDescription(
+            name=f"pymoo-{prob_name}",
+            config_space=get_pymoo_space(bench),
+            env=env,
+            load = partial(_get_pymoo_problems, function_name=prob_name),
+            has_conditionals=False,
+            metrics={
+                    "value1": Measure.metric((-np.inf, np.inf), minimize=True),
+                    "value2": Measure.metric((-np.inf, np.inf), minimize=True),
+                },
+            is_tabular=False,
+            mem_req_mb=1024,
+        )
+            
+
 def pymoo_benchmarks(datadir: Path | None = None) -> Iterator[BenchmarkDescription]:
     yield from pymoo_so_problems()
-    yield from pymoo_mo_problems()
+    yield from pymoo_default_mo_problems()
+    yield from pymoo_extra_mo_problems()

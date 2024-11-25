@@ -110,8 +110,8 @@ class Run:
     env_path: Path = field(init=False)
     """The path to the environment for the run."""
 
-    continuations: bool = field(default=False)
-    """Whether to use continuations for the run."""
+    # continuations: bool = field(default=False)
+    # """Whether to use continuations for the run."""
 
     mem_req_mb: int = field(init=False)
     """The memory requirement for the run in mb.
@@ -166,6 +166,7 @@ class Run:
     def run(
         self,
         *,
+        continuations: bool = False,
         on_error: Literal["raise", "continue"] = "raise",
         overwrite: Run.State | str | Sequence[Run.State | str] | bool = False,
         progress_bar: bool = True,
@@ -219,6 +220,13 @@ class Run:
         self.set_state(Run.State.PENDING)
         _hist: list[Result] = []
         try:
+            if "single" not in self.optimizer.support.fidelities:
+                if continuations:
+                    logger.warning(
+                        f"Optimizer {self.optimizer.name} does not support continuations."
+                        " Ignoring `continuations=True`."
+                    )
+                continuations = False
             self.set_state(self.State.RUNNING)
             _hist = _run(
                 problem=self.problem,
@@ -226,7 +234,7 @@ class Run:
                 run_name=self.name,
                 on_error="raise",
                 progress_bar=progress_bar,
-                continuations=self.continuations,
+                continuations=continuations,
             )
         except Exception as e:
             self.set_state(Run.State.CRASHED, err_tb=(e, traceback.format_exc()))
@@ -325,7 +333,7 @@ class Run:
             "problem": self.problem.to_dict(),
             "seed": self.seed,
             "expdir": str(self.expdir),
-            "continuations": self.continuations,
+            # "continuations": self.continuations,
         }
 
     @classmethod

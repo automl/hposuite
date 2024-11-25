@@ -79,7 +79,7 @@ class NevergradOptimizer(Optimizer):
             raise ValueError(f"Unknown optimizer: {optimizer_name}!")
 
         self.optimizer: NGOptimizer | ConfNGOptimizer
-        match problem.objective:
+        match problem.objectives:
             case tuple() | Mapping():
                 if optimizer_name in ext_opts:
                     if optimizer_name == "Hyperopt":
@@ -108,7 +108,7 @@ class NevergradOptimizer(Optimizer):
 
     @override
     def ask(self) -> Query:
-        match self.problem.fidelity:
+        match self.problem.fidelities:
             case None:
                 config: parameter.Parameter = self.optimizer.ask()
                 name = f"{self.counter}_{config.value}_{self.seed}"
@@ -133,15 +133,15 @@ class NevergradOptimizer(Optimizer):
 
     @override
     def tell(self, result: Result) -> None:
-        match self.problem.objective:
+        match self.problem.objectives:
             case (name, _):
                 _values = result.values[name]
             case Mapping():
-                _values = [result.values[key] for key in self.problem.objective]
+                _values = [result.values[key] for key in self.problem.objectives]
             case _:
                 raise TypeError("Objective must be a string or a list of strings!")
 
-        match self.problem.cost:
+        match self.problem.costs:
             case None:
                 pass
             case tuple():

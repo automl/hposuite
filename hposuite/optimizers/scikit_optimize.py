@@ -72,7 +72,7 @@ class SkoptOptimizer(Optimizer):
         assert acq_optimizer in acq_optimizers, f"acq_optimizer must be one of {acq_optimizers}!"
 
         self.optimizer: skopt.optimizer.Optimizer
-        match problem.objective:
+        match problem.objectives:
             case (_, objective):
                 self.optimizer = skopt.optimizer.Optimizer(
                     dimensions=self._space,
@@ -93,7 +93,7 @@ class SkoptOptimizer(Optimizer):
 
     @override
     def ask(self) -> Query:
-        match self.problem.fidelity:
+        match self.problem.fidelities:
             case None:
                 config = self.optimizer.ask()
                 config_values = {hp.name: value for hp, value in zip(self.config_space.get_hyperparameters(), config, strict=False)}
@@ -115,15 +115,15 @@ class SkoptOptimizer(Optimizer):
 
     @override
     def tell(self, result: Result) -> None:
-        match self.problem.objective:
+        match self.problem.objectives:
             case (name, _):
                 _values = result.values[name]
             case Mapping():
-                _values = [result.values[key] for key in self.problem.objective]
+                _values = [result.values[key] for key in self.problem.objectives]
             case _:
                 raise TypeError("Objective must be a string or a list of strings!")
 
-        match self.problem.cost:
+        match self.problem.costs:
             case None:
                 pass
             case tuple():

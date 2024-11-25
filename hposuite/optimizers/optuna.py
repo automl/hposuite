@@ -60,7 +60,7 @@ class OptunaOptimizer(Optimizer):
                 raise TypeError("Config space must be a list or a ConfigurationSpace!")
 
         self.optimizer: optuna.study.Study
-        match problem.objective:
+        match problem.objectives:
             case (_, objective):
                 self.optimizer = optuna.create_study(
                     sampler=TPESampler(seed=seed, **kwargs),
@@ -79,7 +79,7 @@ class OptunaOptimizer(Optimizer):
                     load_if_exists=False,
                     directions=[
                         "minimize" if obj.minimize else "maximize"
-                        for obj in problem.objective.values()
+                        for obj in problem.objectives.values()
                     ],
                 )
             case _:
@@ -91,7 +91,7 @@ class OptunaOptimizer(Optimizer):
 
     @override
     def ask(self) -> Query:
-        match self.problem.fidelity:
+        match self.problem.fidelities:
             case None:
                 trial = self.optimizer.ask(self._distributions)
                 name = f"trial_{trial.number}"
@@ -111,15 +111,15 @@ class OptunaOptimizer(Optimizer):
 
     @override
     def tell(self, result: Result) -> None:
-        match self.problem.objective:
+        match self.problem.objectives:
             case (name, _):
                 _values = result.values[name]
             case Mapping():
-                _values = [result.values[key] for key in self.problem.objective]
+                _values = [result.values[key] for key in self.problem.objectives]
             case _:
                 raise TypeError("Objective must be a string or a list of strings!")
 
-        match self.problem.cost:
+        match self.problem.costs:
             case None:
                 pass
             case tuple():

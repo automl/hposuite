@@ -65,8 +65,8 @@ class SyneTuneOptimizer(Optimizer):
         )
 
         fidelity = None
-        if isinstance(self.problem.fidelity, tuple):
-            fidelity = trial_suggestion.config.pop(self.problem.fidelity[0])
+        if isinstance(self.problem.fidelities, tuple):
+            fidelity = trial_suggestion.config.pop(self.problem.fidelities[0])
 
         # TODO: How to get the fidelity??
         return Query(
@@ -77,12 +77,12 @@ class SyneTuneOptimizer(Optimizer):
 
     def tell(self, result: Result) -> None:
         """Update the SyneTune Optimizer with the result of a query."""
-        match self.problem.objective:
+        match self.problem.objectives:
             case Mapping():
                 results_obj_dict = {
                     key: result.values[key]
                     for key in result.values
-                    if key in self.problem.objective
+                    if key in self.problem.objectives
                 }
             case (metric_name, _):
                 results_obj_dict = {metric_name: result.values[metric_name]}
@@ -128,7 +128,7 @@ class SyneTuneBO(SyneTuneOptimizer):
         """
         from syne_tune.optimizer.baselines import BayesianOptimization
 
-        match problem.fidelity:
+        match problem.fidelities:
             case None:
                 pass
             case tuple():
@@ -140,7 +140,7 @@ class SyneTuneBO(SyneTuneOptimizer):
             case _:
                 raise TypeError("fidelity_space must be a list, dict or None")
 
-        match problem.cost:
+        match problem.costs:
             case None:
                 pass
             case tuple() | Mapping():
@@ -151,7 +151,7 @@ class SyneTuneBO(SyneTuneOptimizer):
 
         metric_name: str
         mode: Literal["min", "max"]
-        match problem.objective:
+        match problem.objectives:
             case (name, metric):
                 metric_name = name
                 mode = "min" if metric.minimize else "max"
@@ -171,8 +171,8 @@ class SyneTuneBO(SyneTuneOptimizer):
             case _:
                 raise TypeError("config_space must be of type ConfigSpace.ConfigurationSpace")
 
-        if isinstance(problem.fidelity, tuple):
-            synetune_cs[problem.fidelity[0]] = problem.fidelity[1]  # TODO: Check this
+        if isinstance(problem.fidelities, tuple):
+            synetune_cs[problem.fidelities[0]] = problem.fidelities[1]  # TODO: Check this
 
         super().__init__(
             problem=problem,
@@ -221,7 +221,7 @@ class SyneTuneBOHB(SyneTuneOptimizer):
         """
         from syne_tune.optimizer.baselines import BOHB
 
-        match problem.fidelity:
+        match problem.fidelities:
             case None:
                 min_fidelity = None
                 max_fidelity = None
@@ -234,7 +234,7 @@ class SyneTuneBOHB(SyneTuneOptimizer):
             case _:
                 raise TypeError("fidelity_space must be a list, dict or None")
 
-        match problem.cost:
+        match problem.costs:
             case None:
                 pass
             case tuple() | Mapping():
@@ -245,7 +245,7 @@ class SyneTuneBOHB(SyneTuneOptimizer):
 
         metric_name: str
         mode: Literal["min", "max"]
-        match problem.objective:
+        match problem.objectives:
             case (name, metric):
                 metric_name = name
                 mode = "min" if metric.minimize else "max"
@@ -265,8 +265,8 @@ class SyneTuneBOHB(SyneTuneOptimizer):
             case _:
                 raise TypeError("config_space must be of type ConfigSpace.ConfigurationSpace")
 
-        if isinstance(problem.fidelity, tuple):
-            synetune_cs[problem.fidelity[0]] = problem.fidelity[1]  # TODO: Check this
+        if isinstance(problem.fidelities, tuple):
+            synetune_cs[problem.fidelities[0]] = problem.fidelities[1]  # TODO: Check this
 
         super().__init__(
             problem=problem,
@@ -278,8 +278,8 @@ class SyneTuneBOHB(SyneTuneOptimizer):
             metric = metric_name,
             random_seed = seed,
             type="stopping",
-            max_t = problem.fidelity[1].max,
-            resource_attr = problem.fidelity[0],
+            max_t = problem.fidelities[1].max,
+            resource_attr = problem.fidelities[0],
             grace_period=1,
             eta=3,
             )

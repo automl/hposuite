@@ -59,7 +59,7 @@ class DEHB_Optimizer(Optimizer):
             case _:
                 raise TypeError("Config space must be a list or a ConfigurationSpace!")
 
-        match problem.fidelity:
+        match problem.fidelities:
             case None:
                 min_fidelity = None
                 max_fidelity = None
@@ -101,7 +101,7 @@ class DEHB_Optimizer(Optimizer):
         info = self.dehb.ask()
         assert isinstance(info, dict)
 
-        match self.problem.fidelity:
+        match self.problem.fidelities:
             case None:
                 fidelity = None
             case (key, fidelity_def):
@@ -126,7 +126,7 @@ class DEHB_Optimizer(Optimizer):
     def tell(self, result: Result) -> None:
         """Tell DEHB the result of the query."""
         fitness: float
-        match self.problem.objective:
+        match self.problem.objectives:
             case (name, metric):
                 fitness = metric.as_minimize(result.values[name])
             case Mapping():
@@ -134,7 +134,7 @@ class DEHB_Optimizer(Optimizer):
             case _:
                 raise TypeError("Objective must be a string or a list of strings!")
 
-        match self.problem.cost:
+        match self.problem.costs:
             case None:
                 cost = None
             case tuple():

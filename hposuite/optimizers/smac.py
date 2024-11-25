@@ -75,9 +75,9 @@ class SMAC_Optimizer(Optimizer):
                 fidelity = None
             case float() | int():
                 assert self._fidelity is not None
-                assert isinstance(self.problem.fidelity, tuple)
+                assert isinstance(self.problem.fidelities, tuple)
                 fidelity_value = int(fidelity) if self._fidelity.kind is int else fidelity
-                fidelity_name = self.problem.fidelity[0]
+                fidelity_name = self.problem.fidelities[0]
                 fidelity = (fidelity_name, fidelity_value)
             case _:
                 raise NotImplementedError("Unexpected return type for SMAC budget!")
@@ -92,11 +92,11 @@ class SMAC_Optimizer(Optimizer):
         """Tell SMAC the result of the query."""
         from smac.runhistory import StatusType, TrialValue
 
-        match self.problem.objective:
+        match self.problem.objectives:
             case Mapping():
                 cost = [
                     obj.as_minimize(result.values[key])
-                    for key, obj in self.problem.objective.items()
+                    for key, obj in self.problem.objectives.items()
                 ]
             case (key, obj):
                 cost = obj.as_minimize(result.values[key])
@@ -157,7 +157,7 @@ class SMAC_BO(SMAC_Optimizer):
             case _:
                 raise TypeError("Config space must be a list or a ConfigurationSpace!")
 
-        match problem.fidelity:
+        match problem.fidelities:
             case None:
                 pass
             case tuple() | Mapping():
@@ -165,9 +165,9 @@ class SMAC_BO(SMAC_Optimizer):
             case _:
                 raise TypeError("Fidelity must be a string or a list of strings!")
 
-        match problem.objective:
+        match problem.objectives:
             case Mapping():
-                metric_names = list(problem.objective.keys())
+                metric_names = list(problem.objectives.keys())
             case (metric_name, _):
                 metric_names = metric_name
             case _:
@@ -252,7 +252,7 @@ class SMAC_Hyperband(SMAC_Optimizer):
 
         min_fidelity: float | int
         max_fidelity: float | int
-        match problem.fidelity:
+        match problem.fidelities:
             case None:
                 raise ValueError("SMAC Hyperband requires a fidelity space!")
             case Mapping():
@@ -264,9 +264,9 @@ class SMAC_Hyperband(SMAC_Optimizer):
             case _:
                 raise TypeError("Fidelity must be a string or a list of strings!")
 
-        match problem.objective:
+        match problem.objectives:
             case Mapping():
-                metric_names = list(problem.objective.keys())
+                metric_names = list(problem.objectives.keys())
             case (metric_name, _):
                 metric_names = metric_name
             case _:

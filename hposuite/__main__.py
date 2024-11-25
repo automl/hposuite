@@ -15,8 +15,6 @@ def glue_study(  # noqa: D103, PLR0913
     seeds: list,
     num_seeds: int,
     budget: int,
-    n_objectives: int,
-    n_fidelities: int | None,
     exp_name: str,
     output_dir: Path,
     exec_type: str,
@@ -33,15 +31,13 @@ def glue_study(  # noqa: D103, PLR0913
         seeds=seeds,
         num_seeds=num_seeds,
         budget=budget,
-        n_objectives=n_objectives,
-        n_fidelities=n_fidelities,
         group_by=group_by,
+        on_error=on_error,
     )
     study.optimize(
         continuations=continuations,
         overwrite=overwrite,
-        exec_type=exec_type,
-        on_error=on_error,
+        exec_type=exec_type
     )
 
 def _get_from_yaml_config(config_path: Path) -> dict:
@@ -98,17 +94,6 @@ if __name__ == "__main__":
         help="Budget to use",
     )
     parser.add_argument(
-        "--n_objectives", "-no",
-        type=int,
-        default=1,
-        help="Number of objectives",
-    )
-    parser.add_argument(
-        "--n_fidelities", "-nf",
-        type=int,
-        help="Number of fidelities",
-    )
-    parser.add_argument(
         "--overwrite", "-ow",
         action="store_true",
         help="Overwrite existing results",
@@ -121,8 +106,8 @@ if __name__ == "__main__":
     parser.add_argument(
         "--exec_type", "-x",
         type=str,
-        default="dump",
-        choices=["sequential", "parallel", "dump"],
+        default="sequential",
+        choices=["sequential", "parallel"],
         help="Execution type",
     )
     parser.add_argument(
@@ -150,13 +135,11 @@ if __name__ == "__main__":
             seeds=config.get("seeds"),
             num_seeds=config.get("num_seeds", 1),
             budget=config.get("budget", 50),
-            n_objectives=config.get("n_objectives", 1),
-            n_fidelities=config.get("n_fidelities"),
             exp_name=config.get("exp_name"),
             output_dir=config.get("output_dir"),
             overwrite=config.get("overwrite", False),
             continuations=config.get("continuations", False),
-            exec_type=config.get("exec_type", "dump"),
+            exec_type=config.get("exec_type", "sequential"),
             group_by=config.get("group_by"),
             on_error=config.get("on_error", "warn"),
         )
@@ -167,8 +150,6 @@ if __name__ == "__main__":
             seeds=args.seeds,
             num_seeds=args.num_seeds,
             budget=args.budget,
-            n_objectives=args.n_objectives,
-            n_fidelities=args.n_fidelities,
             exp_name=args.exp_name,
             output_dir = args.output_dir,
             overwrite=args.overwrite,

@@ -348,20 +348,10 @@ class Run:
 
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> Run:
-        from hposuite.optimizers import OPTIMIZERS
-
-        if data["optimizer"] not in OPTIMIZERS:
-            raise ValueError(
-                f"Optimizer {data['benchmark']} not found in optimizers!"
-                " Please make sure your optimizer is registed in `OPTIMIZERS`"
-                " before loading/parsing."
-            )
 
         return Run(
             problem=Problem.from_dict(data["problem"]),
             seed=data["seed"],
-            optimizer=OPTIMIZERS[data["optimizer"]],
-            optimizer_hyperparameters=data["optimizer_hyperparameters"],
             expdir=Path(data["expdir"]),
         )
 
@@ -530,14 +520,14 @@ class Run:
                             _rparts[f"query.fidelity.{i}.name"] = k
                             _rparts[f"query.fidelity.{i}.value"] = v
 
-                match problem.objective:
+                match problem.objectives:
                     case (_name, _measure):
                         _rparts["result.objective.1.value"] = _r.values[_name]
                     case Mapping():
-                        for i, name in enumerate(problem.objective, start=1):
+                        for i, name in enumerate(problem.objectives, start=1):
                             _rparts[f"result.objective.{i}.value"] = _r.values[name]
 
-                match problem.fidelity:
+                match problem.fidelities:
                     case None:
                         pass
                     case (name, _):
@@ -545,16 +535,16 @@ class Run:
                         _rparts["result.fidelity.1.value"] = _r.fidelity[1]
                     case Mapping():
                         assert isinstance(_r.fidelity, Mapping)
-                        for i, name in enumerate(problem.fidelity, start=1):
+                        for i, name in enumerate(problem.fidelities, start=1):
                             _rparts[f"result.fidelity.{i}.value"] = _r.fidelity[name]
 
-                match problem.cost:
+                match problem.costs:
                     case None:
                         pass
                     case (name, _):
                         _rparts["result.cost.1.value"] = _r.values[name]
                     case Mapping():
-                        for i, name in enumerate(problem.cost, start=1):
+                        for i, name in enumerate(problem.costs, start=1):
                             _rparts[f"result.fidelity.{i}.value"] = _r.values[name]
 
                 _rparts["result.continuations_cost.1"] = _r.continuations_cost
@@ -565,7 +555,7 @@ class Run:
             parts["run.name"] = self.run.name
             parts["problem.name"] = problem.name
 
-            match problem.objective:
+            match problem.objectives:
                 case (name, measure):
                     parts["problem.objective.count"] = 1
                     parts["problem.objective.1.name"] = name
@@ -573,9 +563,9 @@ class Run:
                     parts["problem.objective.1.min"] = measure.bounds[0]
                     parts["problem.objective.1.max"] = measure.bounds[1]
                 case Mapping():
-                    list(problem.objective)
-                    parts["problem.objective.count"] = len(problem.objective)
-                    for i, (k, v) in enumerate(problem.objective.items(), start=1):
+                    list(problem.objectives)
+                    parts["problem.objective.count"] = len(problem.objectives)
+                    for i, (k, v) in enumerate(problem.objectives.items(), start=1):
                         parts[f"problem.objective.{i}.name"] = k
                         parts[f"problem.objective.{i}.minimize"] = v.minimize
                         parts[f"problem.objective.{i}.min"] = v.bounds[0]
@@ -583,7 +573,7 @@ class Run:
                 case _:
                     raise TypeError("Objective must be a tuple (name, measure) or a mapping")
 
-            match problem.fidelity:
+            match problem.fidelities:
                 case None:
                     parts["problem.fidelity.count"] = 0
                 case (name, fid):
@@ -592,16 +582,16 @@ class Run:
                     parts["problem.fidelity.1.min"] = fid.min
                     parts["problem.fidelity.1.max"] = fid.max
                 case Mapping():
-                    list(problem.fidelity)
-                    parts["problem.fidelity.count"] = len(problem.fidelity)
-                    for i, (k, v) in enumerate(problem.fidelity.items(), start=1):
+                    list(problem.fidelities)
+                    parts["problem.fidelity.count"] = len(problem.fidelities)
+                    for i, (k, v) in enumerate(problem.fidelities.items(), start=1):
                         parts[f"problem.fidelity.{i}.name"] = k
                         parts[f"problem.fidelity.{i}.min"] = v.min
                         parts[f"problem.fidelity.{i}.max"] = v.max
                 case _:
                     raise TypeError("Must be a tuple (name, fidelitiy) or a mapping")
 
-            match problem.cost:
+            match problem.costs:
                 case None:
                     parts["problem.cost.count"] = 0
                 case (name, cost):
@@ -611,9 +601,9 @@ class Run:
                     parts["problem.cost.1.min"] = cost.bounds[0]
                     parts["problem.cost.1.max"] = cost.bounds[1]
                 case Mapping():
-                    list(problem.cost)
-                    parts["problem.cost.count"] = len(problem.cost)
-                    for i, (k, v) in enumerate(problem.cost.items(), start=1):
+                    list(problem.costs)
+                    parts["problem.cost.count"] = len(problem.costs)
+                    for i, (k, v) in enumerate(problem.costs.items(), start=1):
                         parts[f"problem.cost.{i}.name"] = k
                         parts[f"problem.cost.{i}.minimize"] = v.minimize
                         parts[f"problem.cost.{i}.min"] = v.bounds[0]
@@ -659,21 +649,21 @@ class Run:
             )
 
             if incumbent_trajectory:
-                if not isinstance(self.problem.objective, tuple):
+                if not isinstance(self.problem.objectives, tuple):
                     raise ValueError(
                         "Incumbent trajectory only supported for single objective."
-                        f" Problem {self.problem.name} has {len(self.problem.objective)} objectives"
+                        f" Problem {self.problem.name} has {len(self.problem.objectives)} objectives"
                         f" for run {self.run.name}"
                     )
 
-                if self.problem.objective[1].minimize:
+                if self.problem.objectives[1].minimize:
                     _df["_tmp_"] = _df["result.objective.1.value"].cummin()
                 else:
                     _df["_tmp_"] = _df["result.objective.1.value"].cummax()
 
                 _df = _df.drop_duplicates(subset="_tmp_", keep="first").drop(columns="_tmp_")  # type: ignore
 
-            match self.problem.objective:
+            match self.problem.objectives:
                 case (_, measure):
                     _low, _high = measure.bounds
                     if not np.isinf(_low) and not np.isinf(_high):
@@ -681,7 +671,7 @@ class Run:
                             _df["result.objective.1.value"] - _low
                         ) / (_high - _low)
                 case Mapping():
-                    for i, (_, measure) in enumerate(self.problem.objective.items(), start=1):
+                    for i, (_, measure) in enumerate(self.problem.objectives.items(), start=1):
                         _low, _high = measure.bounds
                         if not np.isinf(_low) and not np.isinf(_high):
                             _df[f"result.objective.{i}.normalized_value"] = (
@@ -706,20 +696,20 @@ class Run:
             def _row_to_result(series: pd.Series) -> Result:
                 _row = series.to_dict()
                 _result_values: dict[str, Any] = {}
-                match problem.objective:
+                match problem.objectives:
                     case (name, _):
                         assert int(_row["problem.objective.count"]) == 1
                         assert str(_row["problem.objective.1.name"]) == name
                         _result_values[name] = _row["result.objective.1.value"]
                     case Mapping():
-                        assert int(_row["problem.objective.count"]) == len(problem.objective)
-                        for i, k in enumerate(problem.objective, start=1):
+                        assert int(_row["problem.objective.count"]) == len(problem.objectives)
+                        for i, k in enumerate(problem.objectives, start=1):
                             assert str(_row[f"problem.objective.{i}.name"]) == k
                             _result_values[k] = _row[f"result.objective.{i}.value"]
                     case _:
                         raise TypeError("Objective must be a tuple (name, measure) or a mapping")
 
-                match problem.fidelity:
+                match problem.fidelities:
                     case None:
                         assert int(_row["problem.fidelity.count"]) == 0
                         _result_fidelity = None
@@ -728,15 +718,15 @@ class Run:
                         assert str(_row["problem.fidelity.1.name"]) == name
                         _result_fidelity = (name, fid.kind(_row["result.fidelity.1.value"]))
                     case Mapping():
-                        assert int(_row["problem.fidelity.count"]) == len(problem.fidelity)
+                        assert int(_row["problem.fidelity.count"]) == len(problem.fidelities)
                         _result_fidelity = {}
-                        for i, (name, fid) in enumerate(problem.fidelity.items(), start=1):
+                        for i, (name, fid) in enumerate(problem.fidelities.items(), start=1):
                             assert str(_row[f"problem.fidelity.{i}.name"]) == name
                             _result_fidelity[name] = fid.kind(_row[f"result.fidelity.{i}.value"])
                     case _:
                         raise TypeError("Must be a tuple (name, fidelitiy) or a mapping")
 
-                match problem.cost:
+                match problem.costs:
                     case None:
                         assert int(_row["problem.cost.count"]) == 0
                     case (name, _):
@@ -744,8 +734,8 @@ class Run:
                         assert str(_row["problem.cost.1.name"]) == name
                         _result_values[name] = _row["result.cost.1.value"]
                     case Mapping():
-                        assert int(_row["problem.cost.count"]) == len(problem.cost)
-                        for i, (name, _) in enumerate(problem.cost.items(), start=1):
+                        assert int(_row["problem.cost.count"]) == len(problem.costs)
+                        for i, (name, _) in enumerate(problem.costs.items(), start=1):
                             assert str(_row[f"problem.cost.{i}.name"]) == name
                             _result_values[name] = _row[f"result.cost.{i}.value"]
                     case _:

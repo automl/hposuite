@@ -163,6 +163,7 @@ def lcbench_surrogate(datadir: Path | None = None) -> Iterator[BenchmarkDescript
         Iterator[BenchmarkDescription]: An iterator over BenchmarkDescription objects
         for each task in the LCBench surrogate Benchmark.
     """
+    import mfpbench
     env = Env(
         name="py310-mfpbench-1.9-yahpo",
         requirements=("mf-prior-bench[yahpo]==1.9.0",),
@@ -171,6 +172,7 @@ def lcbench_surrogate(datadir: Path | None = None) -> Iterator[BenchmarkDescript
     for task_id in _lcbench_task_ids:
         yield BenchmarkDescription(
             name=f"yahpo-lcbench-{task_id}",
+            config_space=mfpbench.get("lcbench", task_id=task_id).space,
             load=partial(_lcbench_tabular, task_id=task_id, datadir=datadir),
             metrics={
                 "val_accuracy": Measure.metric((0.0, 100.0), minimize=False),
@@ -240,6 +242,7 @@ def lcbench_tabular(datadir: Path | None = None) -> Iterator[BenchmarkDescriptio
         "vehicle",
         "volkert",
     )
+    import mfpbench
     env = Env(
         name="py310-mfpbench-1.9-lcbench-tabular",
         python_version="3.10",
@@ -249,6 +252,7 @@ def lcbench_tabular(datadir: Path | None = None) -> Iterator[BenchmarkDescriptio
     for task_id in task_ids:
         yield BenchmarkDescription(
             name=f"lcbench_tabular-{task_id}",
+            config_space=mfpbench.get("lcbench_tabular", task_id=task_id).space,
             load=partial(_lcbench_tabular, task_id=task_id, datadir=datadir),
             is_tabular=True,
             fidelities={
@@ -283,6 +287,7 @@ def mfh(datadir: Path | None = None) -> Iterator[BenchmarkDescription]:
         Iterator[BenchmarkDescription]: An iterator over BenchmarkDescription objects
         for each combination of correlation and dimensions in the MFH Benchmarks.
     """
+    import mfpbench
     env = Env(
         name="py310-mfpbench-1.9-mfh",
         python_version="3.10",
@@ -295,6 +300,7 @@ def mfh(datadir: Path | None = None) -> Iterator[BenchmarkDescription]:
             _min = -3.32237 if dims == 3 else -3.86278  # noqa: PLR2004
             yield BenchmarkDescription(
                 name=name,
+                config_space=mfpbench.get(name).space,
                 load=partial(_get_surrogate_benchmark, benchmark_name=name, datadir=datadir),
                 costs={
                     "fid_cost": Measure.cost((0.05, 1), minimize=True),
@@ -323,6 +329,7 @@ def jahs(datadir: Path | None = None) -> Iterator[BenchmarkDescription]:
         Iterator[BenchmarkDescription]: An iterator over BenchmarkDescription objects
         for each task in JAHSBench.
     """
+    import mfpbench
     task_ids = ("CIFAR10", "ColorectalHistology", "FashionMNIST")
     env = Env(
         name="py310-mfpbench-1.9-jahs",
@@ -334,6 +341,7 @@ def jahs(datadir: Path | None = None) -> Iterator[BenchmarkDescription]:
         name = f"jahs-{task_id}"
         yield BenchmarkDescription(
             name=name,
+            config_space=mfpbench.get("jahs", task_id=task_id).space,
             load=partial(
                 _get_surrogate_benchmark,
                 benchmark_name="jahs",
@@ -370,6 +378,7 @@ def pd1(datadir: Path | None = None) -> Iterator[BenchmarkDescription]:
         Iterator[BenchmarkDescription]: An iterator over BenchmarkDescription objects
         for each PD1 benchmark.
     """
+    import mfpbench
     env = Env(
         name="py310-mfpbench-1.9-pd1",
         python_version="3.10",
@@ -378,6 +387,7 @@ def pd1(datadir: Path | None = None) -> Iterator[BenchmarkDescription]:
     )
     yield BenchmarkDescription(
         name="pd1-cifar100-wide_resnet-2048",
+        config_space=mfpbench.get("cifar100_wideresnet_2048").space,
         load=partial(
             _get_surrogate_benchmark, benchmark_name="cifar100_wideresnet_2048", datadir=datadir
         ),
@@ -392,6 +402,7 @@ def pd1(datadir: Path | None = None) -> Iterator[BenchmarkDescription]:
     )
     yield BenchmarkDescription(
         name="pd1-imagenet-resnet-512",
+        config_space=mfpbench.get("imagenet_resnet_512").space,
         load=partial(
             _get_surrogate_benchmark, benchmark_name="imagenet_resnet_512", datadir=datadir
         ),
@@ -406,6 +417,7 @@ def pd1(datadir: Path | None = None) -> Iterator[BenchmarkDescription]:
     )
     yield BenchmarkDescription(
         name="pd1-lm1b-transformer-2048",
+        config_space=mfpbench.get("lm1b_transformer_2048").space,
         load=partial(
             _get_surrogate_benchmark, benchmark_name="lm1b_transformer_2048", datadir=datadir
         ),
@@ -420,6 +432,7 @@ def pd1(datadir: Path | None = None) -> Iterator[BenchmarkDescription]:
     )
     yield BenchmarkDescription(
         name="pd1-translate_wmt-xformer_translate-64",
+        config_space=mfpbench.get("translatewmt_xformer_64").space,
         load=partial(
             _get_surrogate_benchmark, benchmark_name="translatewmt_xformer_64", datadir=datadir
         ),
@@ -445,7 +458,7 @@ def mfpbench_benchmarks(datadir: Path | None = None) -> Iterator[BenchmarkDescri
         Iterator[BenchmarkDescription]: An iterator over BenchmarkDescription objects
         for each benchmark.
     """
-    yield from lcbench_surrogate(datadir)
+    # yield from lcbench_surrogate(datadir)
     yield from lcbench_tabular(datadir)
     yield from mfh(datadir)
     yield from jahs(datadir)

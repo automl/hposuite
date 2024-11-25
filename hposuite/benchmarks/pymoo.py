@@ -56,7 +56,6 @@ def _get_pymoo_problems(
 )-> SurrogateBenchmark:
 
     import pymoo
-    import pymoo.problems
 
     match function_name:
         case "omnitest":
@@ -151,7 +150,6 @@ def pymoo_default_mo_problems() -> Iterator[BenchmarkDescription]:
         )
 
 def pymoo_extra_mo_problems() -> Iterator[BenchmarkDescription]:
-    import pymoo.problems
     env = Env(
         name="py310-pymoo-0.6.1.3",
         requirements=("pymoo==0.6.1.3"),
@@ -181,7 +179,7 @@ def pymoo_extra_mo_problems() -> Iterator[BenchmarkDescription]:
             is_tabular=False,
             mem_req_mb=1024,
         )
-            
+
 
 def pymoo_benchmarks(datadir: Path | None = None) -> Iterator[BenchmarkDescription]:
     yield from pymoo_so_problems()

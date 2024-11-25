@@ -21,7 +21,6 @@ def glue_study(  # noqa: D103, PLR0913
     output_dir: Path,
     exec_type: str,
     group_by: str,
-    precision: int,
     overwrite: bool,
     continuations: bool,
     on_error: str,
@@ -29,8 +28,6 @@ def glue_study(  # noqa: D103, PLR0913
     study = create_study(
         output_dir=output_dir,
         name=exp_name,
-    )
-    study.optimize(
         optimizers=optimizers,
         benchmarks=benchmarks,
         seeds=seeds,
@@ -38,11 +35,12 @@ def glue_study(  # noqa: D103, PLR0913
         budget=budget,
         n_objectives=n_objectives,
         n_fidelities=n_fidelities,
-        precision=precision,
-        overwrite=overwrite,
-        continuations=continuations,
-        exec_type=exec_type,
         group_by=group_by,
+    )
+    study.optimize(
+        continuations=continuations,
+        overwrite=overwrite,
+        exec_type=exec_type,
         on_error=on_error,
     )
 
@@ -121,11 +119,6 @@ if __name__ == "__main__":
         help="Use continuations",
     )
     parser.add_argument(
-        "--precision", "-p",
-        type=int,
-        help="Precision to use",
-    )
-    parser.add_argument(
         "--exec_type", "-x",
         type=str,
         default="dump",
@@ -159,7 +152,6 @@ if __name__ == "__main__":
             budget=config.get("budget", 50),
             n_objectives=config.get("n_objectives", 1),
             n_fidelities=config.get("n_fidelities"),
-            precision=config.get("precision"),
             exp_name=config.get("exp_name"),
             output_dir=config.get("output_dir"),
             overwrite=config.get("overwrite", False),
@@ -177,7 +169,6 @@ if __name__ == "__main__":
             budget=args.budget,
             n_objectives=args.n_objectives,
             n_fidelities=args.n_fidelities,
-            precision=args.precision,
             exp_name=args.exp_name,
             output_dir = args.output_dir,
             overwrite=args.overwrite,

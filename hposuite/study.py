@@ -4,6 +4,7 @@ import hashlib
 import logging
 import warnings
 from collections.abc import Iterable, Mapping
+from dataclasses import dataclass, field
 from datetime import datetime
 from itertools import product
 from pathlib import Path
@@ -38,36 +39,66 @@ OptWithHps: TypeAlias = tuple[type[Optimizer], Mapping[str, Any]]
 GLOBAL_SEED = 42
 
 
-
+@dataclass(kw_only=True)
 class Study:
     """Represents a Suite study for hyperparameter optimization."""
-    def __init__(
-        self,
-        name: str,
-        output_dir: Path | None = None,
-    ):
-        """Initialize a Study object with a name and a results directory.
 
-        Args:
-            name: The name of the study.
-            output_dir: The main directory to store the results of the hposuite studies.
-        """
-        self.name = name
-        if output_dir is None:
-            output_dir = Path.cwd().absolute().parent / "hposuite-output"
-        self.output_dir = output_dir / name
+    name: str
+
+    output_dir: Path | None = None
+
+    study_yaml_path: Path = field(init=False)
+
+    optimizers: list[OptWithHps] | list[type[Optimizer]] = field(init=False)
+
+    benchmarks: list[BenchmarkDescription] = field(init=False)
+
+    experiments: list[Run]
+
+    seeds: Iterable[int] | int | None = None
+
+    num_seeds: int = 1
+
+    budget: int = 50
+
+    objectives: Iterable[str] | None = None
+
+    fidelities: Iterable[str] | None = None
+
+    n_objectives: int = 1
+
+    n_fidelities: int | None = None
+
+    group_by: Literal["opt", "bench", "opt_bench", "seed", "mem"] | None = None
+
+    # continuations: bool = False
+
+    def __post_init__(self):
         self.study_yaml_path = self.output_dir / "study_config.yaml"
 
+        self.optimizers = [run.optimizer for run in self.experiments]
+        self.benchmarks = [run.benchmark for run in self.experiments]
 
-    def to_dict(
-        self,
-        runs: list[Run],
-    ) -> dict[str, Any]:
+        self.write_yaml()
+
+        for run in self.experiments:
+            run.write_yaml()
+
+        if len(self.experiments) > 1:
+            logger.info("Dumping experiments")
+            self._dump_runs(
+                group_by=self.group_by,
+                exp_dir=self.output_dir,
+            )
+
+
+
+    def to_dict(self) -> dict[str, Any]:
         """Convert the study to a dictionary."""
         optimizers = []
         benchmarks = []
         seeds = []
-        for run in runs:
+        for run in self.experiments:
             run_dict = run.to_dict()
             opt_keys = [opt["name"] for opt in optimizers if optimizers]
             if not opt_keys or run.optimizer.name not in opt_keys:
@@ -93,8 +124,7 @@ class Study:
                 else 0
             )
             budget = run_dict["problem"]["budget"]["total"]
-            precision = run_dict["problem"]["precision"]
-            continuations = run_dict["continuations"]
+            # continuations = run_dict["continuations"]
 
         return {
             "name": self.name,
@@ -105,19 +135,15 @@ class Study:
             "n_fidelities": n_fidelities,
             "n_costs": n_costs,
             "budget": budget,
-            "precision": precision,
-            "continuations": continuations,
+            # "continuations": continuations,
         }
 
 
-    def write_yaml(
-        self,
-        runs: list[Run],
-    ) -> None:
+    def write_yaml(self) -> None:
         """Write the study config to a YAML file."""
         self.study_yaml_path.parent.mkdir(parents=True, exist_ok=True)
         with self.study_yaml_path.open("w") as file:
-            yaml.dump(self.to_dict(runs), file, sort_keys=False)
+            yaml.dump(self.to_dict(), file, sort_keys=False)
 
 
     @classmethod
@@ -150,8 +176,7 @@ class Study:
         costs: int = 0,
         multi_objective_generation: Literal["mix_metric_cost", "metric_only"] = "mix_metric_cost",
         on_error: Literal["warn", "raise", "ignore"] = "warn",
-        continuations: bool = False,
-        precision: int | None = None
+        # continuations: bool = False,
     ) -> list[Run]:
         """Generate a set of problems for the given optimizer and benchmark.
 
@@ -237,7 +262,6 @@ class Study:
                     fidelities=fidelities,
                     costs=costs,
                     multi_objective_generation=multi_objective_generation,
-                    precision=precision
                 )
                 _problems.append(_problem)
             except ValueError as e:
@@ -253,14 +277,14 @@ class Study:
         _runs_per_problem: list[Run] = []
         for _problem, _seed in product(_problems, seeds):
             try:
-                if "single" not in _problem.optimizer.support.fidelities:
-                    continuations = False
+                # if "single" not in _problem.optimizer.support.fidelities:
+                #     continuations = False
                 _runs_per_problem.append(
                     Run(
                         problem=_problem,
                         seed=_seed,
                         expdir=Path(expdir),
-                        continuations=continuations
+                        # continuations=continuations
                     )
                 )
             except ValueError as e:
@@ -369,9 +393,6 @@ class Study:
         self,
         group_by: Literal["opt", "bench", "opt_bench", "seed", "mem"] | None,
         exp_dir: Path,
-        *,
-        overwrite: bool = False,
-        precision: int | None = None,
     ) -> None:
         """Dump the grouped runs into separate files."""
         grouped_runs = self._group_by(group_by)
@@ -386,45 +407,14 @@ class Study:
                         f" --seeds {run.seed}"
                         f" --budget {run.problem.budget.total}"
                     )
-                    if overwrite:
-                        f.write(" --overwrite")
-                    if run.continuations:
-                        f.write(" --continuations")
-                    if precision:
-                        f.write(f" --precision {precision}")
                     f.write("\n")
             logger.info(f"Dumped experiments to {exp_dir / f'dump_{key}.txt'}")
 
 
-    def optimize(  # noqa: C901, PLR0912, PLR0913
+    def optimize(
         self,
-        optimizers: (
-            str
-            | tuple[str, Mapping[str, Any]]
-            | type[Optimizer]
-            | OptWithHps
-            | list[tuple[str, Mapping[str, Any]]]
-            | list[str]
-            | list[OptWithHps]
-            | list[type[Optimizer]]
-        ),
-        benchmarks: (
-            str
-            | BenchmarkDescription
-            | FunctionalBenchmark
-            | list[str]
-            | list[BenchmarkDescription]
-            | list[FunctionalBenchmark]
-        ),
         *,
-        seeds: Iterable[int] | int | None = None,
-        num_seeds: int = 1,
-        budget: int = 50,
-        n_objectives: int = 1,
-        n_fidelities: int | None = None,
-        precision: int | None = None,
         exec_type: Literal["sequential", "parallel", "dump"] = "sequential",
-        group_by: Literal["opt", "bench", "opt_bench", "seed", "mem"] | None = None,
         overwrite: bool = False,
         continuations: bool = False,
         on_error: Literal["warn", "raise", "ignore"] = "warn"
@@ -432,22 +422,6 @@ class Study:
         """Execute multiple atomic runs using a list of Optimizers and a list of Benchmarks.
 
         Args:
-            optimizers: The list of optimizers to use.
-
-            benchmarks: The list of benchmarks to use.
-
-            seeds: The seed or seeds to use for the experiment.
-
-            num_seeds: The number of seeds to generate.
-
-            budget: The budget for the experiment.
-
-            n_objectives: The number of objectives to use.
-
-            n_fidelities: The number of fidelities to use.
-
-            precision: The precision of the optimization run(s).
-
             exec_type: The type of execution to use.
             Supported types are "sequential", "parallel" and "dump".
 
@@ -466,65 +440,6 @@ class Study:
                     * "ignore": Ignore the error and continue.
 
         """
-        if not isinstance(optimizers, list):
-            optimizers = [optimizers]
-
-        if not isinstance(benchmarks, list):
-            benchmarks = [benchmarks]
-
-        _optimizers = []
-        match optimizers[0]:
-            case str():
-                for optimizer in optimizers:
-                    assert optimizer in OPTIMIZERS, f"Optimizer must be one of {OPTIMIZERS.keys()}"
-                    _optimizers.append(OPTIMIZERS[optimizer])
-            case tuple():
-                for optimizer, opt_hps in optimizers:
-                    assert optimizer in OPTIMIZERS, f"Optimizer must be one of {OPTIMIZERS.keys()}"
-                    _optimizers.append((OPTIMIZERS[optimizer], opt_hps))
-            case type():
-                _optimizers = optimizers
-            case _:
-                raise TypeError(f"Unknown Optimizer type {type(optimizers[0])}")
-
-        _benchmarks = []
-        match benchmarks[0]:
-            case str():
-                for benchmark in benchmarks:
-                    assert benchmark in BENCHMARKS, f"Benchmark must be one of {BENCHMARKS.keys()}"
-                    if not isinstance(BENCHMARKS[benchmark], FunctionalBenchmark):
-                        _benchmarks.append(BENCHMARKS[benchmark])
-                    else:
-                        _benchmarks.append(BENCHMARKS[benchmark].description)
-            case BenchmarkDescription():
-                for benchmark in benchmarks:
-                    _benchmarks.append(benchmark)
-            case FunctionalBenchmark():
-                for benchmark in benchmarks:
-                    _benchmarks.append(benchmark.description)
-            case _:
-                raise TypeError(f"Unknown Benchmark type {type(benchmarks[0])}")
-
-
-        self.experiments = Study.generate(
-            optimizers=_optimizers,
-            benchmarks=_benchmarks,
-            expdir=self.output_dir,
-            budget=budget,
-            seeds=seeds,
-            num_seeds=num_seeds,
-            fidelities=n_fidelities,
-            objectives=n_objectives,
-            on_error=on_error,
-            precision=precision,
-            continuations=continuations
-        )
-
-        self.write_yaml(self.experiments)
-
-        for run in self.experiments:
-            run.write_yaml()
-
         if (len(self.experiments) > 1):
             match exec_type:
                 case "sequential":
@@ -532,36 +447,150 @@ class Study:
                     for run in self.experiments:
                         # run.create_env(hpoglue=f"-e {Path.cwd()}")
                         run.run(
+                            continuations=continuations,
                             overwrite=overwrite,
                             progress_bar=False,
                         )
                 case "parallel":
                     raise NotImplementedError("Parallel execution not implemented yet!")
-                case "dump":
-                    logger.info("Dumping experiments")
-                    self._dump_runs(
-                        group_by=group_by,
-                        exp_dir=self.output_dir,
-                        overwrite=overwrite,
-                        precision=precision,
-                    )
                 case _:
                     raise ValueError(f"Invalid exceution type: {exec_type}")
         else:
             run = self.experiments[0]
             # run.create_env(hpoglue=f"-e {Path.cwd()}")
             run.run(
+                continuations=continuations,
                 overwrite=overwrite,
                 progress_bar=False,
             )
 
 
-def create_study(
-        output_dir: Path | None = None,
-        name: str | None = None,
-    ) -> Study:
-    """Create a Study object."""
+def create_study(  # noqa: C901, PLR0912
+    *,
+    name: str | None = None,
+    output_dir: Path | None = None,
+    optimizers: (
+        str
+        | tuple[str, Mapping[str, Any]]
+        | type[Optimizer]
+        | OptWithHps
+        | list[tuple[str, Mapping[str, Any]]]
+        | list[str]
+        | list[OptWithHps]
+        | list[type[Optimizer]]
+    ),
+    benchmarks: (
+        str
+        | BenchmarkDescription
+        | FunctionalBenchmark
+        | list[str]
+        | list[BenchmarkDescription]
+        | list[FunctionalBenchmark]
+    ),
+    seeds: Iterable[int] | int | None = None,
+    num_seeds: int = 1,
+    budget: int = 50,
+    n_objectives: int = 1,
+    n_fidelities: int | None = None,
+    group_by: Literal["opt", "bench", "opt_bench", "seed", "mem"] | None = None,
+    # continuations: bool = False,
+) -> Study:
+    """Create a Study object.
+
+    Args:
+        name: The name of the study.
+
+        output_dir: The main output directory where the hposuite studies are saved.
+
+        optimizers: The list of optimizers to use.
+
+        benchmarks: The list of benchmarks to use.
+
+        seeds: The seed or seeds to use for the experiment.
+
+        num_seeds: The number of seeds to generate.
+
+        budget: The budget for the experiment.
+
+        n_objectives: The number of objectives to use.
+
+        n_fidelities: The number of fidelities to use.
+
+        group_by: The grouping to use for the runs dump.
+
+        continuations: Whether to calculate continuations cost.
+
+    Returns:
+        A Study object.
+    """
     if name is None:
         date_hash = hashlib.sha256(datetime.now().strftime("%Y%m%d_%H%M%S").encode()).hexdigest()
-        name = f"hposuite_study_{date_hash[:8]}"
-    return Study(name, output_dir)
+        name = f"hposuite_study_{date_hash[:8]}"    # TODO: Use study config to make a unique hash
+
+    if output_dir is None:
+        output_dir = Path.cwd().absolute().parent / "hposuite-output" / name
+
+    if not isinstance(optimizers, list):
+            optimizers = [optimizers]
+
+    if not isinstance(benchmarks, list):
+        benchmarks = [benchmarks]
+
+    _optimizers = []
+    match optimizers[0]:
+        case str():
+            for optimizer in optimizers:
+                assert optimizer in OPTIMIZERS, f"Optimizer must be one of {OPTIMIZERS.keys()}"
+                _optimizers.append(OPTIMIZERS[optimizer])
+        case tuple():
+            for optimizer, opt_hps in optimizers:
+                assert optimizer in OPTIMIZERS, f"Optimizer must be one of {OPTIMIZERS.keys()}"
+                _optimizers.append((OPTIMIZERS[optimizer], opt_hps))
+        case type():
+            _optimizers = optimizers
+        case _:
+            raise TypeError(f"Unknown Optimizer type {type(optimizers[0])}")
+
+    _benchmarks = []
+    match benchmarks[0]:
+        case str():
+            for benchmark in benchmarks:
+                assert benchmark in BENCHMARKS, f"Benchmark must be one of {BENCHMARKS.keys()}"
+                if not isinstance(BENCHMARKS[benchmark], FunctionalBenchmark):
+                    _benchmarks.append(BENCHMARKS[benchmark])
+                else:
+                    _benchmarks.append(BENCHMARKS[benchmark].description)
+        case BenchmarkDescription():
+            for benchmark in benchmarks:
+                _benchmarks.append(benchmark)
+        case FunctionalBenchmark():
+            for benchmark in benchmarks:
+                _benchmarks.append(benchmark.description)
+        case _:
+            raise TypeError(f"Unknown Benchmark type {type(benchmarks[0])}")
+
+
+    experiments = Study.generate(
+        optimizers=_optimizers,
+        benchmarks=_benchmarks,
+        expdir=output_dir,
+        budget=budget,
+        seeds=seeds,
+        num_seeds=num_seeds,
+        fidelities=n_fidelities,
+        objectives=n_objectives,
+        # continuations=continuations
+    )
+
+    return Study(
+        name=name,
+        output_dir=output_dir,
+        experiments=experiments,
+        seeds=seeds,
+        num_seeds=num_seeds,
+        budget=budget,
+        n_objectives=n_objectives,
+        n_fidelities=n_fidelities,
+        group_by=group_by,
+        # continuations=continuations,
+    )

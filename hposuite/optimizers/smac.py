@@ -37,7 +37,6 @@ class SMAC_Optimizer(Optimizer):
         problem: Problem,
         seed: int,
         working_directory: Path,
-        config_space: list[Config] | ConfigurationSpace,
         optimizer: AbstractFacade,
         fidelity: Fidelity | None,
     ):
@@ -54,7 +53,7 @@ class SMAC_Optimizer(Optimizer):
         self.problem = problem
         self.working_directory = working_directory
         self.optimizer = optimizer
-        self.config_space = config_space
+        self.config_space = problem.config_space
         self._trial_lookup: dict[Hashable, TrialInfo] = {}
         self._fidelity = fidelity
         self._seed = seed
@@ -65,7 +64,7 @@ class SMAC_Optimizer(Optimizer):
         assert smac_info.instance is None, "We don't do instance benchmarks!"
 
         config = smac_info.config
-        raw_config = config.get_dictionary()
+        raw_config = dict(config)
         config_id = str(self.optimizer.intensifier.runhistory.config_ids[config])
 
         fidelity = smac_info.budget
@@ -137,7 +136,6 @@ class SMAC_BO(SMAC_Optimizer):
         problem: Problem,
         seed: int,
         working_directory: Path,
-        config_space: ConfigurationSpace | list[Config],
         xi: float = 0.0,
     ):
         """Create a SMAC BO Optimizer instance for a given problem statement.
@@ -146,9 +144,9 @@ class SMAC_BO(SMAC_Optimizer):
             problem: Problem statement.
             seed: Random seed for the optimizer.
             working_directory: Working directory to store SMAC run.
-            config_space: Configuration space to optimize over.
             xi: Exploration-exploitation trade-off parameter. Defaults to 0.0.
         """
+        config_space = problem.config_space
         match config_space:
             case ConfigurationSpace():
                 pass
@@ -198,7 +196,6 @@ class SMAC_BO(SMAC_Optimizer):
         super().__init__(
             problem=problem,
             seed=seed,
-            config_space=config_space,
             working_directory=working_directory,
             fidelity=None,
             optimizer=BlackBoxFacade(
@@ -230,7 +227,6 @@ class SMAC_Hyperband(SMAC_Optimizer):
         problem: Problem,
         seed: int,
         working_directory: Path,
-        config_space: ConfigurationSpace | list[Config],
         eta: int = 3,
     ):
         """Create a SMAC Hyperband Optimizer instance for a given problem statement.
@@ -239,9 +235,9 @@ class SMAC_Hyperband(SMAC_Optimizer):
             problem: Problem statement.
             seed: Random seed for the optimizer.
             working_directory: Working directory to store SMAC run.
-            config_space: Configuration space to optimize over.
             eta: Hyperband eta parameter. Defaults to 3.
         """
+        config_space = problem.config_space
         match config_space:
             case ConfigurationSpace():
                 pass
@@ -296,7 +292,6 @@ class SMAC_Hyperband(SMAC_Optimizer):
         super().__init__(
             problem=problem,
             seed=seed,
-            config_space=config_space,
             working_directory=working_directory,
             fidelity=_fid,
             optimizer=HyperbandFacade(

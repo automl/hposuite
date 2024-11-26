@@ -57,11 +57,11 @@ class NevergradOptimizer(Optimizer):
         problem: Problem,
         seed: int,
         working_directory: Path,
-        config_space: list[Config] | CS.ConfigurationSpace,
         **kwargs: Any,
     ) -> None:
         """Create a Nevergrad Optimizer instance for a given Problem."""
         self._parametrization: dict[str, parameter.Parameter]
+        config_space = problem.config_space
         match config_space:
             case CS.ConfigurationSpace():
                 self._parametrization = _configspace_to_nevergrad_space(config_space)

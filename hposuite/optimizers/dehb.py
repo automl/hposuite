@@ -43,7 +43,6 @@ class DEHB_Optimizer(Optimizer):
         problem: Problem,
         seed: int,
         working_directory: Path,
-        config_space: list[Config] | ConfigurationSpace,
         eta: int = 3,
         verbose: bool = False,
         # TODO(eddiebergman): Add more DEHB parameters
@@ -51,6 +50,7 @@ class DEHB_Optimizer(Optimizer):
         """Create a DEHB Optimizer instance for a given problem statement."""
         from dehb import DEHB
 
+        config_space = problem.config_space
         match config_space:
             case ConfigurationSpace():
                 pass

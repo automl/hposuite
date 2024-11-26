@@ -46,17 +46,16 @@ class SkoptOptimizer(Optimizer):
         problem: Problem,
         seed: int,
         working_directory: Path,
-        config_space: list[Config] | CS.ConfigurationSpace,
         **kwargs: Any,
     ) -> None:
         """Create an Skopt Optimizer instance for a given problem statement."""
         import skopt
 
-        self.config_space = config_space
+        self.config_space = problem.config_space
         self._space: list[Space]
-        match config_space:
+        match self.config_space:
             case CS.ConfigurationSpace():
-                self._space = _configspace_to_skopt_space(config_space)
+                self._space = _configspace_to_skopt_space(self.config_space)
             case list():
                 raise NotImplementedError("# TODO: Tabular not yet implemented for Scikit_Optimize!")
             case _:

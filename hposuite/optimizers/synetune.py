@@ -114,7 +114,6 @@ class SyneTuneBO(SyneTuneOptimizer):
         problem: Problem,
         seed: int,
         working_directory: Path,
-        config_space: CS.ConfigurationSpace | list[Config],
         **kwargs: Any,
     ):
         """Create a SyneTune Bayesian Optimization instance for a given problem statement.
@@ -123,7 +122,6 @@ class SyneTuneBO(SyneTuneOptimizer):
             problem: The problem statement.
             seed: The random seed.
             working_directory: The working directory to store the results.
-            config_space: The configuration space.
             **kwargs: Additional arguments for the BayesianOptimization.
         """
         from syne_tune.optimizer.baselines import BayesianOptimization
@@ -163,6 +161,8 @@ class SyneTuneBO(SyneTuneOptimizer):
                 raise TypeError("Objective must be a string or a list of strings")
 
         synetune_cs: dict[str, Domain]
+
+        config_space = problem.config_space
         match config_space:
             case CS.ConfigurationSpace():
                 synetune_cs = configspace_to_synetune_configspace(config_space)
@@ -207,7 +207,6 @@ class SyneTuneBOHB(SyneTuneOptimizer):
         problem: Problem,
         seed: int,
         working_directory: Path,
-        config_space: CS.ConfigurationSpace | list[Config],
         **kwargs: Any,
     ):
         """Create a SyneTune BOHB instance for a given problem statement.
@@ -216,7 +215,6 @@ class SyneTuneBOHB(SyneTuneOptimizer):
             problem: The problem statement.
             seed: The random seed.
             working_directory: The working directory to store the results.
-            config_space: The configuration space.
             **kwargs: Additional arguments for the BayesianOptimization.
         """
         from syne_tune.optimizer.baselines import BOHB
@@ -257,6 +255,8 @@ class SyneTuneBOHB(SyneTuneOptimizer):
                 raise TypeError("Objective must be a string or a list of strings")
 
         synetune_cs: dict[str, Domain]
+
+        config_space = problem.config_space
         match config_space:
             case CS.ConfigurationSpace():
                 synetune_cs = configspace_to_synetune_configspace(config_space)

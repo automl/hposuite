@@ -43,7 +43,6 @@ class OptunaOptimizer(Optimizer):
         problem: Problem,
         seed: int,
         working_directory: Path,
-        config_space: list[Config] | CS.ConfigurationSpace,
         **kwargs: Any,
     ) -> None:
         """Create an Optuna Optimizer instance for a given problem statement."""
@@ -51,6 +50,7 @@ class OptunaOptimizer(Optimizer):
         from optuna.samplers import NSGAIISampler, TPESampler
 
         self._distributions: dict[str, BaseDistribution]
+        config_space = problem.config_space
         match config_space:
             case CS.ConfigurationSpace():
                 self._distributions = _configspace_to_optuna_distributions(config_space)

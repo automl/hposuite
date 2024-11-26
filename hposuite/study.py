@@ -115,31 +115,11 @@ class Study:
                 benchmarks.append(
                     {
                         "name": run.benchmark.name,
-                        "objectives": (
-                            list(run.problem.objectives.keys())
-                            if isinstance(run.problem.objectives, Mapping)
-                            else run.problem.objectives[0]
-                        ),
-                        "fidelities": (
-                            None
-                            if run.problem.fidelities is None
-                            else (
-                                list(run.problem.fidelities.keys())
-                                if isinstance(run.problem.fidelities, Mapping)
-                                else run.problem.fidelities[0]
-                            )
-                        ),
+                        "objectives": run.problem.get_objectives(),
+                        "fidelities": run.problem.get_fidelities(),
                     }
                 )
-            n_costs = (
-                None
-                if run.problem.costs is None
-                else (
-                    list(run.problem.costs.keys()) 
-                    if isinstance(run.problem.costs, Mapping) 
-                    else run.problem.costs[0]
-                )
-            )
+            costs = run.problem.get_costs()
             # continuations = run_dict["continuations"]
 
         return {
@@ -148,7 +128,7 @@ class Study:
             "benchmarks": benchmarks,
             "seeds": self.seeds,
             "num_seeds": self.num_seeds,
-            "n_costs": n_costs,
+            "costs": costs,
             "budget": self.budget,
             # "continuations": continuations,
         }

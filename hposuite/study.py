@@ -72,20 +72,38 @@ class Study:
 
         self.optimizers = []
         self.benchmarks = []
-        seeds = []
+        seeds = set()
 
         for run in self.experiments:
-            self.optimizers.append(run.optimizer)
-            self.benchmarks.append(run.benchmark)
-            seeds.append(run.seed)
+            opt_keys = [opt[0].name for opt in self.optimizers if self.optimizers]
+            if not opt_keys or run.optimizer.name not in opt_keys:
+                self.optimizers.append(
+                    (
+                        run.optimizer,
+                        run.optimizer_hyperparameters
+                    )
+                )
+            bench_keys = [bench[0].name for bench in self.benchmarks if self.benchmarks]
+            if not bench_keys or run.benchmark.name not in bench_keys:
+                self.benchmarks.append(
+                    (
+                        run.benchmark,
+                        {
+                            "objectives": run.problem.get_objectives(),
+                            "fidelities": run.problem.get_fidelities()
+                        }
+                    )
+                )
+            seeds.add(run.seed)
 
         if self.seeds is None:
-            self.seeds = seeds
+            self.seeds = list(seeds)
+
+        # self.optimizers = list(self.optimizers)
+        # self.benchmarks = list(self.benchmarks)
+
 
         self.write_yaml()
-
-        for run in self.experiments:
-            run.write_yaml()
 
         if len(self.experiments) > 1:
             logger.info("Dumping experiments")
@@ -95,12 +113,34 @@ class Study:
             )
 
 
+    def _update_study(
+        self,
+        *,
+        new_seeds: Iterable[int],
+    ):
+        """Update the study with new seeds."""
+        more_experiments = Study.generate(
+            optimizers=self.optimizers,
+            benchmarks=self.benchmarks,
+            expdir=self.output_dir,
+            budget=self.budget,
+            seeds=new_seeds,
+            # continuations=self.continuations,
+        )
+
+        self.seeds.extend(new_seeds)
+        self.num_seeds += len(new_seeds)
+        self.experiments.extend(more_experiments)
+        self.write_yaml()
+
+
 
     def to_dict(self) -> dict[str, Any]:
         """Convert the study to a dictionary."""
         optimizers = []
         benchmarks = []
         for run in self.experiments:
+            run.write_yaml()
             # run_dict = run.to_dict()
             opt_keys = [opt["name"] for opt in optimizers if optimizers]
             if not opt_keys or run.optimizer.name not in opt_keys:
@@ -145,10 +185,13 @@ class Study:
     def generate_seeds(
         cls,
         num_seeds: int,
+        offset: int = 0, # To offset number of seeds
     ):
         """Generate a set of seeds using a Global Seed."""
         cls._rng = np.random.default_rng(GLOBAL_SEED)
-        return cls._rng.integers(0, 2 ** 30 - 1, size=num_seeds)
+        _num_seeds = num_seeds + offset
+        _seeds = cls._rng.integers(0, 2 ** 32, size=_num_seeds)
+        return _seeds[offset:].tolist()
 
 
     @classmethod
@@ -203,11 +246,14 @@ class Study:
                 * "ignore": Ignore the error and continue.
             continuations: Whether to use continuations for the run.
             precision: The precision to use for the HP configs.
+
+        Returns:
+            A list of Run objects.
         """
         # Generate seeds
         match seeds:
             case None:
-                seeds = cls.generate_seeds(num_seeds).tolist()
+                seeds = cls.generate_seeds(num_seeds)
             case Iterable():
                 pass
             case int():
@@ -427,6 +473,8 @@ class Study:
         self,
         *,
         exec_type: Literal["sequential", "parallel"] = "sequential",
+        add_seeds: Iterable[int] | int | None = None,
+        add_num_seeds: int | None = None,
         overwrite: bool = False,
         continuations: bool = False
     ) -> None:
@@ -451,6 +499,45 @@ class Study:
                     * "ignore": Ignore the error and continue.
 
         """
+        if add_seeds is not None and add_num_seeds is not None:
+            raise ValueError("Cannot provide both `add_seeds` and `add_num_seeds`!")
+        if isinstance(add_seeds, int):
+            add_seeds = [add_seeds]
+
+        _seeds: list[int] = []
+
+        match add_seeds, add_num_seeds:
+            case None, None:
+                pass
+            case Iterable(), None:
+                for seed in add_seeds:
+                    if seed not in self.seeds:
+                        _seeds.append(seed)
+            case None, int():
+                _num_seeds = add_num_seeds
+                existing_seeds_set = set(self.seeds)
+                existing_len = 0
+                while _num_seeds > 0:
+                    new_seeds = [
+                        s for s in Study.generate_seeds(_num_seeds, offset=existing_len)
+                        if s not in existing_seeds_set
+                    ]
+                    _seeds.extend(new_seeds)
+                    _num_seeds -= len(_seeds)
+                    existing_len += _num_seeds + len(new_seeds)
+            case _:
+                raise ValueError(
+                    "Invalid combination of types for `add_seeds` and `add_num_seeds`"
+                    "Expected (Iterable[int] | int | None, int | None),"
+                    f"got ({add_seeds}, {add_num_seeds})"
+                )
+
+
+        if _seeds:
+            self._update_study(new_seeds=_seeds)
+
+        logger.info(f"Running {len(self.experiments)} experiments")
+
         if (len(self.experiments) > 1):
             match exec_type:
                 case "sequential":
@@ -560,7 +647,7 @@ def create_study(  # noqa: C901, PLR0912
     if not isinstance(benchmarks, list):
         benchmarks = [benchmarks]
 
-    _optimizers = []
+    _optimizers: list[OptWithHps] = []
     match optimizers[0]:
         case str():
             for optimizer in optimizers:
@@ -575,7 +662,7 @@ def create_study(  # noqa: C901, PLR0912
         case _:
             raise TypeError(f"Unknown Optimizer type {type(optimizers[0])}")
 
-    _benchmarks = []
+    _benchmarks: list[BenchWith_Objs_Fids] = []
     match benchmarks[0]:
         case str():
             for benchmark in benchmarks:

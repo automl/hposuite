@@ -37,7 +37,7 @@ def glue_study(  # noqa: D103, PLR0913
     study.optimize(
         continuations=continuations,
         overwrite=overwrite,
-        exec_type=exec_type
+        exec_type=exec_type,
     )
 
 def _get_from_yaml_config(config_path: Path) -> dict:

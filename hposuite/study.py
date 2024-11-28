@@ -136,6 +136,7 @@ class Study:
         """Convert the study to a dictionary."""
         optimizers = []
         benchmarks = []
+        continuations = 0
         for run in self.experiments:
             run.write_yaml()
             opt_keys = [opt["name"] for opt in optimizers if optimizers]
@@ -156,7 +157,9 @@ class Study:
                     }
                 )
             costs = run.problem.get_costs()
-            continuations = run.problem.continuations
+            continuations += run.problem.continuations
+
+        continuations = continuations > 0
 
         return {
             "name": self.name,
@@ -213,7 +216,7 @@ class Study:
         costs: int = 0,
         multi_objective_generation: Literal["mix_metric_cost", "metric_only"] = "mix_metric_cost",
         on_error: Literal["warn", "raise", "ignore"] = "warn",
-        # continuations: bool = False,
+        continuations: bool = True,
     ) -> list[Run]:
         """Generate a set of problems for the given optimizer and benchmark.
 
@@ -225,21 +228,29 @@ class Study:
                 Can provide a single optimizer or a list of optimizers.
                 If you wish to provide hyperparameters for the optimizer, provide a tuple with the
                 optimizer.
+
             benchmarks: The benchmark to generate problems for.
                 Can provide a single benchmark or a list of benchmarks.
+
             expdir: Which directory to store experiment results into.
+
             budget: The budget to use for the problems. Budget defaults to a n_trials budget
                 where when multifidelty is enabled, fractional budget can be used and 1 is
                 equivalent a full fidelity trial.
-            seeds: The seed or seeds to use for the problems.
-            num_seeds: The number of seeds to generate. Only used if seeds is None.
-            costs: The number of costs to generate problems for.
-            multi_objective_generation: The method to generate multiple objectives.
-            on_error: The method to handle errors.
 
+            seeds: The seed or seeds to use for the problems.
+
+            num_seeds: The number of seeds to generate. Only used if seeds is None.
+
+            costs: The number of costs to generate problems for.
+
+            multi_objective_generation: The method to generate multiple objectives.
+
+            on_error: The method to handle errors.
                 * "warn": Log a warning and continue.
                 * "raise": Raise an error.
                 * "ignore": Ignore the error and continue.
+
             continuations: Whether to use continuations for the run.
 
         Returns:
@@ -315,6 +326,7 @@ class Study:
                     fidelities=fidelities,
                     costs=costs,
                     multi_objective_generation=multi_objective_generation,
+                    continuations=continuations,
                 )
                 _problems.append(_problem)
             except ValueError as e:
@@ -330,14 +342,11 @@ class Study:
         _runs_per_problem: list[Run] = []
         for _problem, _seed in product(_problems, seeds):
             try:
-                # if "single" not in _problem.optimizer.support.fidelities:
-                #     continuations = False
                 _runs_per_problem.append(
                     Run(
                         problem=_problem,
                         seed=_seed,
                         expdir=Path(expdir),
-                        # continuations=continuations
                     )
                 )
             except ValueError as e:

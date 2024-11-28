@@ -469,7 +469,7 @@ class Study:
             logger.info(f"Dumped experiments to {exp_dir / f'dump_{key}.txt'}")
 
 
-    def optimize(
+    def optimize(  # noqa: C901, PLR0912
         self,
         *,
         exec_type: Literal["sequential", "parallel"] = "sequential",
@@ -483,6 +483,12 @@ class Study:
         Args:
             exec_type: The type of execution to use.
             Supported types are "sequential", "parallel" and "dump".
+
+            add_seeds: The seed or seeds to add to the study.
+
+            add_num_seeds: The number of seeds to generate and add to the study.
+
+            NOTE: Only one of `add_seeds` and `add_num_seeds` can be provided.
 
             group_by: The grouping to use for the runs dump.
             Supported types are "opt", "bench", "opt_bench", "seed", and "mem"
@@ -510,26 +516,26 @@ class Study:
             case None, None:
                 pass
             case Iterable(), None:
+                seed = list(set(add_seeds))
                 for seed in add_seeds:
-                    if seed not in self.seeds:
+                    if seed not in self.seeds+_seeds:
                         _seeds.append(seed)
             case None, int():
                 _num_seeds = add_num_seeds
-                existing_seeds_set = set(self.seeds)
-                existing_len = 0
+                offset = 0
                 while _num_seeds > 0:
                     new_seeds = [
-                        s for s in Study.generate_seeds(_num_seeds, offset=existing_len)
-                        if s not in existing_seeds_set
+                        s for s in Study.generate_seeds(_num_seeds, offset=offset)
+                        if s not in self.seeds
                     ]
                     _seeds.extend(new_seeds)
                     _num_seeds -= len(_seeds)
-                    existing_len += _num_seeds + len(new_seeds)
+                    offset += _num_seeds + len(new_seeds)
             case _:
                 raise ValueError(
                     "Invalid combination of types for `add_seeds` and `add_num_seeds`"
                     "Expected (Iterable[int] | int | None, int | None),"
-                    f"got ({add_seeds}, {add_num_seeds})"
+                    f"got ({type(add_seeds)}, {type(add_num_seeds)})"
                 )
 
 
@@ -563,7 +569,7 @@ class Study:
             )
 
 
-def create_study(  # noqa: C901, PLR0912
+def create_study(  # noqa: C901, PLR0912, PLR0915
     *,
     name: str | None = None,
     output_dir: str| Path | None = None,
@@ -694,6 +700,8 @@ def create_study(  # noqa: C901, PLR0912
         case _:
             raise TypeError(f"Unknown Benchmark type {type(benchmarks[0])}")
 
+    if isinstance(seeds, Iterable):
+        seeds = list(set(seeds))
 
     experiments = Study.generate(
         optimizers=_optimizers,

@@ -65,7 +65,7 @@ class Study:
 
     group_by: Literal["opt", "bench", "opt_bench", "seed", "mem"] | None = None
 
-    # continuations: bool = False
+    continuations: bool = True
 
     def __post_init__(self):
         self.study_yaml_path = self.output_dir / "study_config.yaml"
@@ -98,9 +98,6 @@ class Study:
 
         if self.seeds is None:
             self.seeds = list(seeds)
-
-        # self.optimizers = list(self.optimizers)
-        # self.benchmarks = list(self.benchmarks)
 
 
         self.write_yaml()
@@ -141,7 +138,6 @@ class Study:
         benchmarks = []
         for run in self.experiments:
             run.write_yaml()
-            # run_dict = run.to_dict()
             opt_keys = [opt["name"] for opt in optimizers if optimizers]
             if not opt_keys or run.optimizer.name not in opt_keys:
                 optimizers.append(
@@ -160,7 +156,7 @@ class Study:
                     }
                 )
             costs = run.problem.get_costs()
-            # continuations = run_dict["continuations"]
+            continuations = run.problem.continuations
 
         return {
             "name": self.name,
@@ -170,7 +166,7 @@ class Study:
             "num_seeds": self.num_seeds,
             "costs": costs,
             "budget": self.budget,
-            # "continuations": continuations,
+            "continuations": continuations,
         }
 
 
@@ -245,7 +241,6 @@ class Study:
                 * "raise": Raise an error.
                 * "ignore": Ignore the error and continue.
             continuations: Whether to use continuations for the run.
-            precision: The precision to use for the HP configs.
 
         Returns:
             A list of Run objects.
@@ -476,7 +471,7 @@ class Study:
         add_seeds: Iterable[int] | int | None = None,
         add_num_seeds: int | None = None,
         overwrite: bool = False,
-        continuations: bool = False
+        continuations: bool = True,
     ) -> None:
         """Execute multiple atomic runs using a list of Optimizers and a list of Benchmarks.
 
@@ -497,7 +492,7 @@ class Study:
             overwrite: Whether to overwrite existing results.
 
             continuations: Whether to calculate continuations cost.
-            Note: Only works for Multi-fidelity Optimizers.
+                Note: Only works for Multi-fidelity Optimizers.
 
             on_error: The method to handle errors.
                     * "warn": Log a warning and continue.
@@ -602,7 +597,7 @@ def create_study(  # noqa: C901, PLR0912, PLR0915
     budget: int = 50,
     group_by: Literal["opt", "bench", "opt_bench", "seed", "mem"] | None = None,
     on_error: Literal["warn", "raise", "ignore"] = "warn",
-    # continuations: bool = False,
+    continuations: bool = True,
 ) -> Study:
     """Create a Study object.
 
@@ -711,7 +706,7 @@ def create_study(  # noqa: C901, PLR0912, PLR0915
         seeds=seeds,
         num_seeds=num_seeds,
         on_error=on_error,
-        # continuations=continuations
+        continuations=continuations
     )
 
     return Study(
@@ -722,5 +717,5 @@ def create_study(  # noqa: C901, PLR0912, PLR0915
         num_seeds=num_seeds,
         budget=budget,
         group_by=group_by,
-        # continuations=continuations,
+        continuations=continuations,
     )

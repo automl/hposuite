@@ -13,13 +13,13 @@ from typing import TYPE_CHECKING, Any, Literal, TypeAlias
 import numpy as np
 import yaml
 from hpoglue import BenchmarkDescription, FunctionalBenchmark, Optimizer, Problem
-from hpoglue.constants import DEFAULT_RELATIVE_EXP_DIR
 from hpoglue.env import (
     GLUE_PYPI,
     get_current_installed_hpoglue_version,
 )
 
 from hposuite.benchmarks import BENCHMARKS
+from hposuite.constants import DEFAULT_STUDY_DIR
 from hposuite.optimizers import OPTIMIZERS
 from hposuite.run import Run
 
@@ -68,7 +68,6 @@ class Study:
     continuations: bool = True
 
     def __post_init__(self):
-        self.study_yaml_path = self.output_dir / "study_config.yaml"
 
         self.optimizers = []
         self.benchmarks = []
@@ -98,9 +97,22 @@ class Study:
 
         if self.seeds is None:
             self.seeds = list(seeds)
+        self.num_seeds = len(self.seeds)
 
+        name_parts: list[str] = []
+        name_parts.append("_".join([f"{opt[0].name}{opt[-1]}" for opt in self.optimizers]))
+        name_parts.append("_".join([f"{bench[0].name}{bench[-1]}" for bench in self.benchmarks]))
+        name_parts.append(f"seeds={self.seeds}")
+        name_parts.append(f"budget={self.budget}")
+        name_parts.append(f"{datetime.now().strftime('%Y%m%d_%H%M%S')}")
 
+        if self.name is None:
+            self.name = hashlib.sha256((".".join(name_parts)).encode()).hexdigest()
+
+        self.output_dir = self.output_dir / self.name
+        self.study_yaml_path = self.output_dir / "study_config.yaml"
         self.write_yaml()
+
 
         if len(self.experiments) > 1:
             logger.info("Dumping experiments")
@@ -138,6 +150,7 @@ class Study:
         benchmarks = []
         continuations = 0
         for run in self.experiments:
+            run._set_paths(self.output_dir)
             run.write_yaml()
             opt_keys = [opt["name"] for opt in optimizers if optimizers]
             if not opt_keys or run.optimizer.name not in opt_keys:
@@ -163,6 +176,7 @@ class Study:
 
         return {
             "name": self.name,
+            "output_dir": str(self.output_dir),
             "optimizers": optimizers,
             "benchmarks": benchmarks,
             "seeds": self.seeds,
@@ -209,7 +223,6 @@ class Study:
             | list[BenchWith_Objs_Fids | BenchmarkDescription]
         ),
         *,
-        expdir: Path | str = DEFAULT_RELATIVE_EXP_DIR,
         budget: BudgetType | int,
         seeds: Iterable[int] | None = None,
         num_seeds: int = 1,
@@ -346,7 +359,6 @@ class Study:
                     Run(
                         problem=_problem,
                         seed=_seed,
-                        expdir=Path(expdir),
                     )
                 )
             except ValueError as e:
@@ -463,7 +475,6 @@ class Study:
                 for run in runs:
                     f.write(
                         f"python -m hpoglue"
-                        # f"--exp_name {self.name}"
                         f" --optimizers {run.optimizer.name}"
                         f" --benchmarks {run.benchmark.name}"
                         f" --seeds {run.seed}"
@@ -634,22 +645,15 @@ def create_study(  # noqa: C901, PLR0912, PLR0915
     Returns:
         A Study object.
     """
-    if name is None:
-        date_hash = hashlib.sha256(datetime.now().strftime("%Y%m%d_%H%M%S").encode()).hexdigest()
-        name = f"hposuite_study_{date_hash[:8]}"    # TODO: Use study config to make a unique hash
-
     match output_dir:
         case None:
-            output_dir = Path.cwd().absolute().parent / "hposuite-output"
+            output_dir = DEFAULT_STUDY_DIR
         case str():
             output_dir = Path(output_dir)
         case Path():
             pass
         case _:
             raise TypeError(f"Invalid type for output_dir: {type(output_dir)}")
-
-
-    output_dir = output_dir / name
 
     if not isinstance(optimizers, list):
             optimizers = [optimizers]
@@ -710,7 +714,6 @@ def create_study(  # noqa: C901, PLR0912, PLR0915
     experiments = Study.generate(
         optimizers=_optimizers,
         benchmarks=_benchmarks,
-        expdir=output_dir,
         budget=budget,
         seeds=seeds,
         num_seeds=num_seeds,

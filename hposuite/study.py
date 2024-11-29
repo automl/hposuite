@@ -655,9 +655,11 @@ def create_study(  # noqa: C901, PLR0912, PLR0915
         case _:
             raise TypeError(f"Invalid type for output_dir: {type(output_dir)}")
 
+    assert optimizers, "At least one optimizer must be provided!"
     if not isinstance(optimizers, list):
-            optimizers = [optimizers]
+        optimizers = [optimizers]
 
+    assert benchmarks, "At least one benchmark must be provided!"
     if not isinstance(benchmarks, list):
         benchmarks = [benchmarks]
 

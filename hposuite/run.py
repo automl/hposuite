@@ -16,7 +16,6 @@ import yaml
 from hpoglue.benchmark import BenchmarkDescription
 from hpoglue.budget import CostBudget, TrialBudget
 from hpoglue.config import Config
-from hpoglue.constants import DEFAULT_RELATIVE_EXP_DIR
 from hpoglue.dataframe_utils import reduce_dtypes
 from hpoglue.env import (
     GLUE_PYPI,
@@ -65,8 +64,8 @@ class Run:
     optimizer: type[Optimizer] = field(init=False)
     """The optimizer to use for the Problem"""
 
-    expdir: Path = field(default=DEFAULT_RELATIVE_EXP_DIR)
-    """Default directory to use for experiments."""
+    expdir: Path = field(init=False)
+    """Default main directory to use for the run's Study."""
 
     optimizer_hyperparameters: Mapping[str, Any] = field(default_factory=dict, init=False)
     """The hyperparameters to use for the optimizer"""
@@ -119,6 +118,8 @@ class Run:
         self.benchmark = self.problem.benchmark
         self.optimizer = self.problem.optimizer
         self.optimizer_hyperparameters = self.problem.optimizer_hyperparameters
+        self.mem_req_mb = self.problem.mem_req_mb
+
         name_parts: list[str] = [
             self.problem.name,
             f"seed={self.seed}",
@@ -138,6 +139,9 @@ class Run:
             case _:
                 raise ValueError("Invalid combination of benchmark and optimizer environments")
 
+
+    def _set_paths(self, expdir: Path) -> None:
+        self.expdir = expdir
         self.working_dir = self.expdir.absolute().resolve() / self.name
         self.complete_flag = self.working_dir / "complete.flag"
         self.error_file = self.working_dir / "error.txt"
@@ -150,7 +154,7 @@ class Run:
         self.post_install_steps = self.working_dir / "venv_post_install.sh"
         self.run_yaml_path = self.working_dir / "run_config.yaml"
         self.env_path = self.expdir / "envs" / self.env.identifier
-        self.mem_req_mb = self.problem.mem_req_mb
+
 
     @property
     def venv(self) -> Venv:
@@ -160,7 +164,7 @@ class Run:
     def conda(self) -> Venv:
         raise NotImplementedError("Conda not implemented yet.")
 
-    def run(
+    def run(  # noqa: C901, PLR0912
         self,
         *,
         continuations: bool = True,
@@ -383,7 +387,7 @@ class Run:
 
         return Run.State.PENDING
 
-    def set_state(
+    def set_state(  # noqa: C901, PLR0912
         self,
         state: Run.State,
         *,

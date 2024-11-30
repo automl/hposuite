@@ -167,9 +167,9 @@ class Study:
                         "name": run.benchmark.name,
                         "objectives": run.problem.get_objectives(),
                         "fidelities": run.problem.get_fidelities(),
+                        "costs": run.problem.get_costs(),
                     }
                 )
-            costs = run.problem.get_costs()
             continuations += run.problem.continuations
 
         continuations = continuations > 0
@@ -181,7 +181,6 @@ class Study:
             "benchmarks": benchmarks,
             "seeds": self.seeds,
             "num_seeds": self.num_seeds,
-            "costs": costs,
             "budget": self.budget,
             "continuations": continuations,
         }
@@ -521,7 +520,11 @@ class Study:
 
         """
         if add_seeds is not None and add_num_seeds is not None:
-            raise ValueError("Cannot provide both `add_seeds` and `add_num_seeds`!")
+            logger.warning(
+                "Cannot provide both `add_seeds` and `add_num_seeds`!"
+                "Using only `add_seeds` and ignoring `add_num_seeds`"
+            )
+            add_num_seeds = None
         if isinstance(add_seeds, int):
             add_seeds = [add_seeds]
 

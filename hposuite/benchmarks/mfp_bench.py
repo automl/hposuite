@@ -387,7 +387,7 @@ def pd1(datadir: Path | None = None) -> Iterator[BenchmarkDescription]:
     )
     yield BenchmarkDescription(
         name="pd1-cifar100-wide_resnet-2048",
-        config_space=mfpbench.get("cifar100_wideresnet_2048").space,
+        config_space=mfpbench.get("cifar100_wideresnet_2048", datadir=datadir).space,
         load=partial(
             _get_surrogate_benchmark, benchmark_name="cifar100_wideresnet_2048", datadir=datadir
         ),
@@ -402,7 +402,7 @@ def pd1(datadir: Path | None = None) -> Iterator[BenchmarkDescription]:
     )
     yield BenchmarkDescription(
         name="pd1-imagenet-resnet-512",
-        config_space=mfpbench.get("imagenet_resnet_512").space,
+        config_space=mfpbench.get("imagenet_resnet_512", datadir=datadir).space,
         load=partial(
             _get_surrogate_benchmark, benchmark_name="imagenet_resnet_512", datadir=datadir
         ),
@@ -417,7 +417,7 @@ def pd1(datadir: Path | None = None) -> Iterator[BenchmarkDescription]:
     )
     yield BenchmarkDescription(
         name="pd1-lm1b-transformer-2048",
-        config_space=mfpbench.get("lm1b_transformer_2048").space,
+        config_space=mfpbench.get("lm1b_transformer_2048", datadir=datadir).space,
         load=partial(
             _get_surrogate_benchmark, benchmark_name="lm1b_transformer_2048", datadir=datadir
         ),
@@ -432,7 +432,7 @@ def pd1(datadir: Path | None = None) -> Iterator[BenchmarkDescription]:
     )
     yield BenchmarkDescription(
         name="pd1-translate_wmt-xformer_translate-64",
-        config_space=mfpbench.get("translatewmt_xformer_64").space,
+        config_space=mfpbench.get("translatewmt_xformer_64", datadir=datadir).space,
         load=partial(
             _get_surrogate_benchmark, benchmark_name="translatewmt_xformer_64", datadir=datadir
         ),
@@ -458,6 +458,8 @@ def mfpbench_benchmarks(datadir: Path | None = None) -> Iterator[BenchmarkDescri
         Iterator[BenchmarkDescription]: An iterator over BenchmarkDescription objects
         for each benchmark.
     """
+    if datadir is None:
+        datadir=Path(__file__).parent.parent.parent.absolute() / "data"
     # yield from lcbench_surrogate(datadir)
     # yield from lcbench_tabular(datadir)
     yield from mfh(datadir)

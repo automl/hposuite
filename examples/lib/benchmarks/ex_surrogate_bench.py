@@ -71,6 +71,8 @@ def ex_surrogate_bench(datadir: Path | None = None) -> BenchmarkDescription:
         Iterator[BenchmarkDescription]: An iterator over BenchmarkDescription objects
         for each PD1 benchmark.
     """
+    if datadir is None:
+        datadir=Path(__file__).parent.parent.parent.parent.resolve() / "data" / "pd1"
     import mfpbench
     env = Env(
         name="py310-mfpbench-1.9-pd1",
@@ -82,7 +84,9 @@ def ex_surrogate_bench(datadir: Path | None = None) -> BenchmarkDescription:
         name="Ex_Surrogate_Bench",
         config_space=mfpbench.get("cifar100_wideresnet_2048", datadir=datadir).space,
         load=partial(
-            _get_surrogate_benchmark, benchmark_name="cifar100_wideresnet_2048", datadir=datadir
+            _get_surrogate_benchmark,
+            benchmark_name="cifar100_wideresnet_2048",
+            datadir=datadir
         ),
         metrics={"valid_error_rate": Measure.metric(bounds=(0, 1), minimize=True)},
         test_metrics=None,

@@ -100,7 +100,7 @@ if __name__ == "__main__":
     )
     parser.add_argument(
         "--continuations", "-c",
-        action="store_true",
+        action="store_false",
         help="Use continuations",
     )
     parser.add_argument(
@@ -138,7 +138,7 @@ if __name__ == "__main__":
             exp_name=config.get("exp_name"),
             output_dir=config.get("output_dir"),
             overwrite=config.get("overwrite", False),
-            continuations=config.get("continuations", False),
+            continuations=config.get("continuations", True),
             exec_type=config.get("exec_type", "sequential"),
             group_by=config.get("group_by"),
             on_error=config.get("on_error", "warn"),

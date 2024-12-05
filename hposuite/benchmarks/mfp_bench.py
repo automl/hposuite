@@ -23,6 +23,7 @@
 
 from __future__ import annotations
 
+import os
 from collections.abc import Iterator
 from functools import partial
 from pathlib import Path
@@ -163,6 +164,8 @@ def lcbench_surrogate(datadir: Path | None = None) -> Iterator[BenchmarkDescript
         Iterator[BenchmarkDescription]: An iterator over BenchmarkDescription objects
         for each task in the LCBench surrogate Benchmark.
     """
+    if datadir is not None and "yahpo" in os.listdir(datadir):
+        datadir = datadir / "yahpo"
     import mfpbench
     env = Env(
         name="py310-mfpbench-1.9-yahpo",
@@ -242,6 +245,8 @@ def lcbench_tabular(datadir: Path | None = None) -> Iterator[BenchmarkDescriptio
         "vehicle",
         "volkert",
     )
+    if datadir is not None and "lcbench-tabular" in os.listdir(datadir):
+        datadir = datadir / "lcbench-tabular"
     import mfpbench
     env = Env(
         name="py310-mfpbench-1.9-lcbench-tabular",
@@ -329,6 +334,8 @@ def jahs(datadir: Path | None = None) -> Iterator[BenchmarkDescription]:
         Iterator[BenchmarkDescription]: An iterator over BenchmarkDescription objects
         for each task in JAHSBench.
     """
+    if datadir is not None and "jahs" in os.listdir(datadir):
+        datadir = datadir / "jahs"
     import mfpbench
     task_ids = ("CIFAR10", "ColorectalHistology", "FashionMNIST")
     env = Env(
@@ -378,6 +385,8 @@ def pd1(datadir: Path | None = None) -> Iterator[BenchmarkDescription]:
         Iterator[BenchmarkDescription]: An iterator over BenchmarkDescription objects
         for each PD1 benchmark.
     """
+    if datadir is not None and "pd1" in os.listdir(datadir):
+        datadir = datadir / "pd1"
     import mfpbench
     env = Env(
         name="py310-mfpbench-1.9-pd1",

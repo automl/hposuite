@@ -260,8 +260,8 @@ class Run:
                     raise NotImplementedError("Continue not yet implemented!") from e
                 case _:
                     raise RuntimeError(f"Invalid value for `on_error`: {on_error}") from e
-        logger.info(f"COMPLETED running {self.name}")
-        logger.info(f"Saving {self.name} at {self.working_dir}")
+        # logger.info(f"COMPLETED running {self.name}")
+        # logger.info(f"Saving {self.name} at {self.working_dir}")
         logger.info(f"Results dumped at {self.df_path.absolute()}")
         return self.post_process(history=_hist)
 

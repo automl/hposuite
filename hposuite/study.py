@@ -5,7 +5,6 @@ import logging
 import warnings
 from collections.abc import Iterable, Mapping
 from dataclasses import dataclass, field
-from datetime import datetime
 from itertools import product
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Literal, TypeAlias
@@ -100,11 +99,10 @@ class Study:
         self.num_seeds = len(self.seeds)
 
         name_parts: list[str] = []
-        name_parts.append("_".join([f"{opt[0].name}{opt[-1]}" for opt in self.optimizers]))
-        name_parts.append("_".join([f"{bench[0].name}{bench[-1]}" for bench in self.benchmarks]))
+        name_parts.append(";".join([f"{opt[0].name}{opt[-1]}" for opt in self.optimizers]))
+        name_parts.append(";".join([f"{bench[0].name}{bench[-1]}" for bench in self.benchmarks]))
         name_parts.append(f"seeds={self.seeds}")
         name_parts.append(f"budget={self.budget}")
-        name_parts.append(f"{datetime.now().strftime('%Y%m%d_%H%M%S')}")
 
         if self.name is None:
             self.name = hashlib.sha256((".".join(name_parts)).encode()).hexdigest()
@@ -112,10 +110,10 @@ class Study:
         self.output_dir = self.output_dir / self.name
         self.study_yaml_path = self.output_dir / "study_config.yaml"
         self.write_yaml()
+        logger.info(f"Created study at {self.output_dir}")
 
 
         if len(self.experiments) > 1:
-            logger.info("Dumping experiments")
             self._dump_runs(
                 group_by=self.group_by,
                 exp_dir=self.output_dir,
@@ -134,7 +132,7 @@ class Study:
             expdir=self.output_dir,
             budget=self.budget,
             seeds=new_seeds,
-            # continuations=self.continuations,
+            continuations=self.continuations,
         )
 
         self.seeds.extend(new_seeds)
@@ -370,6 +368,8 @@ class Study:
                         warnings.warn(f"{e}\nTo ignore this, set `on_error='ignore'`", stacklevel=2)
                         continue
 
+        logger.info(f"Generated {len(_runs_per_problem)} runs")
+
         return _runs_per_problem
 
 
@@ -560,14 +560,16 @@ class Study:
         if _seeds:
             self._update_study(new_seeds=_seeds)
 
-        logger.info(f"Running {len(self.experiments)} experiments")
+        if overwrite:
+            logger.info("Overwrite flag is set to True. Existing results will be overwritten!")
 
         if (len(self.experiments) > 1):
             match exec_type:
                 case "sequential":
-                    logger.info("Running experiments sequentially")
-                    for run in self.experiments:
+                    logger.info(f"Running {len(self.experiments)} experiments sequentially")
+                    for i, run in enumerate(self.experiments, start=1):
                         # run.create_env(hpoglue=f"-e {Path.cwd()}")
+                        logger.info(f"Running experiment {i}/{len(self.experiments)}")
                         run.run(
                             continuations=continuations,
                             overwrite=overwrite,
@@ -580,6 +582,7 @@ class Study:
         else:
             run = self.experiments[0]
             # run.create_env(hpoglue=f"-e {Path.cwd()}")
+            logger.info("Running single experiment")
             run.run(
                 continuations=continuations,
                 overwrite=overwrite,

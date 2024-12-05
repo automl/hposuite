@@ -39,7 +39,7 @@ FIDELITY_MAX_COL = "problem.fidelity.1.max"
 CONTINUATIONS_COL = "result.continuations_cost.1"
 
 
-def plot_results(  # noqa: PLR0915
+def plot_results(  # noqa: C901, PLR0915
     *,
     report: dict[str, Any],
     budget_type: str,
@@ -81,6 +81,7 @@ def plot_results(  # noqa: PLR0915
         logger.info(f"Plotting {instance}")
         optim_res_dict[instance] = {}
         seed_cost_dict = {}
+        seed_cont_dict = {}
         for seed in report[instance]:
             results = report[instance][seed]["results"]
             cost_list = results[SINGLE_OBJ_COL].values.astype(np.float64)
@@ -120,7 +121,7 @@ def plot_results(  # noqa: PLR0915
 
             seed_cost_dict[seed] = pd.Series(cost_list, index=budget_list)
             if continuations:
-                seed_cont_dict = pd.Series(cost_list, index=continuations_list)
+                seed_cont_dict[seed] = pd.Series(cost_list, index=continuations_list)
 
         seed_cost_df = pd.DataFrame(seed_cost_dict)
         seed_cost_df = seed_cost_df.ffill(axis=0)
@@ -227,38 +228,40 @@ def agg_data(
         for file in study_dir.rglob("*.parquet"):
             if benchmark not in file.name:
                 continue
-            res_df = pd.read_parquet(file)
+            _df = pd.read_parquet(file)
 
-            instance = res_df[OPTIMIZER_COL].iloc[0]
-            if res_df[HP_COL].iloc[0] is not None:
-                instance = f"{instance}_{res_df[HP_COL].iloc[0]}"
+            instance = _df[OPTIMIZER_COL].iloc[0]
+            if _df[HP_COL].iloc[0] is not None:
+                instance = f"{instance}_{_df[HP_COL].iloc[0]}"
 
-            objective = res_df[SINGLE_OBJ_NAME].iloc[0]
+            objective = _df[SINGLE_OBJ_NAME].iloc[0]
             budget_type = "TrialBudget"
-            budget = res_df[BUDGET_TOTAL_COL].iloc[0]
-            minimize = res_df[SINGLE_OBJ_MINIMIZE_COL].iloc[0]
-            seed = res_df[SEED_COL].iloc[0]
-            res_df = res_df[
+            budget = _df[BUDGET_TOTAL_COL].iloc[0]
+            minimize = _df[SINGLE_OBJ_MINIMIZE_COL].iloc[0]
+            seed = _df[SEED_COL].iloc[0]
+            res_df = _df[
                 [
                     SINGLE_OBJ_COL,
                     BUDGET_USED_COL,
                 ]
             ]
-            if FIDELITY_COL in res_df.columns:
+            if FIDELITY_COL in _df.columns:
                 res_df = pd.concat(
                     [
                         res_df,
-                        res_df[FIDELITY_COL].to_frame().T,
-                        res_df[FIDELITY_MIN_COL].to_frame().T,
-                        res_df[FIDELITY_MAX_COL].to_frame().T,
-                    ]
+                        _df[FIDELITY_COL],
+                        _df[FIDELITY_MIN_COL],
+                        _df[FIDELITY_MAX_COL],
+                    ],
+                    axis=1,
                 )
-            if CONTINUATIONS_COL in res_df.columns:
+            if CONTINUATIONS_COL in _df.columns:
                 res_df = pd.concat(
                     [
                         res_df,
-                        res_df[CONTINUATIONS_COL].to_frame().T,
-                    ]
+                        _df[CONTINUATIONS_COL],
+                    ],
+                    axis=1,
                 )
             df_agg[instance][int(seed)] = {"results": res_df}
             assert budget_type is not None
@@ -381,7 +384,7 @@ if __name__ == "__main__":
     )
     parser.add_argument(
         "--study_dir",
-        type=str, 
+        type=str,
         help="Name of the study directory from where to plot the results",
         default=None
     )

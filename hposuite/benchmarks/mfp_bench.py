@@ -459,7 +459,7 @@ def mfpbench_benchmarks(datadir: Path | None = None) -> Iterator[BenchmarkDescri
         for each benchmark.
     """
     # yield from lcbench_surrogate(datadir)
-    yield from lcbench_tabular(datadir)
+    # yield from lcbench_tabular(datadir)
     yield from mfh(datadir)
-    yield from jahs(datadir)
+    # yield from jahs(datadir)
     yield from pd1(datadir)

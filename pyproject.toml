@@ -42,12 +42,16 @@ namespaces = false
 
 [project.optional-dependencies]
 dev = ["ruff", "mypy", "pre-commit"]
-optuna = ["optuna"]
-yahpo-gym = ["yahpo-gym"]
+notebook = ["ipykernel"]
+all = ["smac", "optuna", "dehb", "skopt", "nevergrad", "yahpo-gym", "pymoo", "mf-prior-bench"]
+all_opts = ["smac", "optuna", "dehb", "skopt", "nevergrad"]
+all_benchmarks = ["yahpo-gym", "pymoo", "mf-prior-bench"]
 smac = ["smac"]
+optuna = ["optuna"]
 dehb = ["dehb"]
 skopt = ["scikit-optimize"]
 nevergrad = ["nevergrad"]
+yahpo-gym = ["yahpo-gym"]
 pymoo = ["pymoo"]
 mfpbench_main = ["mf-prior-bench"]        # NOTE: doesn't install by itself. Install separately and then upgrade ConfigSpace
 syne-tune = ["syne-tune[basic]", "syne-tune[gpsearchers]"]     # NOTE: install separately, throws PYYAML build errors

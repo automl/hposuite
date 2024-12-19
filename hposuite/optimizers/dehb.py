@@ -29,7 +29,7 @@ class DEHB_Optimizer(Optimizer):
     )
 
     support = Problem.Support(
-        fidelities=(None, "single"),
+        fidelities=("single"),
         objectives=("single",),
         cost_awareness=(None, "single"),
         tabular=False,

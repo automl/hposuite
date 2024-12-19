@@ -281,7 +281,7 @@ def lcbench_tabular(datadir: Path | None = None) -> Iterator[BenchmarkDescriptio
         )
 
 
-def mfh(datadir: Path | None = None) -> Iterator[BenchmarkDescription]:
+def mfh() -> Iterator[BenchmarkDescription]:
     """Generates benchmark descriptions for the MF-Hartmann Benchmarks.
 
     Args:
@@ -306,7 +306,7 @@ def mfh(datadir: Path | None = None) -> Iterator[BenchmarkDescription]:
             yield BenchmarkDescription(
                 name=name,
                 config_space=mfpbench.get(name).space,
-                load=partial(_get_surrogate_benchmark, benchmark_name=name, datadir=datadir),
+                load=partial(_get_surrogate_benchmark, benchmark_name=name),
                 costs={
                     "fid_cost": Measure.cost((0.05, 1), minimize=True),
                 },
@@ -471,6 +471,6 @@ def mfpbench_benchmarks(datadir: Path | None = None) -> Iterator[BenchmarkDescri
         datadir=Path(__file__).parent.parent.parent.absolute() / "data"
     # yield from lcbench_surrogate(datadir)
     # yield from lcbench_tabular(datadir)
-    yield from mfh(datadir)
+    yield from mfh()
     # yield from jahs(datadir)
     yield from pd1(datadir)

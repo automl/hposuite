@@ -38,7 +38,7 @@ pip install hposuite # Current not functional
 
 > [!TIP]
 > * `pip install hposuite["notebook"]` - For usage in a notebook
-* * `pip install hposuite["all]` - To install hposuite with all available optimizers and benchmarks
+> * `pip install hposuite["all]` - To install hposuite with all available optimizers and benchmarks
 > * `pip install hposuite["all_opts]` - To install hposuite with all available optimizers only
 > * `pip install hposuite["all_benchmarks]` - To install hposuite with all available benchmarks only
 

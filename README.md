@@ -70,6 +70,7 @@ study = create_study(
     benchmarks=[
         BENCHMARKS["mfh3_good"],
         BENCHMARKS["pd1-imagenet-resnet-512"]
+    ],
     num_seeds=5,
     budget=100,
 )

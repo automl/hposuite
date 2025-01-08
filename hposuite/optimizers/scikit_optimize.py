@@ -25,10 +25,7 @@ acq_funcs = ["LCB", "EI", "PI", "gp_hedge"]
 acq_optimizers = ["sampling", "lbfgs", "auto"]
 
 class SkoptOptimizer(Optimizer):
-    """The Scikit_Optimize Optimizer.
-
-    # TODO: Document me
-    """
+    """The Scikit_Optimize Optimizer."""
 
     name = "Scikit_Optimize"
     support = Problem.Support(
@@ -144,14 +141,14 @@ def _configspace_to_skopt_space(
     import numpy as np
     from skopt.space.space import Categorical, Integer, Real
 
-    if len(config_space.get_conditions()) > 0:
+    if len(config_space.conditions) > 0:
         raise NotImplementedError("Conditions are not yet supported!")
 
-    if len(config_space.get_forbiddens()) > 0:
+    if len(config_space.forbidden_clauses) > 0:
         raise NotImplementedError("Forbiddens are not yet supported!")
 
     skopt_space: list[float] = []
-    for hp in config_space.get_hyperparameters():
+    for hp in list(config_space.values()):
         match hp:
             case CS.UniformIntegerHyperparameter() if hp.log:
                 skopt_space.append(Integer(hp.lower, hp.upper, name=hp.name, log=hp.log))

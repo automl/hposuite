@@ -22,10 +22,7 @@ logger.setLevel(logging.INFO)
 
 
 class OptunaOptimizer(Optimizer):
-    """The Optuna Optimizer.
-
-    # TODO: Document me
-    """
+    """The Optuna Optimizer."""
 
     name = "Optuna"
     support = Problem.Support(
@@ -147,14 +144,14 @@ def _configspace_to_optuna_distributions(
         IntDistribution as Int,
     )
 
-    if len(config_space.get_conditions()) > 0:
+    if len(config_space.conditions) > 0:
         raise NotImplementedError("Conditions are not yet supported!")
 
-    if len(config_space.get_forbiddens()) > 0:
+    if len(config_space.forbidden_clauses) > 0:
         raise NotImplementedError("Forbiddens are not yet supported!")
 
     optuna_space: dict[str, BaseDistribution] = {}
-    for hp in config_space.get_hyperparameters():
+    for hp in list(config_space.values()):
         match hp:
             case CS.UniformIntegerHyperparameter():
                 optuna_space[hp.name] = Int(hp.lower, hp.upper, log=hp.log)

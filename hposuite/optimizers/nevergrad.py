@@ -162,14 +162,14 @@ def _configspace_to_nevergrad_space(
     config_space: CS.ConfigurationSpace,
 ) -> dict[str, ng.p.Instrumentation]:
 
-    if len(config_space.get_conditions()) > 0:
+    if len(config_space.conditions) > 0:
         raise NotImplementedError("Conditions are not yet supported!")
 
-    if len(config_space.get_forbiddens()) > 0:
+    if len(config_space.forbidden_clauses) > 0:
         raise NotImplementedError("Forbiddens are not yet supported!")
 
     ng_space = ng.p.Dict()
-    for hp in config_space.get_hyperparameters():
+    for hp in list(config_space.values()):
         match hp:
             case CS.UniformIntegerHyperparameter():
                 if hp.log:

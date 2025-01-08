@@ -1,12 +1,11 @@
 from __future__ import annotations
 
-from collections.abc import Iterator
 from functools import partial
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 import numpy as np
-from hpoglue import BenchmarkDescription, Measure, Result, SurrogateBenchmark, TabularBenchmark
+from hpoglue import BenchmarkDescription, Measure, Result, SurrogateBenchmark
 from hpoglue.env import Env
 from hpoglue.fidelity import RangeFidelity
 

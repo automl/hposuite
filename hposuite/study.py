@@ -633,8 +633,25 @@ def create_study(  # noqa: C901, PLR0912, PLR0915
         output_dir: The main output directory where the hposuite studies are saved.
 
         optimizers: The list of optimizers to use.
+                    Usage: [
+                        (
+                            optimizer: str | type[Optimizer],
+                            {
+                                "hp_name": hp_value
+                            }
+                        )
+                    ]
 
         benchmarks: The list of benchmarks to use.
+                    Usage: [
+                        (
+                            benchmark: str | BenchmarkDescription | FunctionalBenchmark,
+                            {
+                                "objectives": [list of objectives] | number of objectives,
+                                "fidelities": [list of fidelities] | number of fidelities | None,
+                            }
+                        )
+                    ]
 
         seeds: The seed or seeds to use for the experiment.
 
@@ -709,6 +726,8 @@ def create_study(  # noqa: C901, PLR0912, PLR0915
                             _benchmarks.append((BENCHMARKS[benchmark], bench_hps))
                         else:
                             _benchmarks.append((BENCHMARKS[benchmark].description, bench_hps))
+                    case BenchmarkDescription():
+                        _benchmarks.append((benchmark, bench_hps))
                     case FunctionalBenchmark():
                         _benchmarks.append((benchmark.description, bench_hps))
                     case _:

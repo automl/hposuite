@@ -19,7 +19,7 @@ study.optimize()
 ```
 
 > [!TIP]
-> * See below for example of [Running multiple Optimizers on multiple Benchmarks](#Simple-example-to-run-SMAC-Hyperband-and-DEHB-on-MF-Hartmann-3D-and-PD1-Imagenet)
+> * See below for example of [Running multiple Optimizers on multiple Benchmarks](#Simple-example-to-run-multiple-Optimizers-on-multiple-benchmarks)
 > * Check this example [notebook](examples/hposuite_demo.ipynb) for more examples
 > * Check out [hpoglue](https://github.com/automl/hpoglue) for core HPO API for interfacing an Optimizer and Benchmark
 
@@ -52,7 +52,7 @@ pip install -e . # -e for editable install
 ```
 
 
-### Simple example to run SMAC Hyperband and DEHB on MF Hartmann 3D and PD1 Imagenet
+### Simple example to run multiple Optimizers on multiple benchmarks
 
 ```python
 from hposuite.benchmarks import BENCHMARKS
@@ -77,4 +77,18 @@ study = create_study(
 
 study.optimize()
 
+```
+
+
+### Results and Plotting
+
+#### Results
+
+Results are saved in the `Run` subdirectories within the main `Study` directory as parquet files. \
+The `Study` directory and the individual `Run` directory paths are logged when running `Study.optimize()`
+
+#### Plotting
+
+```bash
+python -m hposuite.plotting.utils --save_dir <Absolute_path_of_main_directory_to_save_Studies> --study_dir <study_directory_hash>
 ```

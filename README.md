@@ -80,15 +80,16 @@ study.optimize()
 ```
 
 
-### Results and Plotting
+### Results
 
-#### Results
-
+hposuite saves the Studies by default to `./hposuite-output/` (relative to the current working directory).
 Results are saved in the `Run` subdirectories within the main `Study` directory as parquet files. \
 The `Study` directory and the individual `Run` directory paths are logged when running `Study.optimize()`
 
-#### Plotting
+### Plotting
 
 ```bash
-python -m hposuite.plotting.utils --save_dir <Absolute_path_of_main_directory_to_save_Studies> --study_dir <study_directory_hash>
+python -m hposuite.plotting.utils --save_dir <abspath_study_output_dir> --study_dir <study_directory_hash>
 ```
+
+`--save_dir` is set by default to `./hposuite-output`

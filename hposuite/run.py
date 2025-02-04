@@ -125,7 +125,6 @@ class Run:
             f"seed={self.seed}",
         ]
         self.name = ".".join(name_parts)
-        self.optimizer.support.check_opt_support(who=self.optimizer.name, problem=self.problem)
 
         match self.benchmark.env, self.optimizer.env:
             case (None, None):

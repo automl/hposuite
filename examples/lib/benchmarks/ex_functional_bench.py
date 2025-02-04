@@ -4,7 +4,7 @@ from typing import TYPE_CHECKING
 
 import numpy as np
 from ConfigSpace import ConfigurationSpace
-from hpoglue import FunctionalBenchmark, Measure, Result
+from hpoglue import Config, FunctionalBenchmark, Measure, Result
 
 if TYPE_CHECKING:
     from hpoglue.query import Query
@@ -39,7 +39,7 @@ def ackley_fn(x: np.ndarray) -> float:
     return part1 + part2 + a + np.exp(1)
 
 
-def wrapped_ackley(query: Query) -> Result:  # noqa: D103
+def wrapped_ackley(query: Query) -> Result:
 
     y = ackley_fn(
         np.array(query.config.to_tuple())
@@ -60,5 +60,14 @@ Ex_Functional_Bench = FunctionalBenchmark(
         }
     ),
     metrics={"y": Measure.metric((0.0, np.inf), minimize=True)},
-    query=wrapped_ackley
+    query=wrapped_ackley,
+    predefined_points={
+        "min": (
+            Config(
+                config_id="min",
+                description="This point yields a global optimum of y:0.0",
+                values={"x0": 0.0, "x1": 0.0}
+            )
+        )
+    }
 )

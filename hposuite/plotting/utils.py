@@ -12,6 +12,7 @@ import numpy as np
 import pandas as pd
 
 logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)
 
 matplotlib_logger = logging.getLogger("matplotlib")
 matplotlib_logger.setLevel(logging.ERROR)
@@ -39,7 +40,7 @@ FIDELITY_MAX_COL = "problem.fidelity.1.max"
 CONTINUATIONS_COL = "result.continuations_cost.1"
 
 
-def plot_results(  # noqa: C901, PLR0915
+def plot_results(  # noqa: C901, PLR0912, PLR0915
     *,
     report: dict[str, Any],
     budget_type: str,
@@ -48,6 +49,7 @@ def plot_results(  # noqa: C901, PLR0915
     minimize: bool,
     save_dir: Path,
     benchmarks_name: str,
+    show: bool = False,
 ) -> None:
     """Plot the results for the optimizers on the given benchmark."""
     marker_list = [
@@ -207,6 +209,8 @@ def plot_results(  # noqa: C901, PLR0915
     plt.legend()
     save_dir.mkdir(parents=True, exist_ok=True)
     plt.savefig(save_dir / f"{benchmarks_name}_performance.png")
+    if show:
+        plt.show()
 
 
 def agg_data(

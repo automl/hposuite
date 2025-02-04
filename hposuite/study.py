@@ -315,6 +315,7 @@ class Study:
 
                 objectives = objs_fids.get("objectives", 1)
                 fidelities = objs_fids.get("fidelities", None)
+                priors = objs_fids.get("priors", {})
                 if fidelities is None and bench.fidelities:
                     match opt.support.fidelities[0]:
                         case "single":
@@ -337,6 +338,7 @@ class Study:
                     costs=costs,
                     multi_objective_generation=multi_objective_generation,
                     continuations=continuations,
+                    priors=priors,
                 )
                 _problems.append(_problem)
             except ValueError as e:
@@ -649,6 +651,9 @@ def create_study(  # noqa: C901, PLR0912, PLR0915
                             {
                                 "objectives": [list of objectives] | number of objectives,
                                 "fidelities": [list of fidelities] | number of fidelities | None,
+                                "priors": {
+                                    "objective": Prior
+                                }
                             }
                         )
                     ]

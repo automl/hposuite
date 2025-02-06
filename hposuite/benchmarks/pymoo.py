@@ -181,7 +181,44 @@ def pymoo_extra_mo_problems() -> Iterator[BenchmarkDescription]:
         )
 
 
+_pymoo_many_obj = [
+    "dtlz1",
+    "dtlz2",
+    "dtlz3",
+    "dtlz4",
+    "dtlz5",
+    "dtlz6",
+    "dtlz7",
+]
+
+
+def pymoo_many_obj_problems() -> Iterator[BenchmarkDescription]:
+    import pymoo.problems
+    env = Env(
+        name="py310-pymoo-0.6.1.3",
+        requirements=("pymoo==0.6.1.3"),
+        post_install=None
+    )
+    for prob_name in _pymoo_many_obj:
+        yield BenchmarkDescription(
+            name=f"pymoo-{prob_name}",
+            config_space=get_pymoo_space(pymoo.problems.get_problem(prob_name)),
+            env=env,
+            load = partial(_get_pymoo_problems, function_name=prob_name),
+            has_conditionals=False,
+            # PyMOO DTLZ problems have 3 objectives by default, can be changed by setting n_obj
+            metrics={
+                    "value1": Measure.metric((-np.inf, np.inf), minimize=True),
+                    "value2": Measure.metric((-np.inf, np.inf), minimize=True),
+                    "value3": Measure.metric((-np.inf, np.inf), minimize=True),
+                },
+            is_tabular=False,
+            mem_req_mb=1024,
+        )
+
+
 def pymoo_benchmarks(datadir: Path | None = None) -> Iterator[BenchmarkDescription]:
     yield from pymoo_so_problems()
     yield from pymoo_default_mo_problems()
     yield from pymoo_extra_mo_problems()
+    yield from pymoo_many_obj_problems()

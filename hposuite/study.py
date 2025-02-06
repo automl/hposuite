@@ -342,7 +342,7 @@ class Study:
                     for k, v in priors.items():
                         if isinstance(objectives, list):
                             assert k in objectives, (
-                                f"Objective {k} not found in objectives {objectives}"
+                                f"Objective {k} not found in specified objectives {objectives}"
                             )
                         if isinstance(v, Mapping):
                             priors[k] = Config(
@@ -613,6 +613,7 @@ class Study:
                 overwrite=overwrite,
                 progress_bar=False,
             )
+        logger.info(f"Completed study with {len(self.experiments)} runs")
 
 
 def create_study(  # noqa: C901, PLR0912, PLR0915

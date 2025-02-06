@@ -18,4 +18,3 @@ typings
 **/build
 test_config.yaml
 example-outputs/
-!*.png

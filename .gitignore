@@ -4,8 +4,8 @@ results/
 SMAC/
 Optimizers_cache/
 build/**
-hpo-glue-output/
-hpo-suite-output/
+hpoglue-output/
+hposuite-output/
 .mypy_cache
 .ruff_cache
 data
@@ -17,3 +17,5 @@ typings
 .venv
 **/build
 test_config.yaml
+example-outputs/
+!*.png

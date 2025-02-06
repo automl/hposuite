@@ -11,7 +11,7 @@ from typing import TYPE_CHECKING, Any, Literal, TypeAlias
 
 import numpy as np
 import yaml
-from hpoglue import BenchmarkDescription, FunctionalBenchmark, Optimizer, Problem
+from hpoglue import BenchmarkDescription, Config, FunctionalBenchmark, Optimizer, Problem
 from hpoglue.env import (
     GLUE_PYPI,
     get_current_installed_hpoglue_version,
@@ -146,20 +146,24 @@ class Study:
         """Convert the study to a dictionary."""
         optimizers = []
         benchmarks = []
+        opt_keys = []
+        bench_keys = []
         continuations = 0
         for run in self.experiments:
             run._set_paths(self.output_dir)
             run.write_yaml()
-            opt_keys = [opt["name"] for opt in optimizers if optimizers]
-            if not opt_keys or run.optimizer.name not in opt_keys:
+            opt_name = run.name.split("benchmark")[0]
+            if opt_name not in opt_keys:
                 optimizers.append(
                     {
                         "name": run.optimizer.name,
                         "hyperparameters": run.optimizer_hyperparameters or {},
                     }
                 )
-            bench_keys = [bench["name"] for bench in benchmarks if benchmarks]
-            if not bench_keys or run.benchmark.name not in bench_keys:
+                opt_keys.append(opt_name)
+
+            bench_name = run.name.split("benchmark")[-1].split("seed")[0]
+            if bench_name not in bench_keys:
                 benchmarks.append(
                     {
                         "name": run.benchmark.name,
@@ -168,6 +172,7 @@ class Study:
                         "costs": run.problem.get_costs(),
                     }
                 )
+                bench_keys.append(bench_name)
             continuations += run.problem.continuations
 
         continuations = continuations > 0
@@ -314,7 +319,13 @@ class Study:
                 fidelities: int | str | list[str] | None
 
                 objectives = objs_fids.get("objectives", 1)
+                if isinstance(objectives, list) and len(objectives) == 1:
+                    objectives = objectives[0]
+
                 fidelities = objs_fids.get("fidelities", None)
+                if isinstance(fidelities, list) and len(fidelities) == 1:
+                    fidelities = fidelities[0]
+
                 priors = objs_fids.get("priors", {})
                 if fidelities is None and bench.fidelities:
                     match opt.support.fidelities[0]:
@@ -326,6 +337,18 @@ class Study:
                             fidelities = None
                         case _:
                             raise ValueError("Invalid fidelity support")
+
+                if priors:
+                    for k, v in priors.items():
+                        if isinstance(objectives, list):
+                            assert k in objectives, (
+                                f"Objective {k} not found in objectives {objectives}"
+                            )
+                        if isinstance(v, Mapping):
+                            priors[k] = Config(
+                                config_id=k,
+                                values=v,
+                            )
 
 
                 _problem = Problem.problem(
@@ -692,53 +715,58 @@ def create_study(  # noqa: C901, PLR0912, PLR0915
         benchmarks = [benchmarks]
 
     _optimizers: list[OptWithHps] = []
-    match optimizers[0]:
-        case str():
-            for optimizer in optimizers:
+    for optimizer in optimizers:
+        match optimizer:
+            case str():
                 assert optimizer in OPTIMIZERS, f"Optimizer must be one of {OPTIMIZERS.keys()}"
                 _optimizers.append(OPTIMIZERS[optimizer])
-        case tuple():
-            for optimizer, opt_hps in optimizers:
-                assert optimizer in OPTIMIZERS, f"Optimizer must be one of {OPTIMIZERS.keys()}"
-                _optimizers.append((OPTIMIZERS[optimizer], opt_hps))
-        case type():
-            _optimizers = optimizers
-        case _:
-            raise TypeError(f"Unknown Optimizer type {type(optimizers[0])}")
+            case tuple():
+                opt, hps = optimizer
+                match opt:
+                    case str():
+                        assert opt in OPTIMIZERS, f"Optimizer must be one of {OPTIMIZERS.keys()}"
+                        _optimizers.append((OPTIMIZERS[opt], hps))
+                    case type():
+                        _optimizers.append((opt, hps))
+                    case _:
+                        raise TypeError(f"Unknown Optimizer type {type(opt)}")
+            case type():
+                _optimizers.append(optimizer)
+            case _:
+                raise TypeError(f"Unknown Optimizer type {type(optimizers)}")
+
 
     _benchmarks: list[BenchWith_Objs_Fids] = []
-    match benchmarks[0]:
-        case str():
-            for benchmark in benchmarks:
+    for benchmark in benchmarks:
+        match benchmark:
+            case str():
                 assert benchmark in BENCHMARKS, f"Benchmark must be one of {BENCHMARKS.keys()}"
                 if not isinstance(BENCHMARKS[benchmark], FunctionalBenchmark):
                     _benchmarks.append(BENCHMARKS[benchmark])
                 else:
                     _benchmarks.append(BENCHMARKS[benchmark].description)
-        case BenchmarkDescription():
-            for benchmark in benchmarks:
+            case BenchmarkDescription():
                 _benchmarks.append(benchmark)
-        case FunctionalBenchmark():
-            for benchmark in benchmarks:
+            case FunctionalBenchmark():
                 _benchmarks.append(benchmark.description)
-        case tuple():
-            for benchmark, bench_hps in benchmarks:
-                match benchmark:
+            case tuple():
+                bench, bench_hps = benchmark
+                match bench:
                     case str():
-                        assert benchmark in BENCHMARKS, "Benchmark must be one of"
+                        assert bench in BENCHMARKS, "Benchmark must be one of"
                         f"{BENCHMARKS.keys()}"
-                        if not isinstance(BENCHMARKS[benchmark], FunctionalBenchmark):
-                            _benchmarks.append((BENCHMARKS[benchmark], bench_hps))
+                        if not isinstance(BENCHMARKS[bench], FunctionalBenchmark):
+                            _benchmarks.append((BENCHMARKS[bench], bench_hps))
                         else:
-                            _benchmarks.append((BENCHMARKS[benchmark].description, bench_hps))
+                            _benchmarks.append((BENCHMARKS[bench].description, bench_hps))
                     case BenchmarkDescription():
-                        _benchmarks.append((benchmark, bench_hps))
+                        _benchmarks.append((bench, bench_hps))
                     case FunctionalBenchmark():
-                        _benchmarks.append((benchmark.description, bench_hps))
+                        _benchmarks.append((bench.description, bench_hps))
                     case _:
                         raise TypeError(f"Unknown Benchmark type {type(benchmark)}")
-        case _:
-            raise TypeError(f"Unknown Benchmark type {type(benchmarks[0])}")
+            case _:
+                raise TypeError(f"Unknown Benchmark type {type(benchmarks)}")
 
     if isinstance(seeds, Iterable):
         seeds = list(set(seeds))

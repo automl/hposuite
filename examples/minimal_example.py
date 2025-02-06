@@ -3,6 +3,7 @@ from hposuite.study import create_study
 if __name__ == "__main__":
     study = create_study(
         name="minimal_example",
+        output_dir="example-outputs",
     )
     study.optimize(
         optimizers=("DEHB", {"eta": 3}),

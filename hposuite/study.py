@@ -96,7 +96,7 @@ class Study:
 
         if self.seeds is None:
             self.seeds = list(seeds)
-        self.num_seeds = len(self.seeds)
+        self.num_seeds = len(self.seeds) if isinstance(self.seeds, Iterable) else 1
 
         name_parts: list[str] = []
         name_parts.append(";".join([f"{opt[0].name}{opt[-1]}" for opt in self.optimizers]))
@@ -110,7 +110,7 @@ class Study:
         self.output_dir = self.output_dir / self.name
         self.study_yaml_path = self.output_dir / "study_config.yaml"
         self.write_yaml()
-        logger.info(f"Created study at {self.output_dir}")
+        logger.info(f"Created study at {self.output_dir.absolute()}")
 
 
         if len(self.experiments) > 1:
@@ -129,7 +129,6 @@ class Study:
         more_experiments = Study.generate(
             optimizers=self.optimizers,
             benchmarks=self.benchmarks,
-            expdir=self.output_dir,
             budget=self.budget,
             seeds=new_seeds,
             continuations=self.continuations,
@@ -187,6 +186,21 @@ class Study:
             "budget": self.budget,
             "continuations": continuations,
         }
+
+
+    @classmethod
+    def from_dict(cls, data: dict[str, Any]) -> Study:
+        """Create a Study object from a dictionary."""
+        return create_study(
+            name=data.get("name"),
+            output_dir=data.get("output_dir"),
+            optimizers=data["optimizers"],
+            benchmarks=data["benchmarks"],
+            seeds=data.get("seeds"),
+            num_seeds=data.get("num_seeds", 1),
+            budget=data.get("budget", 50),
+            continuations=data.get("continuations", True),
+        )
 
 
     def write_yaml(self) -> None:
@@ -270,6 +284,10 @@ class Study:
 
         Returns:
             A list of Run objects.
+
+        Note:
+            `Study.generate()` only generates the Run objects.
+            It does not set absolute paths or write yaml files.
         """
         # Generate seeds
         match seeds:
@@ -505,7 +523,7 @@ class Study:
                         f" --budget {run.problem.budget.total}"
                     )
                     f.write("\n")
-            logger.info(f"Dumped experiments to {exp_dir / f'dump_{key}.txt'}")
+            logger.info(f"Dumped experiments to {(exp_dir / f'dump_{key}.txt').absolute()}")
 
 
     def optimize(  # noqa: C901, PLR0912

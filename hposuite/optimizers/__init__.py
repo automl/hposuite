@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING
 from hposuite.optimizers.dehb import DEHB_Optimizer
 from hposuite.optimizers.nevergrad import NevergradOptimizer
 from hposuite.optimizers.optuna import OptunaOptimizer
-from hposuite.optimizers.random_search import RandomSearch
+from hposuite.optimizers.random_search import RandomSearch, RandomSearchWithPriors
 from hposuite.optimizers.scikit_optimize import SkoptOptimizer
 from hposuite.optimizers.smac import SMAC_BO, SMAC_Hyperband
 from hposuite.optimizers.synetune import SyneTuneBO, SyneTuneBOHB
@@ -15,6 +15,7 @@ if TYPE_CHECKING:
 
 OPTIMIZERS: dict[str, type[Optimizer]] = {
     RandomSearch.name: RandomSearch,
+    RandomSearchWithPriors.name: RandomSearchWithPriors,
     DEHB_Optimizer.name: DEHB_Optimizer,
     NevergradOptimizer.name: NevergradOptimizer,
     SMAC_BO.name: SMAC_BO,

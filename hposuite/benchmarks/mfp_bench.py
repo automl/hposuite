@@ -24,6 +24,7 @@
 from __future__ import annotations
 
 import os
+import warnings
 from collections.abc import Iterator
 from functools import partial
 from pathlib import Path
@@ -38,8 +39,11 @@ from hpoglue.result import Result
 
 if TYPE_CHECKING:
     import mfpbench
-
     from hpoglue.query import Query
+
+
+warnings.filterwarnings("ignore", category=DeprecationWarning)
+warnings.filterwarnings("ignore", category=UserWarning)
 
 
 def _get_surrogate_benchmark(
@@ -51,10 +55,13 @@ def _get_surrogate_benchmark(
 ) -> SurrogateBenchmark:
     import mfpbench
 
-    if datadir is not None:
-        datadir = Path(datadir).absolute().resolve()
-        kwargs["datadir"] = datadir
-    bench = mfpbench.get(benchmark_name, **kwargs)
+    from hposuite.utils import HiddenPrints
+
+    with HiddenPrints():        # NOTE: To stop yahpo-lcbench from printing garbage
+        if datadir is not None:
+            datadir = Path(datadir).absolute().resolve()
+            kwargs["datadir"] = datadir
+        bench = mfpbench.get(benchmark_name, **kwargs)
     query_function = partial(_mfpbench_surrogate_query_function, benchmark=bench)
     return SurrogateBenchmark(
         desc=description,
@@ -167,34 +174,51 @@ def lcbench_surrogate(datadir: Path | None = None) -> Iterator[BenchmarkDescript
     if datadir is not None and "yahpo" in os.listdir(datadir):
         datadir = datadir / "yahpo"
     import mfpbench
+
+    from hposuite.utils import HiddenPrints
+
     env = Env(
         name="py310-mfpbench-1.9-yahpo",
-        requirements=("mf-prior-bench[yahpo]==1.9.0",),
+        requirements=(
+            "mf-prior-bench[yahpo]==1.9.0",
+            "ConfigSpace==0.6.1",
+            "xgboost>=1.7"
+        ),
         post_install=_download_data_cmd("yahpo", datadir=datadir),
     )
-    for task_id in _lcbench_task_ids:
-        yield BenchmarkDescription(
-            name=f"yahpo-lcbench-{task_id}",
-            config_space=mfpbench.get("lcbench", task_id=task_id).space,
-            load=partial(_lcbench_tabular, task_id=task_id, datadir=datadir),
-            metrics={
-                "val_accuracy": Measure.metric((0.0, 100.0), minimize=False),
-                "val_cross_entropy": Measure.metric((0, np.inf), minimize=True),
-                "val_balanced_accuracy": Measure.metric((0, 100), minimize=False),
-            },
-            test_metrics={
-                "test_balanced_accuracy": Measure.test_metric((0, 100), minimize=False),
-                "test_cross_entropy": Measure.test_metric(bounds=(0, np.inf), minimize=True),
-            },
-            costs={
-                "time": Measure.cost((0, np.inf), minimize=True),
-            },
-            fidelities={
-                "epoch": RangeFidelity.from_tuple((1, 52, 1), supports_continuation=True),
-            },
-            env=env,
-            mem_req_mb=4096,
-        )
+    with HiddenPrints():        # NOTE: To stop yahpo-lcbench from printing garbage
+        for task_id in _lcbench_task_ids:
+            yield BenchmarkDescription(
+                name=f"yahpo-lcbench-{task_id}",
+                config_space=mfpbench.get(
+                    "lcbench",
+                    task_id=task_id,
+                    datadir=datadir,
+                ).space,
+                load=partial(
+                    _get_surrogate_benchmark,
+                    benchmark_name="lcbench",
+                    datadir=datadir,
+                    task_id=task_id
+                ),
+                metrics={
+                    "val_accuracy": Measure.metric((0.0, 100.0), minimize=False),
+                    "val_cross_entropy": Measure.metric((0, np.inf), minimize=True),
+                    "val_balanced_accuracy": Measure.metric((0, 100), minimize=False),
+                },
+                test_metrics={
+                    "test_balanced_accuracy": Measure.test_metric((0, 100), minimize=False),
+                    "test_cross_entropy": Measure.test_metric(bounds=(0, np.inf), minimize=True),
+                },
+                costs={
+                    "time": Measure.cost((0, np.inf), minimize=True),
+                },
+                fidelities={
+                    "epoch": RangeFidelity.from_tuple((1, 52, 1), supports_continuation=True),
+                },
+                env=env,
+                mem_req_mb=4096,
+            )
 
 
 def lcbench_tabular(datadir: Path | None = None) -> Iterator[BenchmarkDescription]:
@@ -257,7 +281,11 @@ def lcbench_tabular(datadir: Path | None = None) -> Iterator[BenchmarkDescriptio
     for task_id in task_ids:
         yield BenchmarkDescription(
             name=f"lcbench_tabular-{task_id}",
-            config_space=mfpbench.get("lcbench_tabular", task_id=task_id).space,
+            config_space=mfpbench.get(
+                "lcbench_tabular",
+                task_id=task_id,
+                datadir=datadir,
+            ).space,
             load=partial(_lcbench_tabular, task_id=task_id, datadir=datadir),
             is_tabular=True,
             fidelities={
@@ -348,7 +376,11 @@ def jahs(datadir: Path | None = None) -> Iterator[BenchmarkDescription]:
         name = f"jahs-{task_id}"
         yield BenchmarkDescription(
             name=name,
-            config_space=mfpbench.get("jahs", task_id=task_id).space,
+            config_space=mfpbench.get(
+                "jahs",
+                task_id=task_id,
+                datadir=datadir,
+            ).space,
             load=partial(
                 _get_surrogate_benchmark,
                 benchmark_name="jahs",
@@ -401,7 +433,7 @@ def pd1(datadir: Path | None = None) -> Iterator[BenchmarkDescription]:
             _get_surrogate_benchmark, benchmark_name="cifar100_wideresnet_2048", datadir=datadir
         ),
         metrics={"valid_error_rate": Measure.metric(bounds=(0, 1), minimize=True)},
-        test_metrics=None,
+        test_metrics={"test_error_rate": Measure.metric(bounds=(0, 1), minimize=True)},
         costs={"train_cost": Measure.cost(bounds=(0, np.inf), minimize=True)},
         fidelities={"epoch": RangeFidelity.from_tuple((1, 199, 1), supports_continuation=True)},
         is_tabular=False,
@@ -416,7 +448,7 @@ def pd1(datadir: Path | None = None) -> Iterator[BenchmarkDescription]:
             _get_surrogate_benchmark, benchmark_name="imagenet_resnet_512", datadir=datadir
         ),
         metrics={"valid_error_rate": Measure.metric(bounds=(0, 1), minimize=True)},
-        test_metrics=None,
+        test_metrics={"test_error_rate": Measure.metric(bounds=(0, 1), minimize=True)},
         costs={"train_cost": Measure.cost(bounds=(0, np.inf), minimize=True)},
         fidelities={"epoch": RangeFidelity.from_tuple((1, 99, 1), supports_continuation=True)},
         is_tabular=False,
@@ -431,7 +463,7 @@ def pd1(datadir: Path | None = None) -> Iterator[BenchmarkDescription]:
             _get_surrogate_benchmark, benchmark_name="lm1b_transformer_2048", datadir=datadir
         ),
         metrics={"valid_error_rate": Measure.metric(bounds=(0, 1), minimize=True)},
-        test_metrics=None,
+        test_metrics={"test_error_rate": Measure.metric(bounds=(0, 1), minimize=True)},
         costs={"train_cost": Measure.cost(bounds=(0, np.inf), minimize=True)},
         fidelities={"epoch": RangeFidelity.from_tuple((1, 74, 1), supports_continuation=True)},
         is_tabular=False,
@@ -446,7 +478,7 @@ def pd1(datadir: Path | None = None) -> Iterator[BenchmarkDescription]:
             _get_surrogate_benchmark, benchmark_name="translatewmt_xformer_64", datadir=datadir
         ),
         metrics={"valid_error_rate": Measure.metric(bounds=(0, 1), minimize=True)},
-        test_metrics=None,
+        test_metrics={"test_error_rate": Measure.metric(bounds=(0, 1), minimize=True)},
         costs={"train_cost": Measure.cost(bounds=(0, np.inf), minimize=True)},
         fidelities={"epoch": RangeFidelity.from_tuple((1, 19, 1), supports_continuation=True)},
         is_tabular=False,
@@ -469,7 +501,7 @@ def mfpbench_benchmarks(datadir: Path | None = None) -> Iterator[BenchmarkDescri
     """
     if datadir is None:
         datadir=Path(__file__).parent.parent.parent.absolute() / "data"
-    # yield from lcbench_surrogate(datadir)
+    yield from lcbench_surrogate(datadir)
     # yield from lcbench_tabular(datadir)
     yield from mfh()
     # yield from jahs(datadir)

@@ -88,7 +88,7 @@ def ex_surrogate_bench(datadir: Path | None = None) -> BenchmarkDescription:
             datadir=datadir
         ),
         metrics={"valid_error_rate": Measure.metric(bounds=(0, 1), minimize=True)},
-        test_metrics=None,
+        test_metrics={"test_error_rate": Measure.metric(bounds=(0, 1), minimize=True)},
         costs={"train_cost": Measure.cost(bounds=(0, np.inf), minimize=True)},
         fidelities={"epoch": RangeFidelity.from_tuple((1, 199, 1), supports_continuation=True)},
         is_tabular=False,

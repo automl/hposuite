@@ -18,6 +18,8 @@ class RandomSearch(Optimizer):
 
     name = "RandomSearch"
 
+    # NOTE(eddiebergman): Random search doesn't directly use any of this
+    # information but we allow it to be used as it's a common baseline.
     support = Problem.Support(
         fidelities=(None,),
         objectives=("single", "many"),
@@ -25,7 +27,7 @@ class RandomSearch(Optimizer):
         tabular=False,
     )
 
-    mem_req_mb = 100
+    mem_req_mb = 100  # noqa: N815
 
     def __init__(
         self,
@@ -128,11 +130,11 @@ class RandomSearchWithPriors(Optimizer):
         self._priors_used = {key: 0 for key in self.priors}
 
     def ask(self) -> Query:
+        """Ask the optimizer for a new config to evaluate."""
         self._optmizer_unique_id += 1
         if len(self.priors) > 1:
             match self.mo_prior_sampling:
                 case "random":
-                    print(list(self.priors.values()))
                     prior = self._rng.choice(list(self.priors.values()))
                 case "equal":
                     # raise NotImplementedError
@@ -159,7 +161,9 @@ class RandomSearchWithPriors(Optimizer):
         return Query(config=config, fidelity=None)
 
     def tell(self, result: Result) -> None:
-        return
+        """Tell the optimizer the result of the query."""
+        # NOTE(eddiebergman): Random search does nothing with the result
+
 
 
 def _create_normal_prior(

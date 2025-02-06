@@ -10,7 +10,7 @@ dependencies = [
   "pyyaml",
   "pyarrow",
   "ConfigSpace>=1.0",
-  "hpoglue"
+  "hpoglue>=0.2.0"
   ]
 authors = [
   { name = "Soham Basu", email = "soham.basu07@gmail.com" },
@@ -43,7 +43,7 @@ namespaces = false
 [project.optional-dependencies]
 dev = ["ruff", "mypy", "pre-commit"]
 notebook = ["ipykernel"]
-all = ["smac", "optuna", "dehb", "skopt", "nevergrad", "yahpo-gym", "pymoo", "mf-prior-bench"]
+all = ["smac", "optuna", "dehb", "skopt", "nevergrad", "yahpo-gym", "pymoo"]
 all_opts = ["smac", "optuna", "dehb", "skopt", "nevergrad"]
 all_benchmarks = ["yahpo-gym", "pymoo", "mf-prior-bench"]
 smac = ["smac"]
@@ -53,7 +53,7 @@ skopt = ["scikit-optimize"]
 nevergrad = ["nevergrad"]
 yahpo-gym = ["yahpo-gym"]
 pymoo = ["pymoo"]
-mfpbench_main = ["mf-prior-bench"]        # NOTE: doesn't install by itself. Install separately and then upgrade ConfigSpace
+mfpbench_main = ["mf-prior-bench"]        # NOTE: doesn't install by itself. Install separately and then upgrade ConfigSpace>=1.0
 syne-tune = ["syne-tune[basic]", "syne-tune[gpsearchers]"]     # NOTE: install separately, throws PYYAML build errors
 
 [project.urls]

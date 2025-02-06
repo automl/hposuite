@@ -20,7 +20,10 @@ study.optimize()
 
 > [!TIP]
 > * See below for example of [Running multiple Optimizers on multiple Benchmarks](#Simple-example-to-run-multiple-Optimizers-on-multiple-benchmarks)
-> * Check this example [notebook](examples/hposuite_demo.ipynb) for more examples
+> * Check this example [notebook](examples/hposuite_demo.ipynb) for more demo examples
+> * This [notebook](examples/opt_bench_usage_examples.ipynb) contains usage examples for Optimizer and Benchmark combinations
+> * This [notebook](examples/study_usage_examples.ipynb) demonstrates some of the features of hposuite's Study
+> * This [notebook](examples/plots_and_comparisons.ipynb) shows how to plot results for comparison
 > * Check out [hpoglue](https://github.com/automl/hpoglue) for core HPO API for interfacing an Optimizer and Benchmark
 
 ## Installation
@@ -41,6 +44,11 @@ pip install hposuite # Current not functional
 > * `pip install hposuite["all]` - To install hposuite with all available optimizers and benchmarks
 > * `pip install hposuite["all_opts]` - To install hposuite with all available optimizers only
 > * `pip install hposuite["all_benchmarks]` - To install hposuite with all available benchmarks only
+
+> [!NOTE]
+> * mf-prior-bench is not installed when doing `pip install hposuite["all]` or `pip install hposuite["all_benchmarks]` \
+It has to be installed separately using `pip intall mf-prior-bench` and then the ConfigSpace version has to be \
+upgraded using `pip install "ConfigSpace>=1.0"`
 
 ### Installation from source
 

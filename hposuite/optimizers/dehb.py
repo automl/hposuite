@@ -16,12 +16,10 @@ if TYPE_CHECKING:
 
 
 class DEHB_Optimizer(Optimizer):
-    """The DEHB Optimizer.
+    """The DEHB Optimizer."""
 
-    TODO: Document me
-    """
+    name = "DEHB"
 
-    name = "DEHB_Optimizer"
     env = Env(
         name="dehb-0.1.1",
         python_version="3.10",

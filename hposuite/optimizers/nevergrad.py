@@ -36,12 +36,10 @@ ext_opts = {
 
 
 class NevergradOptimizer(Optimizer):
-    """The Nevergrad Optimizer.
-
-    # TODO: Document me
-    """
+    """The Nevergrad Optimizer."""
 
     name = "Nevergrad"
+
     support = Problem.Support(
         fidelities=(None,),
         objectives=("single", "many"),

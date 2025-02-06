@@ -1,6 +1,6 @@
 optimizers: 
 - SMAC_Hyperband
-- DEHB_Optimizer
+- DEHB
 benchmarks:
 - mfh3_good
 - mfh6_good

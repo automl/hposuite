@@ -5,7 +5,7 @@ if __name__ == "__main__":
         name="minimal_example",
     )
     study.optimize(
-        optimizers=("DEHB_Optimizer", {"eta": 3}),
+        optimizers=("DEHB", {"eta": 3}),
         benchmarks="mfh3_good",
         seeds=1,
         budget=50,

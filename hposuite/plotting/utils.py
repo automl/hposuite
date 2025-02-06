@@ -50,6 +50,8 @@ def plot_results(  # noqa: C901, PLR0912, PLR0915
     save_dir: Path,
     benchmarks_name: str,
     show: bool = False,
+    figsize: tuple[int, int] = (20, 10),
+    logscale: bool = False,
 ) -> None:
     """Plot the results for the optimizers on the given benchmark."""
     marker_list = [
@@ -76,7 +78,7 @@ def plot_results(  # noqa: C901, PLR0912, PLR0915
     colors = plt.rcParams["axes.prop_cycle"].by_key()["color"]  # type: ignore
     colors_mean = cycle(colors)
     optimizers = list(report.keys())
-    plt.figure(figsize=(20, 10))
+    plt.figure(figsize=figsize)
     optim_res_dict = {}
     continuations = False
     for instance in optimizers:
@@ -203,19 +205,24 @@ def plot_results(  # noqa: C901, PLR0912, PLR0915
     plt.xlabel(f"{budget_type}")
     plt.ylabel(f"{objective}")
     plt.title(f"Performance of Optimizers on {benchmarks_name}")
-    plt.xscale("log")
+    if logscale:
+        plt.xscale("log")
     if len(optimizers) == 1:
         plt.title(f"Performance of {optimizers[0]} on {benchmarks_name}")
     plt.legend()
     save_dir.mkdir(parents=True, exist_ok=True)
     plt.savefig(save_dir / f"{benchmarks_name}_performance.png")
+    logger.info(f"Saved plot to {(save_dir / f'{benchmarks_name}_performance.png').absolute()}")
     if show:
         plt.show()
 
 
 def agg_data(
     study_dir: Path,
-    save_dir: Path
+    save_dir: Path,
+    figsize: tuple[int, int] = (20, 10),
+    *,
+    logscale: bool = False,
 ) -> None:
     """Aggregate the data from the run directory for plotting."""
     df_agg = defaultdict(lambda: defaultdict(lambda: defaultdict(dict)))
@@ -279,6 +286,8 @@ def agg_data(
             minimize=minimize,
             save_dir=save_dir,
             benchmarks_name=benchmark,
+            figsize=figsize,
+            logscale=logscale,
         )
 
 
@@ -398,12 +407,27 @@ if __name__ == "__main__":
         help="Directory to save the plots",
         default="plots"
     )
+    parser.add_argument(
+        "--figsize", "-fs",
+        type=int,
+        nargs="+",
+        default=(20, 10),
+        help="Size of the figure to plot",
+    )
+    parser.add_argument(
+        "--logscale", "-ls",
+        action="store_true",
+        help="Use log scale for the x-axis",
+    )
     args = parser.parse_args()
 
     study_dir = args.output_dir / args.study_dir
     save_dir = study_dir / args.save_dir
+    figsize = tuple(map(int, args.figsize))
 
     agg_data(
         study_dir=study_dir,
-        save_dir=save_dir
+        save_dir=save_dir,
+        figsize=figsize,
+        logscale=args.logscale,
     )

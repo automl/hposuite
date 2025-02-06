@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import os
+import sys
 from typing import Any
 
 from hpoglue import Problem
@@ -20,3 +22,12 @@ class GlueWrapperFunctions:
             optimizers_dict=OPTIMIZERS,
         )
 
+class HiddenPrints:  # noqa: D101
+    def __enter__(self):
+        self._original_stdout = sys.stdout
+        from pathlib import Path
+        sys.stdout = Path(os.devnull).open("w")
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        sys.stdout.close()
+        sys.stdout = self._original_stdout

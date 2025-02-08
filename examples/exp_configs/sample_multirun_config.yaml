@@ -1,10 +1,12 @@
+study_name: sample_multirun
+output_dir: example-outputs
 optimizers: 
-- SMAC_Hyperband
+- name: SMAC_Hyperband
+  hps:
+    eta: 2
 - DEHB
 benchmarks:
 - mfh3_good
 - mfh6_good
 seeds: 1
 budget: 100
-overwrite: True
-group_by: memory

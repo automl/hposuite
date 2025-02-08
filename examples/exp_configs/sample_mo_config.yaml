@@ -1,9 +1,12 @@
+name: sample_mo
+output_dir: example-outputs
 optimizers:
-- !!python/tuple [Nevergrad, opt: EvolutionStrategy] # uses NSGA2 by default
+- name: Nevergrad
+  hps:
+    opt: EvolutionStrategy # uses NSGA2 by default
 benchmarks:
 - pymoo-zdt1
 seeds: 
 - 1
 n_objectives: 2
 budget: 100
-overwrite: True

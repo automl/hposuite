@@ -3,63 +3,28 @@ from __future__ import annotations
 import argparse
 from pathlib import Path
 
-import yaml
-
-from hposuite.study import create_study
+from hposuite.study import Study, create_study
 
 
-def glue_study(  # noqa: D103, PLR0913
-    optimizers: str,
-    benchmarks: str,
-    *,
-    seeds: list,
-    num_seeds: int,
-    budget: int,
-    exp_name: str,
-    output_dir: Path,
-    exec_type: str,
-    group_by: str,
-    overwrite: bool,
-    continuations: bool,
-    on_error: str,
-):
-    study = create_study(
-        output_dir=output_dir,
-        name=exp_name,
-        optimizers=optimizers,
-        benchmarks=benchmarks,
-        seeds=seeds,
-        num_seeds=num_seeds,
-        budget=budget,
-        group_by=group_by,
-        on_error=on_error,
-    )
-    study.optimize(
-        continuations=continuations,
-        overwrite=overwrite,
-        exec_type=exec_type,
-    )
-
-def _get_from_yaml_config(config_path: Path) -> dict:
-    with config_path.open() as file:
-        return yaml.load(file, Loader=yaml.FullLoader)  # noqa: S506
+def _study_from_yaml_config(yaml_config: Path) -> Study:
+    return Study.from_yaml(yaml_config)
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument(
-        "--exp_name", "-e",
+        "--study_name", "-sn",
         type=str,
-        help="Experiment name",
+        help="Study name",
     )
     parser.add_argument(
-        "--output_dir", "-od",
+        "--output_dir", "-d",
         type=Path,
         help="Results directory",
     )
     parser.add_argument(
-        "--exp_config", "-ec",
+        "--study_config", "-cfg",
         type=Path,
-        help="Absolute path to the experiment configuration file",
+        help="Absolute path to the Study configuration file",
     )
     parser.add_argument(
         "--optimizers", "-o",
@@ -127,35 +92,23 @@ if __name__ == "__main__":
     )
     args = parser.parse_args()
 
-    if args.exp_config:
-        config = _get_from_yaml_config(args.exp_config)
-        glue_study(
-            optimizers=config["optimizers"],
-            benchmarks=config["benchmarks"],
-            seeds=config.get("seeds"),
-            num_seeds=config.get("num_seeds", 1),
-            budget=config.get("budget", 50),
-            exp_name=config.get("exp_name"),
-            output_dir=config.get("output_dir"),
-            overwrite=config.get("overwrite", False),
-            continuations=config.get("continuations", True),
-            exec_type=config.get("exec_type", "sequential"),
-            group_by=config.get("group_by"),
-            on_error=config.get("on_error", "warn"),
-        )
+    if args.study_config:
+        study = _study_from_yaml_config(args.study_config)
     else:
-        glue_study(
+        study = create_study(
+            output_dir=args.output_dir,
+            name=args.study_name,
             optimizers=args.optimizers,
             benchmarks=args.benchmarks,
             seeds=args.seeds,
             num_seeds=args.num_seeds,
             budget=args.budget,
-            exp_name=args.exp_name,
-            output_dir = args.output_dir,
-            overwrite=args.overwrite,
-            continuations=args.continuations,
-            exec_type=args.exec_type,
             group_by=args.group_by,
             on_error=args.on_error,
         )
+    study.optimize(
+        continuations=args.continuations,
+        overwrite=args.overwrite,
+        exec_type=args.exec_type,
+    )
 

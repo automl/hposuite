@@ -48,6 +48,8 @@ class Study:
 
     output_dir: Path | None = None
 
+    study_dir: Path = field(init=False)
+
     study_yaml_path: Path = field(init=False)
 
     optimizers: list[OptWithHps] | list[type[Optimizer]] = field(init=False)
@@ -107,16 +109,16 @@ class Study:
         if self.name is None:
             self.name = hashlib.sha256((".".join(name_parts)).encode()).hexdigest()
 
-        self.output_dir = self.output_dir / self.name
-        self.study_yaml_path = self.output_dir / "study_config.yaml"
+        self.study_dir = self.output_dir / self.name
+        self.study_yaml_path = self.study_dir / "study_config.yaml"
         self.write_yaml()
-        logger.info(f"Created study at {self.output_dir.absolute()}")
+        logger.info(f"Created study at {self.study_dir.absolute()}")
 
 
         if len(self.experiments) > 1:
             self._dump_runs(
                 group_by=self.group_by,
-                exp_dir=self.output_dir,
+                exp_dir=self.study_dir,
             )
 
 
@@ -149,7 +151,7 @@ class Study:
         bench_keys = []
         continuations = 0
         for run in self.experiments:
-            run._set_paths(self.output_dir)
+            run._set_paths(self.study_dir)
             run.write_yaml()
             opt_name = run.name.split("benchmark")[0]
             if opt_name not in opt_keys:
@@ -191,16 +193,51 @@ class Study:
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> Study:
         """Create a Study object from a dictionary."""
+        # TODO: Add documentation for usage
+        # TODO: Test for all allowed types in Study.create_study()
+        _optimizers = []
+        for opt in data["optimizers"]:
+            if isinstance(opt, dict):
+                _optimizers.append(tuple(opt.values()))
+            else:
+                _optimizers.append(opt)
+
+        _benchmarks = []
+        for bench in data["benchmarks"]:
+            if isinstance(bench, dict):
+                _benchmarks.append(tuple(bench.values()))
+            else:
+                _benchmarks.append(bench)
+
+
         return create_study(
-            name=data.get("name"),
+            name=data.get("study_name"),
             output_dir=data.get("output_dir"),
-            optimizers=data["optimizers"],
-            benchmarks=data["benchmarks"],
+            optimizers=_optimizers,
+            benchmarks=_benchmarks,
             seeds=data.get("seeds"),
             num_seeds=data.get("num_seeds", 1),
             budget=data.get("budget", 50),
-            continuations=data.get("continuations", True),
+            group_by=data.get("group_by"),
+            on_error=data.get("on_error", "warn"),
         )
+
+
+    @classmethod
+    def from_yaml(cls, yaml_file: Path | str) -> Study:
+        """Create a Study instance from a YAML file.
+
+        Args:
+            yaml_file: The path to the YAML file containing the study data.
+
+        Returns:
+            An instance of the Study class populated with data from the YAML file.
+        """
+        if isinstance(yaml_file, str):
+            yaml_file = Path(yaml_file)
+        with yaml_file.open("r") as file:
+            data = yaml.safe_load(file)
+        return cls.from_dict(data)
 
 
     def write_yaml(self) -> None:

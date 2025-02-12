@@ -90,6 +90,11 @@ if __name__ == "__main__":
         choices=["warn", "raise", "ignore"],
         help="Action to take on error",
     )
+    parser.add_argument(
+        "--disable_env", "-de",
+        action="store_true",
+        help="Disable environments",
+    )
     args = parser.parse_args()
 
     if args.study_config:
@@ -110,5 +115,6 @@ if __name__ == "__main__":
         continuations=args.continuations,
         overwrite=args.overwrite,
         exec_type=args.exec_type,
+        disable_env=args.disable_env,
     )
 

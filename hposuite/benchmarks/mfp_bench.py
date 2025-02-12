@@ -32,11 +32,9 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 import numpy as np
-from hpoglue.benchmark import BenchmarkDescription, SurrogateBenchmark, TabularBenchmark
+from hpoglue import BenchmarkDescription, Measure, Result, SurrogateBenchmark, TabularBenchmark
 from hpoglue.env import Env
 from hpoglue.fidelity import RangeFidelity
-from hpoglue.measure import Measure
-from hpoglue.result import Result
 
 from hposuite.utils import is_package_installed
 
@@ -44,7 +42,7 @@ mfp_logger = logging.getLogger(__name__)
 
 if TYPE_CHECKING:
     import mfpbench
-    from hpoglue.query import Query
+    from hpoglue import Query
 
 
 warnings.filterwarnings("ignore", category=DeprecationWarning)

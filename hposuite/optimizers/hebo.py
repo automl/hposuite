@@ -2,19 +2,28 @@ from __future__ import annotations
 
 from collections.abc import Mapping
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import numpy as np
 from ConfigSpace import ConfigurationSpace
 from hebo.design_space.design_space import DesignSpace
 from hebo.optimizers.hebo import HEBO
-from hpoglue import Config, Optimizer, Problem, Query, Result
+from hpoglue import Config, Optimizer, Problem, Query
+from hpoglue.env import Env
 
+if TYPE_CHECKING:
+    from hpoglue import Result
 
 class HEBOOptimizer(Optimizer):
     """The HEBO Optimizer."""
 
     name = "HEBO"
+
+    env = Env(
+        name="hebo-0.3.6",
+        python_version="3.10",
+        requirements=("hebo==0.3.6",),
+    )
 
     support = Problem.Support(
         fidelities=(None,),

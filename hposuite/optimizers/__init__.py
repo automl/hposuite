@@ -12,7 +12,7 @@ from hposuite.optimizers.smac import SMAC_BO, SMAC_Hyperband
 from hposuite.optimizers.synetune import SyneTuneBO, SyneTuneBOHB
 
 if TYPE_CHECKING:
-    from hpoglue.optimizer import Optimizer
+    from hpoglue import Optimizer
 
 OPTIMIZERS: dict[str, type[Optimizer]] = {
     RandomSearch.name: RandomSearch,

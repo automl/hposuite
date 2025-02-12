@@ -4,16 +4,14 @@ import logging
 from collections.abc import Mapping
 from pathlib import Path
 from typing import TYPE_CHECKING
-from typing_extensions import Any, override
+from typing_extensions import Any
 
 import ConfigSpace as CS  # noqa: N817
-from hpoglue.config import Config
-from hpoglue.optimizer import Optimizer
-from hpoglue.problem import Problem
-from hpoglue.query import Query
+from hpoglue import Config, Optimizer, Problem, Query
+from hpoglue.env import Env
 
 if TYPE_CHECKING:
-    from hpoglue.result import Result
+    from hpoglue import Result
     from skopt.space.space import Space
 
 logger = logging.getLogger(__name__)
@@ -28,6 +26,13 @@ class SkoptOptimizer(Optimizer):
     """The Scikit_Optimize Optimizer."""
 
     name = "Scikit_Optimize"
+
+    env = Env(
+        name="scikit_optimize-0.10.2",
+        python_version="3.10",
+        requirements=("scikit-optimize==0.10.2",),
+    )
+
     support = Problem.Support(
         fidelities=(None,),  # NOTE: Skopt does not support multi-fidelity optimization
         objectives=("single", "many"),

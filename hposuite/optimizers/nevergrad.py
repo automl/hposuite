@@ -4,19 +4,17 @@ import logging
 from collections.abc import Mapping
 from pathlib import Path
 from typing import TYPE_CHECKING
-from typing_extensions import Any, override
+from typing_extensions import Any
 
 import ConfigSpace as CS  # noqa: N817
 import nevergrad as ng
 import numpy as np
-from hpoglue.config import Config
-from hpoglue.optimizer import Optimizer
-from hpoglue.problem import Problem
-from hpoglue.query import Query
+from hpoglue import Config, Optimizer, Problem, Query
+from hpoglue.env import Env
 from nevergrad.parametrization import parameter
 
 if TYPE_CHECKING:
-    from hpoglue.result import Result
+    from hpoglue import Result
     from nevergrad.optimization.base import (
         ConfiguredOptimizer as ConfNGOptimizer,
         Optimizer as NGOptimizer,
@@ -39,6 +37,12 @@ class NevergradOptimizer(Optimizer):
     """The Nevergrad Optimizer."""
 
     name = "Nevergrad"
+
+    env = Env(
+        name="nevergrad-1.0.5",
+        python_version="3.10",
+        requirements=("nevergrad==1.0.5",),
+    )
 
     support = Problem.Support(
         fidelities=(None,),

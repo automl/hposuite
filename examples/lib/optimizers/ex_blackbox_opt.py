@@ -20,6 +20,13 @@ def _dummy_target_function(*args: Any, budget: int | float, seed: int) -> NoRetu
 
 class Ex_Blackbox_Opt(Optimizer):
     name = "Ex_Blackbox_Opt"
+
+    env = Env(
+        name="SMAC-2.1",
+        python_version="3.10",
+        requirements=("smac==2.1",)
+    )
+
     support = Problem.Support(
         fidelities=(None,),
         objectives=("single", "many"),

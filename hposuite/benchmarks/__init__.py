@@ -7,7 +7,7 @@ from hposuite.benchmarks.pymoo import pymoo_benchmarks
 from hposuite.benchmarks.synthetic import ACKLEY_BENCH, BRANIN_BENCH
 
 if TYPE_CHECKING:
-    from hpoglue.benchmark import BenchmarkDescription
+    from hpoglue import BenchmarkDescription
 
 BENCHMARKS: dict[str, BenchmarkDescription] = {}
 MF_BENCHMARKS: dict[str, BenchmarkDescription] = {}

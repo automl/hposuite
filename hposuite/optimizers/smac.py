@@ -5,16 +5,13 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any, NoReturn
 
 from ConfigSpace import ConfigurationSpace
+from hpoglue import Config, Optimizer, Problem, Query
 from hpoglue.budget import CostBudget, TrialBudget
-from hpoglue.config import Config
 from hpoglue.env import Env
-from hpoglue.optimizer import Optimizer
-from hpoglue.problem import Problem
-from hpoglue.query import Query
 
 if TYPE_CHECKING:
-    from hpoglue.problem import Fidelity
-    from hpoglue.result import Result
+    from hpoglue import Result
+    from hpoglue.fidelity import Fidelity
     from smac.facade import AbstractFacade
     from smac.runhistory import TrialInfo
 
@@ -24,12 +21,14 @@ def _dummy_target_function(*args: Any, budget: int | float, seed: int) -> NoRetu
 
 
 class SMAC_Optimizer(Optimizer):
-    """Default SMAC Optimizer.
+    """Default SMAC Optimizer."""
 
-    # TODO: Document me
-    """
+    env = Env(
+        name="SMAC-2.1",
+        python_version="3.10",
+        requirements=("smac==2.1",)
+    )
 
-    env = Env(name="SMAC-2.1", python_version="3.10", requirements=("smac==2.1",))
 
     def __init__(
         self,
@@ -221,7 +220,7 @@ class SMAC_Hyperband(SMAC_Optimizer):
     )
     mem_req_mb = 1024
 
-    def __init__(
+    def __init__(  # noqa: PLR0912
         self,
         *,
         problem: Problem,

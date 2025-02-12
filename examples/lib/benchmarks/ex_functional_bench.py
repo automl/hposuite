@@ -7,7 +7,7 @@ from ConfigSpace import ConfigurationSpace
 from hpoglue import Config, FunctionalBenchmark, Measure, Result
 
 if TYPE_CHECKING:
-    from hpoglue.query import Query
+    from hpoglue import Query
 
 
 def ackley_fn(x: np.ndarray) -> float:

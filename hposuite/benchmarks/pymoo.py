@@ -9,14 +9,12 @@ from typing import TYPE_CHECKING, Any
 
 import numpy as np
 from ConfigSpace import ConfigurationSpace, Float
-from hpoglue.benchmark import BenchmarkDescription, SurrogateBenchmark
+from hpoglue import BenchmarkDescription, Measure, Result, SurrogateBenchmark
 from hpoglue.env import Env
-from hpoglue.measure import Measure
-from hpoglue.result import Result
 
 if TYPE_CHECKING:
     import pymoo
-    from hpoglue.query import Query
+    from hpoglue import Query
 
 def get_pymoo_space(
     pymoo_prob: pymoo.core.problem.Problem

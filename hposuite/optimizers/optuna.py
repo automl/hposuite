@@ -4,17 +4,15 @@ import logging
 from collections.abc import Mapping
 from pathlib import Path
 from typing import TYPE_CHECKING
-from typing_extensions import Any, override
+from typing_extensions import Any
 
 import ConfigSpace as CS  # noqa: N817
 import optuna
-from hpoglue.config import Config
-from hpoglue.optimizer import Optimizer
-from hpoglue.problem import Problem
-from hpoglue.query import Query
+from hpoglue import Config, Optimizer, Problem, Query
+from hpoglue.env import Env
 
 if TYPE_CHECKING:
-    from hpoglue.result import Result
+    from hpoglue import Result
     from optuna.distributions import BaseDistribution
 
 logger = logging.getLogger(__name__)
@@ -25,6 +23,14 @@ class OptunaOptimizer(Optimizer):
     """The Optuna Optimizer."""
 
     name = "Optuna"
+
+    env = Env(
+        name="optuna-4.0.0",
+        python_version="3.10",
+        requirements=("optuna==4.0.0",),
+    )
+
+
     support = Problem.Support(
         fidelities=(None,),  # TODO: Implement fidelity support
         objectives=("single", "many"),
@@ -86,8 +92,9 @@ class OptunaOptimizer(Optimizer):
         self.working_directory = working_directory
         self._trial_lookup: dict[str, optuna.trial.Trial] = {}
 
-    @override
+
     def ask(self) -> Query:
+        """Ask the optimizer for a new configuration to evaluate."""
         match self.problem.fidelities:
             case None:
                 trial = self.optimizer.ask(self._distributions)
@@ -106,8 +113,9 @@ class OptunaOptimizer(Optimizer):
             case _:
                 raise TypeError("Fidelity must be None or a tuple!")
 
-    @override
+
     def tell(self, result: Result) -> None:
+        """Tell the optimizer about the result of a query."""
         match self.problem.objectives:
             case (name, _):
                 _values = result.values[name]

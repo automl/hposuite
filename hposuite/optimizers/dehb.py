@@ -5,14 +5,11 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 from ConfigSpace import ConfigurationSpace
-from hpoglue.config import Config
+from hpoglue import Config, Optimizer, Problem, Query
 from hpoglue.env import Env
-from hpoglue.optimizer import Optimizer
-from hpoglue.problem import Problem
-from hpoglue.query import Query
 
 if TYPE_CHECKING:
-    from hpoglue.result import Result
+    from hpoglue import Result
 
 
 class DEHB_Optimizer(Optimizer):

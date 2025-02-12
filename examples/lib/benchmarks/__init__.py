@@ -7,7 +7,7 @@ from lib.benchmarks.ex_surrogate_bench import ex_surrogate_bench
 from lib.benchmarks.ex_synthetic_mf import ex_synthetic_mf_bench
 
 if TYPE_CHECKING:
-    from hpoglue.benchmark import BenchmarkDescription
+    from hpoglue import BenchmarkDescription
 
 
 BENCHMARKS: dict[str, BenchmarkDescription] = {}

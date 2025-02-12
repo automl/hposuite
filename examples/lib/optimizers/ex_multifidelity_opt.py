@@ -20,6 +20,7 @@ def _dummy_target_function(*args: Any, budget: int | float, seed: int) -> NoRetu
 
 class Ex_Multifidelity_Opt(Optimizer):
     name = "Ex_Multifidelity_Opt"
+
     support = Problem.Support(
         fidelities=("single",),
         objectives=("single", "many"),

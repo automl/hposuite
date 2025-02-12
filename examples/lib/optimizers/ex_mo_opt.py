@@ -4,17 +4,15 @@ import logging
 from collections.abc import Mapping
 from pathlib import Path
 from typing import TYPE_CHECKING
-from typing_extensions import Any, override
+from typing_extensions import Any
 
 import ConfigSpace as CS  # noqa: N817
 import optuna
-from hpoglue.config import Config
-from hpoglue.optimizer import Optimizer
-from hpoglue.problem import Problem
-from hpoglue.query import Query
+from hpoglue import Config, Optimizer, Problem, Query
+from hpoglue.env import Env
 
 if TYPE_CHECKING:
-    from hpoglue.result import Result
+    from hpoglue import Result
     from optuna.distributions import BaseDistribution
 
 logger = logging.getLogger(__name__)
@@ -25,6 +23,14 @@ class Ex_MO_Opt(Optimizer):
     """Example of a Multi-objective Optimizer using Optuna NSGA II Sampler."""
 
     name = "Ex_MO_Opt"
+
+    env = Env(
+        name="optuna-4.0.0",
+        python_version="3.10",
+        requirements=("optuna==4.0.0",),
+    )
+
+
     support = Problem.Support(
         fidelities=(None,),
         objectives=("single", "many"),
@@ -76,8 +82,9 @@ class Ex_MO_Opt(Optimizer):
         self.working_directory = working_directory
         self._trial_lookup: dict[str, optuna.trial.Trial] = {}
 
-    @override
+
     def ask(self) -> Query:
+        """Ask the optimizer for a new configuration to evaluate."""
         assert self.problem.fidelities is None, "Fidelities are not supported for this optimizer!"
         trial = self.optimizer.ask(self._distributions)
         name = f"trial_{trial.number}"
@@ -87,8 +94,9 @@ class Ex_MO_Opt(Optimizer):
             optimizer_info=trial,
         )
 
-    @override
+
     def tell(self, result: Result) -> None:
+        """Tell the optimizer about the result of a query."""
         _values = [result.values[key] for key in self.problem.objectives]
 
         assert isinstance(result.query.optimizer_info, optuna.trial.Trial)

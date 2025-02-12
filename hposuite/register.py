@@ -1,7 +1,6 @@
 from __future__ import annotations
 
-from hpoglue.benchmark import BenchmarkDescription
-from hpoglue.optimizer import Optimizer
+from hpoglue import BenchmarkDescription, Optimizer
 
 from hposuite.benchmarks import BENCHMARKS
 from hposuite.optimizers import OPTIMIZERS

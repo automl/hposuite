@@ -13,9 +13,8 @@ from typing import Any, Literal, TypeAlias, TypeVar
 import numpy as np
 import pandas as pd
 import yaml
-from hpoglue.benchmark import BenchmarkDescription
+from hpoglue import BenchmarkDescription, Config, Optimizer, Problem, Query, Result
 from hpoglue.budget import CostBudget, TrialBudget
-from hpoglue.config import Config
 from hpoglue.dataframe_utils import reduce_dtypes
 from hpoglue.env import (
     GLUE_PYPI,
@@ -23,10 +22,6 @@ from hpoglue.env import (
     Venv,
     get_current_installed_hpoglue_version,
 )
-from hpoglue.optimizer import Optimizer
-from hpoglue.problem import Problem
-from hpoglue.query import Query
-from hpoglue.result import Result
 
 OptWithHps: TypeAlias = tuple[type[Optimizer], Mapping[str, Any]]
 
@@ -170,6 +165,7 @@ class Run:
         on_error: Literal["raise", "continue"] = "raise",
         overwrite: Run.State | str | Sequence[Run.State | str] | bool = False,
         progress_bar: bool = True,
+        disable_env: bool = False,
     ) -> Report:
         """Run the Run.
 
@@ -192,6 +188,8 @@ class Run:
             progress_bar: Whether to show a progress bar.
 
             continuations: Whether to use continuations for the run.
+
+            disable_env: Whether to disable the environment for the run.
         """
         from hpoglue._run import _run
 
@@ -240,7 +238,7 @@ class Run:
                 case _:
                     raise RuntimeError("continuations expects a bool value!")
 
-            self.set_state(self.State.RUNNING)
+            self.set_state(self.State.RUNNING, disable_env=disable_env)
             _hist = _run(
                 problem=self.problem,
                 seed=self.seed,
@@ -296,6 +294,10 @@ class Run:
         if hpoglue == "current_version":
             raise NotImplementedError("Not implemented yet.")
 
+
+        if self.env_path.exists():
+            return
+
         match hpoglue:
             case "current_version":
                 _version = get_current_installed_hpoglue_version()
@@ -311,9 +313,6 @@ class Run:
         self.working_dir.mkdir(parents=True, exist_ok=True)
         with self.venv_requirements_file.open("w") as f:
             f.write("\n".join(requirements))
-
-        if self.env_path.exists():
-            return
 
         self.env_path.parent.mkdir(parents=True, exist_ok=True)
 
@@ -392,6 +391,7 @@ class Run:
         *,
         df: pd.DataFrame | None = None,
         err_tb: tuple[Exception, str] | None = None,
+        disable_env: bool = False,
     ) -> None:
         """Set the run to a certain state.
 
@@ -399,6 +399,7 @@ class Run:
             state: The state to set the problem to.
             df: Optional dataframe to save if setting to [`Run.State.COMPLETE`].
             err_tb: Optional error traceback to save if setting to [`Run.State.CRASHED`].
+            disable_env: Whether to disable the environment for the run.
         """
         _flags = (self.complete_flag, self.error_file, self.running_flag, self.queue_flag)
         match state:
@@ -422,14 +423,15 @@ class Run:
                 self.working_dir.mkdir(parents=True, exist_ok=True)
                 self.df_path.parent.mkdir(parents=True, exist_ok=True)
 
-                # lines = subprocess.run(
-                #     [self.venv.pip, "freeze"],  # noqa: S603
-                #     check=True,
-                #     capture_output=True,
-                #     text=True,
-                # )
-                # with self.requirements_ran_with_file.open("w") as f:
-                #     f.write(lines.stdout)
+                if not disable_env:
+                    lines = subprocess.run(  # noqa: S603
+                        [self.venv.pip, "freeze"],
+                        check=True,
+                        capture_output=True,
+                        text=True,
+                    )
+                    with self.requirements_ran_with_file.open("w") as f:
+                        f.write(lines.stdout)
 
                 self.running_flag.touch()
 

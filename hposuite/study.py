@@ -541,64 +541,6 @@ class Study:
         return _runs_per_problem
 
 
-    def create_env(             #TODO: This is not called for now. Fix this.
-        self,
-        *,
-        how: Literal["venv", "conda"] = "venv",
-        hpoglue: Literal["current_version"] | str,
-    ) -> None:
-        """Set up the isolation for the experiment."""
-        if hpoglue == "current_version":
-            raise NotImplementedError("Not implemented yet.")
-
-        match hpoglue:
-            case "current_version":
-                _version = get_current_installed_hpoglue_version()
-                req = f"{GLUE_PYPI}=={_version}"
-            case str():
-                req = hpoglue
-            case _:
-                raise ValueError(f"Invalid value for `hpoglue`: {hpoglue}")
-
-        requirements = [req, *self.env.requirements]
-
-        if self.env_path.exists():
-            logger.info(f"Environment already exists: {self.env.identifier}")
-            return
-
-        logger.info(f"Installing deps: {self.env.identifier}")
-        self.working_dir.mkdir(parents=True, exist_ok=True)
-        with self.venv_requirements_file.open("w") as f:
-            f.write("\n".join(requirements))
-
-        # if self.env_path.exists(): TODO: Does this need to be after install step?
-        #     return
-
-        self.env_path.parent.mkdir(parents=True, exist_ok=True)
-
-        env_dict = self.env.to_dict()
-        env_dict.update({"env_path": str(self.env_path), "hpoglue_source": req})
-
-        logger.info(f"Installing env: {self.env.identifier}")
-        match how:
-            case "venv":
-                logger.info(f"Creating environment {self.env.identifier} at {self.env_path}")
-                self.venv.create(
-                    path=self.env_path,
-                    python_version=self.env.python_version,
-                    requirements_file=self.venv_requirements_file,
-                    exists_ok=False,
-                )
-                if self.env.post_install:
-                    logger.info(f"Running post install for {self.env.identifier}")
-                    with self.post_install_steps.open("w") as f:
-                        f.write("\n".join(self.env.post_install))
-                    self.venv.run(self.env.post_install)
-            case "conda":
-                raise NotImplementedError("Conda not implemented yet.")
-            case _:
-                raise ValueError(f"Invalid value for `how`: {how}")
-
     def _group_by(  # noqa: C901
         self,
         group_by: Literal["opt", "bench", "opt_bench", "seed", "mem"] | None,
@@ -675,6 +617,7 @@ class Study:
         add_num_seeds: int | None = None,
         overwrite: bool = False,
         continuations: bool = True,
+        disable_env: bool = False,
     ) -> None:
         """Execute multiple atomic runs using a list of Optimizers and a list of Benchmarks.
 
@@ -701,6 +644,8 @@ class Study:
                     * "warn": Log a warning and continue.
                     * "raise": Raise an error.
                     * "ignore": Ignore the error and continue.
+
+            disable_env: Whether to disable environment creation.
 
         """
         if add_seeds is not None and add_num_seeds is not None:
@@ -752,12 +697,14 @@ class Study:
                 case "sequential":
                     logger.info(f"Running {len(self.experiments)} experiments sequentially")
                     for i, run in enumerate(self.experiments, start=1):
-                        # run.create_env(hpoglue=f"-e {Path.cwd()}")
+                        if not disable_env:
+                            run.create_env(hpoglue=f"-e {Path.cwd()}")
                         logger.info(f"Running experiment {i}/{len(self.experiments)}")
                         run.run(
                             continuations=continuations,
                             overwrite=overwrite,
                             progress_bar=False,
+                            disable_env=disable_env,
                         )
                 case "parallel":
                     raise NotImplementedError("Parallel execution not implemented yet!")
@@ -765,12 +712,14 @@ class Study:
                     raise ValueError(f"Invalid exceution type: {exec_type}")
         else:
             run = self.experiments[0]
-            # run.create_env(hpoglue=f"-e {Path.cwd()}")
+            if not disable_env:
+                run.create_env(hpoglue=f"-e {Path.cwd()}")
             logger.info("Running single experiment")
             run.run(
                 continuations=continuations,
                 overwrite=overwrite,
                 progress_bar=False,
+                disable_env=disable_env,
             )
         logger.info(f"Completed study with {len(self.experiments)} runs")
 

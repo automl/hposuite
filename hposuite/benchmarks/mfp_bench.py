@@ -23,6 +23,7 @@
 
 from __future__ import annotations
 
+import logging
 import os
 import warnings
 from collections.abc import Iterator
@@ -36,6 +37,10 @@ from hpoglue.env import Env
 from hpoglue.fidelity import RangeFidelity
 from hpoglue.measure import Measure
 from hpoglue.result import Result
+
+from hposuite.utils import is_package_installed
+
+mfp_logger = logging.getLogger(__name__)
 
 if TYPE_CHECKING:
     import mfpbench
@@ -180,12 +185,17 @@ def lcbench_surrogate(datadir: Path | None = None) -> Iterator[BenchmarkDescript
     env = Env(
         name="py310-mfpbench-1.9-yahpo",
         requirements=(
-            "mf-prior-bench[yahpo]==1.9.0",
+            "mf-prior-bench==1.9.0",
+            "yahpo-gym==1.0.1",
             "ConfigSpace==0.6.1",
             "xgboost>=1.7"
         ),
         post_install=_download_data_cmd("yahpo", datadir=datadir),
     )
+    for req in env.requirements:
+        if not is_package_installed(req):
+            mfp_logger.error(f"Please install the required package: {req}", stacklevel=2)
+            return
     with HiddenPrints():        # NOTE: To stop yahpo-lcbench from printing garbage
         for task_id in _lcbench_task_ids:
             yield BenchmarkDescription(
@@ -275,9 +285,17 @@ def lcbench_tabular(datadir: Path | None = None) -> Iterator[BenchmarkDescriptio
     env = Env(
         name="py310-mfpbench-1.9-lcbench-tabular",
         python_version="3.10",
-        requirements=("mf-prior-bench[tabular]==1.9.0",),
+        requirements=(
+            "mf-prior-bench==1.9.0",
+            "pandas>2",
+            "pyarrow"
+        ),
         post_install=_download_data_cmd("lcbench-tabular", datadir=datadir),
     )
+    for req in env.requirements:
+        if not is_package_installed(req):
+            mfp_logger.error(f"Please install the required package: {req}", stacklevel=2)
+            return
     for task_id in task_ids:
         yield BenchmarkDescription(
             name=f"lcbench_tabular-{task_id}",
@@ -327,6 +345,10 @@ def mfh() -> Iterator[BenchmarkDescription]:
         requirements=("mf-prior-bench==1.9.0",),
         post_install=(),
     )
+    for req in env.requirements:
+        if not is_package_installed(req):
+            mfp_logger.error(f"Please install the required package: {req}", stacklevel=2)
+            return
     for correlation in ("bad", "good", "moderate", "terrible"):
         for dims in (3, 6):
             name = f"mfh{dims}_{correlation}"
@@ -369,9 +391,18 @@ def jahs(datadir: Path | None = None) -> Iterator[BenchmarkDescription]:
     env = Env(
         name="py310-mfpbench-1.9-jahs",
         python_version="3.10",
-        requirements=("mf-prior-bench[jahs-bench]==1.9.0",),
+        requirements=(
+            "mf-prior-bench==1.9.0",
+            "jahs-bench==1.1.0",
+            "pandas<1.4",
+            "ConfigSpace<=0.6.1",
+        ),
         post_install=_download_data_cmd("jahs", datadir=datadir),
     )
+    for req in env.requirements:
+        if not is_package_installed(req):
+            mfp_logger.error(f"Please install the required package: {req}", stacklevel=2)
+            return
     for task_id in task_ids:
         name = f"jahs-{task_id}"
         yield BenchmarkDescription(
@@ -423,9 +454,13 @@ def pd1(datadir: Path | None = None) -> Iterator[BenchmarkDescription]:
     env = Env(
         name="py310-mfpbench-1.9-pd1",
         python_version="3.10",
-        requirements=("mf-prior-bench[pd1]==1.9.0",),
+        requirements=("mf-prior-bench==1.9.0","xgboost>=1.7"),
         post_install=_download_data_cmd("pd1", datadir=datadir),
     )
+    for req in env.requirements:
+        if not is_package_installed(req):
+            mfp_logger.error(f"Please install the required package: {req}", stacklevel=2)
+            return
     yield BenchmarkDescription(
         name="pd1-cifar100-wide_resnet-2048",
         config_space=mfpbench.get("cifar100_wideresnet_2048", datadir=datadir).space,
@@ -504,5 +539,5 @@ def mfpbench_benchmarks(datadir: Path | None = None) -> Iterator[BenchmarkDescri
     yield from lcbench_surrogate(datadir)
     # yield from lcbench_tabular(datadir)
     yield from mfh()
-    # yield from jahs(datadir)
+    yield from jahs(datadir)
     yield from pd1(datadir)

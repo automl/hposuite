@@ -2,11 +2,15 @@ study_name: sample_multirun
 output_dir: example-outputs
 optimizers: 
 - name: SMAC_Hyperband
-  hps:
+  hyperparameters:
     eta: 2
 - DEHB
 benchmarks:
-- mfh3_good
-- mfh6_good
+- name: pd1-cifar100-wide_resnet-2048
+  objectives: valid_error_rate
+  fidelities: epoch
+  costs: null
+  priors: null
+- mfh6_good # Not providing objectives or fidelities will use the first objective and fidelity (if available)
 seeds: 1
 budget: 100

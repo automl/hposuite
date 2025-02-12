@@ -94,6 +94,7 @@ class DEHB_Optimizer(Optimizer):
 
         self._info_lookup: dict[str, dict[str, Any]] = {}
 
+
     def ask(self) -> Query:
         """Ask DEHB for a new config to evaluate."""
         info = self.dehb.ask()
@@ -120,6 +121,7 @@ class DEHB_Optimizer(Optimizer):
             fidelity=fidelity,
             optimizer_info=info,
         )
+
 
     def tell(self, result: Result) -> None:
         """Tell DEHB the result of the query."""

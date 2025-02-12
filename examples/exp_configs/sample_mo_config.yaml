@@ -2,7 +2,7 @@ name: sample_mo
 output_dir: example-outputs
 optimizers:
 - name: Nevergrad
-  hps:
+  hyperparameters:
     opt: EvolutionStrategy # uses NSGA2 by default
 benchmarks:
 - pymoo-zdt1

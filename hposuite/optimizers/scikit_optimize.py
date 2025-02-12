@@ -37,6 +37,7 @@ class SkoptOptimizer(Optimizer):
 
     mem_req_mb = 1024
 
+
     def __init__(
         self,
         *,
@@ -54,46 +55,48 @@ class SkoptOptimizer(Optimizer):
             case CS.ConfigurationSpace():
                 self._space = _configspace_to_skopt_space(self.config_space)
             case list():
-                raise NotImplementedError("# TODO: Tabular not yet implemented for Scikit_Optimize!")
+                raise ValueError("SciKit-Optimize does not support list-type config spaces!")
             case _:
                 raise TypeError("Config space must be a list or a ConfigurationSpace!")
 
         base_estimator = kwargs.get("base_estimator", "GP")
-        assert base_estimator in base_estimators, f"base_estimator must be one of {base_estimators}!"
+        assert base_estimator in base_estimators, f"base_estimator must be one of {base_estimators}"
 
         acq_func = kwargs.get("acq_func", "gp_hedge")
-        assert acq_func in acq_funcs, f"acq_func must be one of {acq_funcs}!"
+        assert acq_func in acq_funcs, f"acq_func must be one of {acq_funcs}"
 
         acq_optimizer = kwargs.get("acq_optimizer", "auto")
-        assert acq_optimizer in acq_optimizers, f"acq_optimizer must be one of {acq_optimizers}!"
+        assert acq_optimizer in acq_optimizers, f"acq_optimizer must be one of {acq_optimizers}"
 
         self.optimizer: skopt.optimizer.Optimizer
-        match problem.objectives:
-            case (_, objective):
-                self.optimizer = skopt.optimizer.Optimizer(
-                    dimensions=self._space,
-                    base_estimator=base_estimator,
-                    acq_func=acq_func,
-                    acq_optimizer=acq_optimizer,
-                    random_state=seed,
-                    n_initial_points=5
-                )
-            case Mapping():
-                raise NotImplementedError("Multiobjective not supported by Scikit_Optimize!")
-            case _:
-                raise ValueError("Objective must be a string or a list of strings!")
+        self.optimizer = skopt.optimizer.Optimizer(
+            dimensions=self._space,
+            base_estimator=base_estimator,
+            acq_func=acq_func,
+            acq_optimizer=acq_optimizer,
+            random_state=seed,
+            n_initial_points=5
+        )
 
         self.problem = problem
         self.working_directory = working_directory
         self.trial_counter = 0
 
-    @override
+
     def ask(self) -> Query:
         match self.problem.fidelities:
             case None:
                 config = self.optimizer.ask()
-                config_values = {hp.name: value for hp, value in zip(self.config_space.get_hyperparameters(), config, strict=False)}
-                assert list(config_values.keys()) == list(self.config_space.get_hyperparameter_names())
+                config_values = {
+                    hp.name: value
+                    for hp, value in zip(
+                        self.config_space.get_hyperparameters(),
+                        config,
+                        strict=False
+                    )
+                }
+                assert list(config_values.keys()) == \
+                    list(self.config_space.get_hyperparameter_names())
                 assert list(config_values.keys()) == [hp.name for hp in self._space]
                 name = f"trial_{self.trial_counter}"
                 self.trial_counter += 1
@@ -103,19 +106,19 @@ class SkoptOptimizer(Optimizer):
                     optimizer_info=None,
                 )
             case tuple():
-                raise NotImplementedError("# TODO: Fidelity-aware not yet implemented for Scikit_Optimize!")
+                raise ValueError("Multi-fidelity optimization not supported by Scikit_Optimize!")
             case Mapping():
-                raise NotImplementedError("# TODO: Fidelity-aware not yet implemented for Scikit_Optimize!")
+                raise ValueError("Many-fidelity optimization not supported by Scikit_Optimize!")
             case _:
-                raise TypeError("Fidelity must be None or a tuple!")
+                raise TypeError("Fidelity must be None, a tuple or a Mapping!")
 
-    @override
+
     def tell(self, result: Result) -> None:
         match self.problem.objectives:
             case (name, _):
                 _values = result.values[name]
             case Mapping():
-                _values = [result.values[key] for key in self.problem.objectives]
+                raise ValueError("Multiobjective not supported by Scikit_Optimize!")
             case _:
                 raise TypeError("Objective must be a string or a list of strings!")
 
@@ -123,9 +126,9 @@ class SkoptOptimizer(Optimizer):
             case None:
                 pass
             case tuple():
-                raise NotImplementedError("# TODO: Cost-aware not yet implemented for Scikit_Optimize!")
+                raise ValueError("Cost-aware optimization not supported by Scikit_Optimize!")
             case Mapping():
-                raise NotImplementedError("# TODO: Cost-aware not yet implemented for Scikit_Optimize!")
+                raise ValueError("Cost-aware optimization not supported by Scikit_Optimize!")
             case _:
                 raise TypeError("Cost must be None or a mapping!")
 
@@ -135,7 +138,7 @@ class SkoptOptimizer(Optimizer):
         )
 
 
-def _configspace_to_skopt_space(
+def _configspace_to_skopt_space(  # noqa: C901
     config_space: CS.ConfigurationSpace,
 ) -> dict[str, Space]:
     import numpy as np
@@ -168,7 +171,9 @@ def _configspace_to_skopt_space(
             case CS.OrdinalHyperparameter():
                 skopt_space.append(Categorical(list(hp.sequence), name=hp.name))
             case _:
-                raise ValueError(f"Unrecognized type of hyperparameter in ConfigSpace: {hp.__class__.__name__}!")
+                raise ValueError(
+                    f"Unrecognized type of hyperparameter in ConfigSpace: {hp.__class__.__name__}!"
+                )
 
     return skopt_space
 

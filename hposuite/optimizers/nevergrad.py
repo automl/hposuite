@@ -104,7 +104,7 @@ class NevergradOptimizer(Optimizer):
         self.history: dict[str, tuple[ng.p.Parameter, float | list[float] | None]] = {}
         self.counter = 0
 
-    @override
+
     def ask(self) -> Query:
         match self.problem.fidelities:
             case None:
@@ -129,7 +129,7 @@ class NevergradOptimizer(Optimizer):
             case _:
                 raise TypeError("Fidelity must be None or a tuple!")
 
-    @override
+
     def tell(self, result: Result) -> None:
         match self.problem.objectives:
             case (name, _):
@@ -156,7 +156,7 @@ class NevergradOptimizer(Optimizer):
         )
 
 
-def _configspace_to_nevergrad_space(
+def _configspace_to_nevergrad_space(  # noqa: C901, PLR0912
     config_space: CS.ConfigurationSpace,
 ) -> dict[str, ng.p.Instrumentation]:
 

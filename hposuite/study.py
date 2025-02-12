@@ -42,59 +42,96 @@ GLOBAL_SEED = 42
 
 @dataclass(kw_only=True)
 class Study:
-    """Represents a Suite study for hyperparameter optimization."""
+    """A class to represent a hposuite Study consisting of multiple Runs."""
 
-    name: str
+    name: str | None = None
+    """The name of the study."""
 
-    output_dir: Path | None = None
+    output_dir: str | Path = DEFAULT_STUDY_DIR
+    """The outer directory where all Studies are stored"""
 
     study_dir: Path = field(init=False)
+    """The directory for storing the Study results.
+        study_dir = output_dir/study_name
+    """
 
     study_yaml_path: Path = field(init=False)
+    """The path to the study configuration YAML file."""
 
-    optimizers: list[OptWithHps] | list[type[Optimizer]] = field(init=False)
+    optimizers: list[OptWithHps] = field(init=False)
+    """The list of optimizers used in the study."""
 
-    benchmarks: list[BenchWith_Objs_Fids] | list[BenchmarkDescription] = field(init=False)
+    benchmarks: list[BenchWith_Objs_Fids] = field(init=False)
+    """The benchmarks used in the study."""
 
     experiments: list[Run]
+    """The list of experiments in the study."""
 
     seeds: Iterable[int] | int | None = None
+    """The seeds used in the study."""
 
     num_seeds: int = 1
+    """The number of seeds used in the study."""
 
     budget: int = 50
+    """The budget for the study."""
 
     group_by: Literal["opt", "bench", "opt_bench", "seed", "mem"] | None = None
+    """The grouping method to dump run commands for the study."""
 
     continuations: bool = True
+    """Whether to use continuations for the study."""
 
-    def __post_init__(self):
+    def __post_init__(self):  # noqa: C901
 
         self.optimizers = []
         self.benchmarks = []
         seeds = set()
 
+        opt_keys = []
+        bench_keys = {}
+        complexity = 0
         for run in self.experiments:
-            opt_keys = [opt[0].name for opt in self.optimizers if self.optimizers]
-            if not opt_keys or run.optimizer.name not in opt_keys:
+            opt_name = run.name.split("benchmark")[0]
+            if opt_name not in opt_keys:
                 self.optimizers.append(
                     (
                         run.optimizer,
-                        run.optimizer_hyperparameters
+                        run.optimizer_hyperparameters or {},
                     )
                 )
-            bench_keys = [bench[0].name for bench in self.benchmarks if self.benchmarks]
-            if not bench_keys or run.benchmark.name not in bench_keys:
-                self.benchmarks.append(
-                    (
-                        run.benchmark,
-                        {
-                            "objectives": run.problem.get_objectives(),
-                            "fidelities": run.problem.get_fidelities()
-                        }
-                    )
-                )
+                opt_keys.append(opt_name)
+
+            # TODO: This doesn't uniquely identify runs with priors (Problem level issue).
+
+            _store_val = {
+                "objectives": run.problem.get_objectives(),
+                "fidelities": run.problem.get_fidelities(),
+                "costs": run.problem.get_costs(),
+                "priors": run.problem.priors,
+            }
+
+            bench = bench_keys.setdefault(run.benchmark.name, (run.benchmark, []))
+
+            if _store_val not in bench[1]:
+                for variant in bench[1]:
+                    complexity += 1
+                    if variant["objectives"] == _store_val["objectives"]:
+                        for key in ["fidelities", "costs", "priors"]:
+                            variant[key] = variant[key] or _store_val[key]
+                        break
+                else:
+                    bench[1].append(_store_val)
+
             seeds.add(run.seed)
+
+        for _, v in bench_keys.items():
+            [self.benchmarks.append(
+                (
+                    v[0],
+                    var,
+                )
+            ) for var in v[1]]
 
         if self.seeds is None:
             self.seeds = list(seeds)
@@ -145,44 +182,35 @@ class Study:
 
     def to_dict(self) -> dict[str, Any]:
         """Convert the study to a dictionary."""
-        optimizers = []
-        benchmarks = []
-        opt_keys = []
-        bench_keys = []
         continuations = 0
         for run in self.experiments:
             run._set_paths(self.study_dir)
             run.write_yaml()
-            opt_name = run.name.split("benchmark")[0]
-            if opt_name not in opt_keys:
-                optimizers.append(
-                    {
-                        "name": run.optimizer.name,
-                        "hyperparameters": run.optimizer_hyperparameters or {},
-                    }
-                )
-                opt_keys.append(opt_name)
-
-            bench_name = run.name.split("benchmark")[-1].split("seed")[0]
-            if bench_name not in bench_keys:
-                benchmarks.append(
-                    {
-                        "name": run.benchmark.name,
-                        "objectives": run.problem.get_objectives(),
-                        "fidelities": run.problem.get_fidelities(),
-                        "costs": run.problem.get_costs(),
-                    }
-                )
-                bench_keys.append(bench_name)
             continuations += run.problem.continuations
 
         continuations = continuations > 0
+        _optimizers = [{"name": opt[0].name, "hyperparameters": opt[1]} for opt in self.optimizers]
+        _benchmarks = []
+        for bench in self.benchmarks:
+            _priors = {}
+            for k, v in bench[1]["priors"].items():
+                assert isinstance(v, Config), "Priors must be Config objects"
+                _priors = {k: v.values}
+            _benchmarks.append(
+                {
+                    "name": bench[0].name,
+                    "objectives": bench[1]["objectives"],
+                    "fidelities": bench[1]["fidelities"],
+                    "costs": bench[1]["costs"],
+                    "priors": _priors,
+                }
+            )
 
         return {
-            "name": self.name,
-            "output_dir": str(self.output_dir),
-            "optimizers": optimizers,
-            "benchmarks": benchmarks,
+            "study_name": self.name,
+            "output_dir": str(self.output_dir.absolute()),
+            "optimizers": _optimizers,
+            "benchmarks": _benchmarks,
             "seeds": self.seeds,
             "num_seeds": self.num_seeds,
             "budget": self.budget,
@@ -197,17 +225,57 @@ class Study:
         # TODO: Test for all allowed types in Study.create_study()
         _optimizers = []
         for opt in data["optimizers"]:
-            if isinstance(opt, dict):
-                _optimizers.append(tuple(opt.values()))
-            else:
-                _optimizers.append(opt)
+            match opt:
+                case Mapping():
+                    assert "name" in opt, f"Optimizer name not found in {opt}"
+                    assert "hyperparameters" in opt, f"Optimizer hyperparameters not found in {opt}"
+                    _optimizers.append(tuple(opt.values()))
+                case str():
+                    _optimizers.append(opt)
+                case tuple():
+                    assert len(opt) == 2, "Each Optimizer must only have a name and hyperparameters"  # noqa: PLR2004
+                    assert isinstance(opt[0], str), "Expected str for optimizer name"
+                    assert isinstance(opt[1], Mapping), (
+                        "Expected Mapping for Optimizer hyperparameters"
+                    )
+                    _optimizers.append(opt)
+                case _:
+                    raise ValueError(
+                        f"Invalid type for optimizer: {type(opt)}. "
+                        "Expected Mapping, str or tuple"
+                    )
 
         _benchmarks = []
         for bench in data["benchmarks"]:
-            if isinstance(bench, dict):
-                _benchmarks.append(tuple(bench.values()))
-            else:
-                _benchmarks.append(bench)
+            match bench:
+                case Mapping():
+                    assert "name" in bench, f"Benchmark name not found in {bench}"
+                    assert "objectives" in bench, f"Benchmark objectives not found in {bench}"
+                    _benchmarks.append(
+                        (
+                            bench["name"],
+                            {
+                                "objectives": bench["objectives"],
+                                "fidelities": bench.get("fidelities"),
+                                "costs": bench.get("costs"),
+                                "priors": bench.get("priors"),
+                            }
+                        )
+                    )
+                case str():
+                    _benchmarks.append(bench)
+                case tuple():
+                    assert len(bench) == 2, "Each Benchmark must only have a name and objectives"  # noqa: PLR2004
+                    assert isinstance(bench[0], str), "Expected str for benchmark name"
+                    assert isinstance(bench[1], Mapping), (
+                        "Expected Mapping for Benchmark objectives and fidelities"
+                    )
+                    _benchmarks.append(bench)
+                case _:
+                    raise ValueError(
+                        f"Invalid type for benchmark: {type(bench)}. "
+                        "Expected Mapping, str or tuple"
+                    )
 
 
         return create_study(
@@ -279,7 +347,6 @@ class Study:
         budget: BudgetType | int,
         seeds: Iterable[int] | None = None,
         num_seeds: int = 1,
-        costs: int = 0,
         multi_objective_generation: Literal["mix_metric_cost", "metric_only"] = "mix_metric_cost",
         on_error: Literal["warn", "raise", "ignore"] = "warn",
         continuations: bool = True,
@@ -307,8 +374,6 @@ class Study:
             seeds: The seed or seeds to use for the problems.
 
             num_seeds: The number of seeds to generate. Only used if seeds is None.
-
-            costs: The number of costs to generate problems for.
 
             multi_objective_generation: The method to generate multiple objectives.
 
@@ -372,6 +437,7 @@ class Study:
 
                 objectives: int | str | list[str]
                 fidelities: int | str | list[str] | None
+                costs: int | str | list[str] | None
 
                 objectives = objs_fids.get("objectives", 1)
                 if isinstance(objectives, list) and len(objectives) == 1:
@@ -381,25 +447,42 @@ class Study:
                 if isinstance(fidelities, list) and len(fidelities) == 1:
                     fidelities = fidelities[0]
 
+                costs = objs_fids.get("costs", None)
+                if isinstance(costs, list) and len(costs) == 1:
+                    costs = costs[0]
+
                 priors = objs_fids.get("priors", {})
-                if fidelities is None and bench.fidelities:
-                    match opt.support.fidelities[0]:
-                        case "single":
-                            fidelities = 1
-                        case "many":
-                            fidelities = len(bench.fidelities)
-                        case None:
-                            fidelities = None
-                        case _:
-                            raise ValueError("Invalid fidelity support")
+
+                match fidelities, bench.fidelities:
+                    case None, None:
+                        fidelities = None
+                    case None, _:
+                        match opt.support.fidelities[0]:
+                            case "single":
+                                fidelities = 1
+                            case "many":
+                                fidelities = len(bench.fidelities)
+                            case None:
+                                fidelities = None
+                            case _:
+                                raise ValueError("Invalid fidelity support")
+                    case str() | int() | list(), _:
+                        match opt.support.fidelities[0]:
+                            case str():
+                                pass
+                            case None:
+                                fidelities = None
+                            case _:
+                                raise ValueError("Invalid fidelity support")
+                    case _:
+                        raise ValueError(
+                            f"Invalid fidelity type: {type(fidelities)}. "
+                            f"Expected None, str, int or list"
+                        )
 
                 if priors:
                     for k, v in priors.items():
-                        if isinstance(objectives, list):
-                            assert k in objectives, (
-                                f"Objective {k} not found in specified objectives {objectives}"
-                            )
-                        if isinstance(v, Mapping):
+                        if isinstance(v, dict):
                             priors[k] = Config(
                                 config_id=k,
                                 values=v,
@@ -429,15 +512,19 @@ class Study:
                         warnings.warn(f"{e}\nTo ignore this, set `on_error='ignore'`", stacklevel=2)
                         continue
 
-        _runs_per_problem: list[Run] = []
+
+        # NOTE: _runs_per_problem is a dict now to avoid duplicate runs esp.
+        # for eg. in case a BO Opt being used in combination with a
+        # MF Opt on a benchmark with multiple fidelities
+        _runs_per_problem: Mapping[str, Run] = {}
         for _problem, _seed in product(_problems, seeds):
             try:
-                _runs_per_problem.append(
-                    Run(
+                _run = Run(
                         problem=_problem,
                         seed=_seed,
                     )
-                )
+                if _run.name not in _runs_per_problem:
+                    _runs_per_problem[_run.name] = _run
             except ValueError as e:
                 match on_error:
                     case "raise":
@@ -447,6 +534,7 @@ class Study:
                     case "warn":
                         warnings.warn(f"{e}\nTo ignore this, set `on_error='ignore'`", stacklevel=2)
                         continue
+        _runs_per_problem = list(_runs_per_problem.values())
 
         logger.info(f"Generated {len(_runs_per_problem)} runs")
 
@@ -511,16 +599,32 @@ class Study:
             case _:
                 raise ValueError(f"Invalid value for `how`: {how}")
 
-    def _group_by(
+    def _group_by(  # noqa: C901
         self,
         group_by: Literal["opt", "bench", "opt_bench", "seed", "mem"] | None,
     ) -> Mapping[str, list[Run]]:
         """Group the runs by the specified group."""
-        if group_by is None:
-            return {"all": self.experiments}
-
         _grouped_runs = {}
+        filtered_runs = {}
+
+        # To avoid duplicate run dumps because we do not support having
+        # objectives, fidelities and priors in the hpoglue CLI run command
         for run in self.experiments:
+            _run_hash = ".".join(
+                [
+                    run.optimizer.name,
+                    run.benchmark.name,
+                    str(run.seed),
+                    f"{run.mem_req_mb}mb",
+                ]
+            )
+            if _run_hash not in filtered_runs:
+                filtered_runs[_run_hash] = run
+
+        if group_by is None:
+            return {"all": list(filtered_runs.values())}
+
+        for run in filtered_runs.values():
             key = ""
             match group_by:
                 case "opt":
@@ -730,6 +834,7 @@ def create_study(  # noqa: C901, PLR0912, PLR0915
                             {
                                 "objectives": [list of objectives] | number of objectives,
                                 "fidelities": [list of fidelities] | number of fidelities | None,
+                                "costs": [list of costs] | number of costs | None,
                                 "priors": {
                                     "objective": Prior
                                 }
@@ -752,6 +857,7 @@ def create_study(  # noqa: C901, PLR0912, PLR0915
     Returns:
         A Study object.
     """
+    # TODO: Add redundancy checks for repeated optimizers and benchmarks with same configs
     match output_dir:
         case None:
             output_dir = DEFAULT_STUDY_DIR
@@ -774,13 +880,19 @@ def create_study(  # noqa: C901, PLR0912, PLR0915
     for optimizer in optimizers:
         match optimizer:
             case str():
-                assert optimizer in OPTIMIZERS, f"Optimizer must be one of {OPTIMIZERS.keys()}"
+                assert optimizer in OPTIMIZERS, (
+                    f"Optimizer must be one of {OPTIMIZERS.keys()}\n"
+                    f"Found {optimizer}"
+                )
                 _optimizers.append(OPTIMIZERS[optimizer])
             case tuple():
                 opt, hps = optimizer
                 match opt:
                     case str():
-                        assert opt in OPTIMIZERS, f"Optimizer must be one of {OPTIMIZERS.keys()}"
+                        assert opt in OPTIMIZERS, (
+                            f"Optimizer must be one of {OPTIMIZERS.keys()}\n"
+                            f"Found {opt}"
+                        )
                         _optimizers.append((OPTIMIZERS[opt], hps))
                     case type():
                         _optimizers.append((opt, hps))
@@ -796,29 +908,34 @@ def create_study(  # noqa: C901, PLR0912, PLR0915
     for benchmark in benchmarks:
         match benchmark:
             case str():
-                assert benchmark in BENCHMARKS, f"Benchmark must be one of {BENCHMARKS.keys()}"
+                assert benchmark in BENCHMARKS, (
+                    f"Benchmark must be one of {BENCHMARKS.keys()}\n"
+                    f"Found {benchmark}"
+                )
                 if not isinstance(BENCHMARKS[benchmark], FunctionalBenchmark):
                     _benchmarks.append(BENCHMARKS[benchmark])
                 else:
-                    _benchmarks.append(BENCHMARKS[benchmark].description)
+                    _benchmarks.append(BENCHMARKS[benchmark].desc)
             case BenchmarkDescription():
                 _benchmarks.append(benchmark)
             case FunctionalBenchmark():
-                _benchmarks.append(benchmark.description)
+                _benchmarks.append(benchmark.desc)
             case tuple():
                 bench, bench_hps = benchmark
                 match bench:
                     case str():
-                        assert bench in BENCHMARKS, "Benchmark must be one of"
-                        f"{BENCHMARKS.keys()}"
+                        assert bench in BENCHMARKS, (
+                            f"Benchmark must be one of {BENCHMARKS.keys()}\n"
+                            f"Found {bench}"
+                        )
                         if not isinstance(BENCHMARKS[bench], FunctionalBenchmark):
                             _benchmarks.append((BENCHMARKS[bench], bench_hps))
                         else:
-                            _benchmarks.append((BENCHMARKS[bench].description, bench_hps))
+                            _benchmarks.append((BENCHMARKS[bench].desc, bench_hps))
                     case BenchmarkDescription():
                         _benchmarks.append((bench, bench_hps))
                     case FunctionalBenchmark():
-                        _benchmarks.append((bench.description, bench_hps))
+                        _benchmarks.append((bench.desc, bench_hps))
                     case _:
                         raise TypeError(f"Unknown Benchmark type {type(benchmark)}")
             case _:

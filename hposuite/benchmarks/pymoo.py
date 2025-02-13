@@ -4,7 +4,6 @@ from __future__ import annotations
 
 from collections.abc import Iterator
 from functools import partial
-from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 import numpy as np
@@ -34,7 +33,7 @@ def _pymoo_query_function(
 ) -> Result:
     assert query.fidelity is None
     config_vals = np.array(list(query.config.values.values()))
-    values = benchmark.evaluate(config_vals).tolist()    #TODO: Test multiobjective
+    values = benchmark.evaluate(config_vals).tolist()
     if len(values) > 1:
         values = {f"value{i}": val for i, val in enumerate(values, start=1)}
     else:
@@ -47,31 +46,35 @@ def _pymoo_query_function(
 
 
 def _get_pymoo_problems(
-    description: BenchmarkDescription,
-    *,
     function_name: str,
     **kwargs: Any,
-)-> SurrogateBenchmark:
+)-> pymoo.core.problem.Problem:
 
-    import pymoo
+    import pymoo.problems
 
     match function_name:
         case "omnitest":
             from pymoo.problems.multi.omnitest import OmniTest
-            bench = OmniTest()
+            return OmniTest()
         case "sympart":
             from pymoo.problems.multi.sympart import SYMPART
-            bench = SYMPART()
+            return SYMPART()
         case "sympart_rotated":
             from pymoo.problems.multi.sympart import SYMPARTRotated
-            bench = SYMPARTRotated()
+            return SYMPARTRotated()
         case _:
-            bench = pymoo.problems.get_problem(function_name, **kwargs)
-    query_function = partial(_pymoo_query_function, benchmark=bench)
+            return pymoo.problems.get_problem(function_name, **kwargs)
+
+
+def _pymoo_surrogate_bench(
+    desc: BenchmarkDescription,
+    pymoo_prob: pymoo.core.problem.Problem,
+) -> SurrogateBenchmark:
+    query_function = partial(_pymoo_query_function, benchmark=pymoo_prob)
     return SurrogateBenchmark(
-        desc=description,
-        benchmark=bench,
-        config_space=get_pymoo_space(bench),
+        desc=desc,
+        config_space=get_pymoo_space(pymoo_prob),
+        benchmark=pymoo_prob,
         query=query_function,
     )
 
@@ -88,7 +91,7 @@ _pymoo_so = [
 ]
 
 def pymoo_so_problems() -> Iterator[BenchmarkDescription]:
-    import pymoo.problems
+    """Generates benchmark descriptions for single-objective problems using the pymoo library."""
     env = Env(
         name="py310-pymoo-0.6.1.3",
         python_version="3.10",
@@ -96,20 +99,21 @@ def pymoo_so_problems() -> Iterator[BenchmarkDescription]:
         post_install=None
     )
     for prob_name in _pymoo_so:
+        pymoo_prob = _get_pymoo_problems(prob_name)
         yield BenchmarkDescription(
             name=f"pymoo-{prob_name}",
-            config_space=get_pymoo_space(pymoo.problems.get_problem(prob_name)),
-            env=env,
-            load = partial(_get_pymoo_problems, function_name=prob_name),
+            config_space=get_pymoo_space(pymoo_prob),
+            load = partial(_pymoo_surrogate_bench, pymoo_prob=pymoo_prob),
             has_conditionals=False,
             metrics={
                     "value": Measure.metric((-np.inf, np.inf), minimize=True),
                 },
             is_tabular=False,
+            env=env,
             mem_req_mb=1024,
         )
 
-_pymoo_default_mo = [
+_pymoo_mo = [
     "kursawe",
     "zdt1",
     "zdt2",
@@ -117,64 +121,33 @@ _pymoo_default_mo = [
     "zdt4",
     "zdt5",
     "zdt6",
-]
-
-_pymoo_mo_exra = [
     "omnitest",
     "sympart",
     "sympart_rotated",
 ]
 
-def pymoo_default_mo_problems() -> Iterator[BenchmarkDescription]:
-    import pymoo.problems
+def pymoo_mo_problems() -> Iterator[BenchmarkDescription]:
+    """Generator function that yields benchmark descriptions for multi-objective problems
+    using the pymoo library.
+    """
     env = Env(
         name="py310-pymoo-0.6.1.3",
         requirements=("pymoo==0.6.1.3"),
         post_install=None
     )
-    for prob_name in _pymoo_default_mo:
+    for prob_name in _pymoo_mo:
+        pymoo_prob = _get_pymoo_problems(prob_name)
         yield BenchmarkDescription(
             name=f"pymoo-{prob_name}",
-            config_space=get_pymoo_space(pymoo.problems.get_problem(prob_name)),
-            env=env,
-            load = partial(_get_pymoo_problems, function_name=prob_name),
+            config_space=get_pymoo_space(pymoo_prob),
+            load = partial(_pymoo_surrogate_bench,  pymoo_prob=pymoo_prob),
             has_conditionals=False,
             metrics={
                     "value1": Measure.metric((-np.inf, np.inf), minimize=True),
                     "value2": Measure.metric((-np.inf, np.inf), minimize=True),
                 },
             is_tabular=False,
-            mem_req_mb=1024,
-        )
-
-def pymoo_extra_mo_problems() -> Iterator[BenchmarkDescription]:
-    env = Env(
-        name="py310-pymoo-0.6.1.3",
-        requirements=("pymoo==0.6.1.3"),
-        post_install=None
-    )
-    for prob_name in _pymoo_mo_exra:
-        match prob_name:
-            case "omnitest":
-                from pymoo.problems.multi.omnitest import OmniTest
-                bench = OmniTest()
-            case "sympart":
-                from pymoo.problems.multi.sympart import SYMPART
-                bench = SYMPART()
-            case "sympart_rotated":
-                from pymoo.problems.multi.sympart import SYMPARTRotated
-                bench = SYMPARTRotated()
-        yield BenchmarkDescription(
-            name=f"pymoo-{prob_name}",
-            config_space=get_pymoo_space(bench),
             env=env,
-            load = partial(_get_pymoo_problems, function_name=prob_name),
-            has_conditionals=False,
-            metrics={
-                    "value1": Measure.metric((-np.inf, np.inf), minimize=True),
-                    "value2": Measure.metric((-np.inf, np.inf), minimize=True),
-                },
-            is_tabular=False,
             mem_req_mb=1024,
         )
 
@@ -191,18 +164,19 @@ _pymoo_many_obj = [
 
 
 def pymoo_many_obj_problems() -> Iterator[BenchmarkDescription]:
-    import pymoo.problems
+    """Generates benchmark descriptions for many-objective problems using the PyMOO library."""
     env = Env(
         name="py310-pymoo-0.6.1.3",
         requirements=("pymoo==0.6.1.3"),
         post_install=None
     )
     for prob_name in _pymoo_many_obj:
+        pymoo_prob = _get_pymoo_problems(prob_name)
         yield BenchmarkDescription(
             name=f"pymoo-{prob_name}",
-            config_space=get_pymoo_space(pymoo.problems.get_problem(prob_name)),
-            env=env,
-            load = partial(_get_pymoo_problems, function_name=prob_name),
+            config_space=get_pymoo_space(pymoo_prob),
+
+            load = partial(_pymoo_surrogate_bench,  pymoo_prob=pymoo_prob),
             has_conditionals=False,
             # PyMOO DTLZ problems have 3 objectives by default, can be changed by setting n_obj
             metrics={
@@ -211,12 +185,17 @@ def pymoo_many_obj_problems() -> Iterator[BenchmarkDescription]:
                     "value3": Measure.metric((-np.inf, np.inf), minimize=True),
                 },
             is_tabular=False,
+            env=env,
             mem_req_mb=1024,
         )
 
 
-def pymoo_benchmarks(datadir: Path | None = None) -> Iterator[BenchmarkDescription]:
+def pymoo_benchmarks() -> Iterator[BenchmarkDescription]:
+    """Generate benchmark descriptions for various pymoo problems.
+
+    This function yields benchmark descriptions for single-objective,
+    multi-objective, and many-objective problems from the pymoo library.
+    """
     yield from pymoo_so_problems()
-    yield from pymoo_default_mo_problems()
-    yield from pymoo_extra_mo_problems()
+    yield from pymoo_mo_problems()
     yield from pymoo_many_obj_problems()

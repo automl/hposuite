@@ -295,9 +295,6 @@ class Run:
             raise NotImplementedError("Not implemented yet.")
 
 
-        if self.env_path.exists():
-            return
-
         match hpoglue:
             case "current_version":
                 _version = get_current_installed_hpoglue_version()
@@ -313,6 +310,9 @@ class Run:
         self.working_dir.mkdir(parents=True, exist_ok=True)
         with self.venv_requirements_file.open("w") as f:
             f.write("\n".join(requirements))
+
+        if self.env_path.exists():
+            return
 
         self.env_path.parent.mkdir(parents=True, exist_ok=True)
 
@@ -334,6 +334,7 @@ class Run:
                     with self.post_install_steps.open("w") as f:
                         f.write("\n".join(self.env.post_install))
                     self.venv.run(self.env.post_install)
+                    ""
             case "conda":
                 raise NotImplementedError("Conda not implemented yet.")
             case _:

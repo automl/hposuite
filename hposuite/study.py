@@ -163,7 +163,7 @@ class Study:
         self,
         *,
         new_seeds: Iterable[int],
-    ):
+    ) -> None:
         """Update the study with new seeds."""
         more_experiments = Study.generate(
             optimizers=self.optimizers,
@@ -320,7 +320,7 @@ class Study:
         cls,
         num_seeds: int,
         offset: int = 0, # To offset number of seeds
-    ):
+    ) -> list[int]:
         """Generate a set of seeds using a Global Seed."""
         cls._rng = np.random.default_rng(GLOBAL_SEED)
         _num_seeds = num_seeds + offset
@@ -663,9 +663,9 @@ class Study:
             case None, None:
                 pass
             case Iterable(), None:
-                seed = list(set(add_seeds))
+                add_seeds = list(set(add_seeds))
                 for seed in add_seeds:
-                    if seed not in self.seeds+_seeds:
+                    if seed not in self.seeds:
                         _seeds.append(seed)
             case None, int():
                 _num_seeds = add_num_seeds

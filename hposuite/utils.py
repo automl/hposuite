@@ -27,6 +27,7 @@ class GlueWrapperFunctions:
             optimizers_dict=OPTIMIZERS,
         )
 
+
 class HiddenPrints:  # noqa: D101
     def __enter__(self):
         self._original_stdout = sys.stdout

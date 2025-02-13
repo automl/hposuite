@@ -18,9 +18,9 @@ class DEHB_Optimizer(Optimizer):
     name = "DEHB"
 
     env = Env(
-        name="dehb-0.1.1",
+        name="dehb-0.1.2",
         python_version="3.10",
-        requirements=("dehb==0.1.1",),
+        requirements=("dehb==0.1.2",),
     )
 
     support = Problem.Support(

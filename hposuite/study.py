@@ -317,7 +317,7 @@ class Study:
         seeds: Iterable[int] | None = None,
         num_seeds: int = 1,
         name: str | None = None,
-        output_dir: Path | str | None = None,
+        output_dir: Path | str | None = DEFAULT_STUDY_DIR,
         group_by: Literal["opt", "bench", "opt_bench", "seed", "mem"] | None = None,
         on_error: Literal["warn", "raise", "ignore"] = "warn"
     ) -> Study:
@@ -343,6 +343,17 @@ class Study:
         """
         if not isinstance(problems, list):
             problems = [problems]
+
+
+        match output_dir:
+            case None:
+                output_dir = DEFAULT_STUDY_DIR
+            case str():
+                output_dir = Path(output_dir)
+            case Path():
+                pass
+            case _:
+                raise TypeError(f"Invalid type for output_dir: {type(output_dir)}")
 
 
         if not seeds and not (num_seeds and num_seeds > 0):
@@ -840,7 +851,7 @@ class Study:
 def create_study(  # noqa: C901, PLR0912, PLR0915
     *,
     name: str | None = None,
-    output_dir: str| Path | None = None,
+    output_dir: str| Path | None = DEFAULT_STUDY_DIR,
     optimizers: (
         str
         | tuple[str, Mapping[str, Any]]

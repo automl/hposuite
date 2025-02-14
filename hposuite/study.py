@@ -12,10 +12,6 @@ from typing import TYPE_CHECKING, Any, Literal, TypeAlias
 import numpy as np
 import yaml
 from hpoglue import BenchmarkDescription, Config, FunctionalBenchmark, Optimizer, Problem
-from hpoglue.env import (
-    GLUE_PYPI,
-    get_current_installed_hpoglue_version,
-)
 
 from hposuite.benchmarks import BENCHMARKS
 from hposuite.constants import DEFAULT_STUDY_DIR
@@ -79,7 +75,7 @@ class Study:
     group_by: Literal["opt", "bench", "opt_bench", "seed", "mem"] | None = None
     """The grouping method to dump run commands for the study."""
 
-    continuations: bool = True
+    continuations: bool = field(init=False)
     """Whether to use continuations for the study."""
 
     def __post_init__(self):  # noqa: C901
@@ -90,8 +86,9 @@ class Study:
 
         opt_keys = []
         bench_keys = {}
-        complexity = 0
+        continuations = 0
         for run in self.experiments:
+            continuations += run.problem.continuations
             opt_name = run.name.split("benchmark")[0]
             if opt_name not in opt_keys:
                 self.optimizers.append(
@@ -115,7 +112,6 @@ class Study:
 
             if _store_val not in bench[1]:
                 for variant in bench[1]:
-                    complexity += 1
                     if variant["objectives"] == _store_val["objectives"]:
                         for key in ["fidelities", "costs", "priors"]:
                             variant[key] = variant[key] or _store_val[key]
@@ -132,6 +128,8 @@ class Study:
                     var,
                 )
             ) for var in v[1]]
+
+        self.continuations = continuations > 0
 
         if self.seeds is None:
             self.seeds = list(seeds)
@@ -182,13 +180,10 @@ class Study:
 
     def to_dict(self) -> dict[str, Any]:
         """Convert the study to a dictionary."""
-        continuations = 0
         for run in self.experiments:
             run._set_paths(self.study_dir)
             run.write_yaml()
-            continuations += run.problem.continuations
 
-        continuations = continuations > 0
         _optimizers = [{"name": opt[0].name, "hyperparameters": opt[1]} for opt in self.optimizers]
         _benchmarks = []
         for bench in self.benchmarks:
@@ -214,7 +209,7 @@ class Study:
             "seeds": self.seeds,
             "num_seeds": self.num_seeds,
             "budget": self.budget,
-            "continuations": continuations,
+            "continuations": self.continuations,
         }
 
 
@@ -313,6 +308,123 @@ class Study:
         self.study_yaml_path.parent.mkdir(parents=True, exist_ok=True)
         with self.study_yaml_path.open("w") as file:
             yaml.dump(self.to_dict(), file, sort_keys=False)
+
+
+    @classmethod
+    def from_problems(  # noqa: C901, PLR0912
+        cls,
+        problems: Problem | list[Problem],
+        seeds: Iterable[int] | None = None,
+        num_seeds: int = 1,
+        name: str | None = None,
+        output_dir: Path | str | None = None,
+        group_by: Literal["opt", "bench", "opt_bench", "seed", "mem"] | None = None,
+        on_error: Literal["warn", "raise", "ignore"] = "warn"
+    ) -> Study:
+        """Create a Study object from a list of Problems.
+
+        Args:
+            name: The name of the study.
+
+            output_dir: The main output directory where the hposuite studies are saved.
+
+            problems: The list of problems to generate runs for.
+
+            seeds: The seed or seeds to use for the experiment.
+
+            num_seeds: The number of seeds to generate.
+
+            group_by: The grouping to use for the runs dump.
+
+            on_error: The method to handle errors while generating runs for the study.
+
+        Returns:
+            A Study object.
+        """
+        if not isinstance(problems, list):
+            problems = [problems]
+
+
+        if not seeds and not (num_seeds and num_seeds > 0):
+            match on_error:
+                case "raise":
+                    raise ValueError("At least one seed or num_seeds must be provided")
+                case "warn" | "ignore":
+                    warnings.warn(
+                        "At least one seed or num_seeds must be provided"
+                        "Continuing with num_seeds=1",
+                        stacklevel=2
+                    )
+                    num_seeds = 1
+                case _:
+                    raise TypeError(
+                        f"Invalid value for on_error: {on_error}"
+                    )
+
+        # Generate seeds
+        match seeds:
+            case None:
+                seeds = cls.generate_seeds(num_seeds)
+            case Iterable():
+                seeds = list(set(seeds))
+            case int():
+                seeds = [seeds]
+
+
+        _budget = problems[0].budget.total
+        _problems: list[Problem] = []
+        for _problem in problems:
+            try:
+                if not isinstance(_problem, Problem):
+                    raise TypeError(
+                        f"Expected Problem or list[Problem], got {type(_problem)}"
+                    )
+                if _problem.budget.total != _budget:
+                    raise ValueError("All problems must have the same budget")
+                _problems.append(_problem)
+            except Exception as e:
+                match on_error:
+                    case "raise":
+                        raise e
+                    case "ignore":
+                        continue
+                    case "warn":
+                        warnings.warn(f"{e}\nTo ignore this, set `on_error='ignore'`", stacklevel=2)
+                        continue
+
+
+        #Generate runs from problems
+        _runs_per_problem: Mapping[str, Run] = {}
+        for _problem, _seed in product(_problems, seeds):
+            try:
+                _run = Run(
+                        problem=_problem,
+                        seed=_seed,
+                    )
+                if _run.name not in _runs_per_problem:
+                    _runs_per_problem[_run.name] = _run
+            except ValueError as e:
+                match on_error:
+                    case "raise":
+                        raise e
+                    case "ignore":
+                        continue
+                    case "warn":
+                        warnings.warn(f"{e}\nTo ignore this, set `on_error='ignore'`", stacklevel=2)
+                        continue
+        _runs_per_problem = list(_runs_per_problem.values())
+
+        logger.info(f"Generated {len(_runs_per_problem)} runs")
+
+        return cls(
+            name=name,
+            output_dir=output_dir,
+            experiments=_runs_per_problem,
+            seeds=seeds,
+            num_seeds=num_seeds,
+            budget=_budget,
+            group_by=group_by
+        )
 
 
     @classmethod
@@ -513,9 +625,10 @@ class Study:
                         continue
 
 
-        # NOTE: _runs_per_problem is a dict now to avoid duplicate runs esp.
+        # NOTE: REDUNDANCY CHECK: _runs_per_problem is a dict now to avoid duplicate runs esp.
         # for eg. in case a BO Opt being used in combination with a
-        # MF Opt on a benchmark with multiple fidelities
+        # MF Opt on a benchmark with multiple fidelities -> explicitly adding different fidelities
+        # in multiple benchmark instances would create redundant problems if BO Opts are present.
         _runs_per_problem: Mapping[str, Run] = {}
         for _problem, _seed in product(_problems, seeds):
             try:
@@ -757,7 +870,6 @@ def create_study(  # noqa: C901, PLR0912, PLR0915
     budget: int = 50,
     group_by: Literal["opt", "bench", "opt_bench", "seed", "mem"] | None = None,
     on_error: Literal["warn", "raise", "ignore"] = "warn",
-    continuations: bool = True,
 ) -> Study:
     """Create a Study object.
 
@@ -801,8 +913,6 @@ def create_study(  # noqa: C901, PLR0912, PLR0915
 
         on_error: The method to handle errors while generating runs for the study.
 
-        continuations: Whether to calculate continuations cost.
-
     Returns:
         A Study object.
     """
@@ -824,6 +934,24 @@ def create_study(  # noqa: C901, PLR0912, PLR0915
     assert benchmarks, "At least one benchmark must be provided!"
     if not isinstance(benchmarks, list):
         benchmarks = [benchmarks]
+
+
+    if not seeds and not (num_seeds and num_seeds > 0):
+        match on_error:
+            case "raise":
+                raise ValueError("At least one seed or num_seeds must be provided")
+            case "warn" | "ignore":
+                warnings.warn(
+                    "At least one seed or num_seeds must be provided"
+                    "Continuing with num_seeds=1",
+                    stacklevel=2
+                )
+                num_seeds = 1
+            case _:
+                raise TypeError(
+                    f"Invalid value for on_error: {on_error}"
+                )
+
 
     _optimizers: list[OptWithHps] = []
     for optimizer in optimizers:
@@ -900,7 +1028,6 @@ def create_study(  # noqa: C901, PLR0912, PLR0915
         seeds=seeds,
         num_seeds=num_seeds,
         on_error=on_error,
-        continuations=continuations
     )
 
     return Study(
@@ -911,5 +1038,4 @@ def create_study(  # noqa: C901, PLR0912, PLR0915
         num_seeds=num_seeds,
         budget=budget,
         group_by=group_by,
-        continuations=continuations,
     )

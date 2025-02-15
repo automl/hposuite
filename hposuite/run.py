@@ -17,11 +17,11 @@ from hpoglue import BenchmarkDescription, Config, Optimizer, Problem, Query, Res
 from hpoglue.budget import CostBudget, TrialBudget
 from hpoglue.dataframe_utils import reduce_dtypes
 from hpoglue.env import (
-    GLUE_PYPI,
     Env,
     Venv,
-    get_current_installed_hpoglue_version,
 )
+
+from hposuite.utils import HPOSUITE_PYPI, get_current_installed_hposuite_version
 
 OptWithHps: TypeAlias = tuple[type[Optimizer], Mapping[str, Any]]
 
@@ -288,21 +288,21 @@ class Run:
         self,
         *,
         how: Literal["venv", "conda"] = "venv",
-        hpoglue: Literal["current_version"] | str,
+        hposuite: Literal["current_version"] | str,
     ) -> None:
         """Set up the isolation for the experiment."""
-        if hpoglue == "current_version":
+        if hposuite == "current_version":
             raise NotImplementedError("Not implemented yet.")
 
 
-        match hpoglue:
+        match hposuite:
             case "current_version":
-                _version = get_current_installed_hpoglue_version()
-                req = f"{GLUE_PYPI}=={_version}"
+                _version = get_current_installed_hposuite_version()
+                req = f"{HPOSUITE_PYPI}=={_version}"
             case str():
-                req = hpoglue
+                req = hposuite
             case _:
-                raise ValueError(f"Invalid value for `hpoglue`: {hpoglue}")
+                raise ValueError(f"Invalid value for `hposuite`: {hposuite}")
 
         requirements = [req, *self.env.requirements]
 
@@ -317,7 +317,7 @@ class Run:
         self.env_path.parent.mkdir(parents=True, exist_ok=True)
 
         env_dict = self.env.to_dict()
-        env_dict.update({"env_path": str(self.env_path), "hpoglue_source": req})
+        env_dict.update({"env_path": str(self.env_path), "hposuite_source": req})
 
         logger.info(f"Installing env: {self.env.identifier}")
         match how:
@@ -334,7 +334,6 @@ class Run:
                     with self.post_install_steps.open("w") as f:
                         f.write("\n".join(self.env.post_install))
                     self.venv.run(self.env.post_install)
-                    ""
             case "conda":
                 raise NotImplementedError("Conda not implemented yet.")
             case _:

@@ -2,8 +2,10 @@ from __future__ import annotations
 
 import importlib.metadata
 import importlib.util
+import logging
 import os
 import site
+import subprocess
 import sys
 from pathlib import Path
 from typing import Any
@@ -11,6 +13,12 @@ from typing import Any
 from hpoglue import Problem
 from packaging import version
 
+logger = logging.getLogger(__name__)
+
+
+HPOSUITR_REPO = "github.com/automl/hposuite.git"
+HPOSUITE_PYPI = "hposuite"
+HPOSUITE_GIT_SSH_INSTALL = "git+ssh://git@github.com/automl/hposuite.git"
 
 class GlueWrapperFunctions:
     """A collection of wrapper functions around certain hpoglue methods."""
@@ -103,3 +111,21 @@ def _check_package_version(
             return installed_version > required_version
         case "<":
             return installed_version < required_version
+
+
+def get_current_installed_hposuite_version() -> str:
+    """Retrieve the currently installed version of hposuite."""
+    cmd = ["pip", "show", "hposuite"]
+    logger.debug(cmd)
+    output = subprocess.run(  # noqa: S603
+        cmd,
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    lines = output.stdout.strip().splitlines()
+    for line in lines:
+        if "Version: " in line:
+            return line.split(": ")[1]
+
+    raise RuntimeError(f"Could not find hposuite version in {lines}.")

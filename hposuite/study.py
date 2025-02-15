@@ -311,7 +311,7 @@ class Study:
 
 
     @classmethod
-    def from_problems(  # noqa: C901, PLR0912
+    def from_problems(  # noqa: C901, PLR0912, PLR0915
         cls,
         problems: Problem | list[Problem],
         seeds: Iterable[int] | None = None,
@@ -822,7 +822,7 @@ class Study:
                     logger.info(f"Running {len(self.experiments)} experiments sequentially")
                     for i, run in enumerate(self.experiments, start=1):
                         if not disable_env:
-                            run.create_env(hpoglue=f"-e {Path.cwd()}")
+                            run.create_env(hposuite=f"-e {Path.cwd()}")
                         logger.info(f"Running experiment {i}/{len(self.experiments)}")
                         run.run(
                             continuations=continuations,
@@ -837,7 +837,7 @@ class Study:
         else:
             run = self.experiments[0]
             if not disable_env:
-                run.create_env(hpoglue=f"-e {Path.cwd()}")
+                run.create_env(hposuite=f"-e {Path.cwd()}")
             logger.info("Running single experiment")
             run.run(
                 continuations=continuations,

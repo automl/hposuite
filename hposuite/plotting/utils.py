@@ -217,10 +217,12 @@ def plot_results(  # noqa: C901, PLR0912, PLR0915
         plt.show()
 
 
-def agg_data(
+def agg_data(  # noqa: C901, PLR0912
     study_dir: Path,
     save_dir: Path,
     figsize: tuple[int, int] = (20, 10),
+    benchmark_spec: str | list[str] | None = None,
+    optimizer_spec: str | list[str] | None = None,
     *,
     logscale: bool = False,
 ) -> None:
@@ -230,15 +232,40 @@ def agg_data(
     budget: int | None = None
     objective: str | None = None
     minimize = True
-    benchmarks_in_dir = [
-        (f.name.split("benchmark=")[-1].split(".")[0])
-        for f in study_dir.iterdir() if f.is_dir() and "benchmark=" in f.name]
-    benchmarks_in_dir = list(set(benchmarks_in_dir))
-    logger.info(f"Found benchmarks: {benchmarks_in_dir}")
+
+    match benchmark_spec:
+        case None:
+            benchmarks_in_dir = [
+                (f.name.split("benchmark=")[-1].split(".")[0])
+                for f in study_dir.iterdir() if f.is_dir() and "benchmark=" in f.name]
+            benchmarks_in_dir = list(set(benchmarks_in_dir))
+            logger.info(f"Found benchmarks: {benchmarks_in_dir}")
+        case str():
+            benchmarks_in_dir = [benchmark_spec]
+        case list():
+            benchmarks_in_dir = benchmark_spec
+        case _:
+            raise ValueError(f"Unsupported type for benchmark_spec: {type(benchmark_spec)}")
+
+    match optimizer_spec:
+        case None:
+            optimizers_in_dir = None
+        case str():
+            optimizers_in_dir = [optimizer_spec]
+        case list():
+            optimizers_in_dir = optimizer_spec
+        case _:
+            raise ValueError(f"Unsupported type for optimizer_spec: {type(optimizer_spec)}")
+
     for benchmark in benchmarks_in_dir:
         for file in study_dir.rglob("*.parquet"):
             if benchmark not in file.name:
                 continue
+            if (
+                optimizers_in_dir is not None
+                and not any(spec in file.name for spec in optimizers_in_dir)
+            ):
+                    continue
             _df = pd.read_parquet(file)
 
             instance = _df[OPTIMIZER_COL].iloc[0]
@@ -390,6 +417,22 @@ if __name__ == "__main__":
         "--root_dir", type=Path, help="Location of the root directory", default=Path("./")
     )
     parser.add_argument(
+        "--benchmark_spec", "-bs",
+        nargs="+",
+        type=str,
+        help="Specification of the benchmark to plot \n"
+        " (e.g., 'benchmark=pd1-cifar100-wide_resnet-2048',"
+        " 'benchmark=pd1-cifar100-wide_resnet-2048.objective=valid_error_rate.fidelity=epochs'"
+    )
+    parser.add_argument(
+        "--optimizer_spec", "-os",
+        type=str,
+        nargs="+",
+        help="Specification of the optimizer to plot \n"
+        " (e.g., 'optimizer=DEHB', \n"
+        " 'optimizer=DEHB.eta=3', \n"
+    )
+    parser.add_argument(
         "--output_dir",
         type=Path,
         help="Location of the main directory where all studies are stored",
@@ -430,4 +473,6 @@ if __name__ == "__main__":
         save_dir=save_dir,
         figsize=figsize,
         logscale=args.logscale,
+        benchmark_spec=args.benchmark_spec,
+        optimizer_spec=args.optimizer_spec,
     )

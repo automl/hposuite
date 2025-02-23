@@ -10,7 +10,7 @@ dependencies = [
   "pyyaml",
   "pyarrow",
   "ConfigSpace>=1.0",
-  "hpoglue>=0.2.0"
+  "hpoglue>=0.2.1"
   ]
 authors = [
   { name = "Soham Basu", email = "soham.basu07@gmail.com" },

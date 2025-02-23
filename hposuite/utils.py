@@ -17,6 +17,7 @@ logger = logging.getLogger(__name__)
 
 
 HPOSUITR_REPO = "github.com/automl/hposuite.git"
+HPOSUITE_EDITABLE = Path(__file__).parent.parent
 HPOSUITE_PYPI = "hposuite"
 HPOSUITE_GIT_SSH_INSTALL = "git+ssh://git@github.com/automl/hposuite.git"
 
@@ -61,6 +62,9 @@ def is_package_installed(package_name: str) -> bool:
 
     # Normalize package name (replace hyphens with underscores)
     package_name = package_name.replace("-", "_")
+
+    # Remove dependencies from the package name
+    package_name = package_name.split("[")[0]
 
     # Get the site-packages directory of the current virtual environment
     venv_site_packages = site.getsitepackages() if hasattr(site, "getsitepackages") else []

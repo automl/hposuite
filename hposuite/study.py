@@ -11,12 +11,14 @@ from typing import TYPE_CHECKING, Any, Literal, TypeAlias
 
 import numpy as np
 import yaml
-from hpoglue import BenchmarkDescription, Config, FunctionalBenchmark, Optimizer, Problem
+from hpoglue import BenchmarkDescription, FunctionalBenchmark, Optimizer, Problem
+from hpoglue.utils import configpriors_to_dict, dict_to_configpriors
 
 from hposuite.benchmarks import BENCHMARKS
 from hposuite.constants import DEFAULT_STUDY_DIR
 from hposuite.optimizers import OPTIMIZERS
 from hposuite.run import Run
+from hposuite.utils import HPOSUITE_EDITABLE
 
 if TYPE_CHECKING:
     from hpoglue.budget import BudgetType
@@ -187,10 +189,9 @@ class Study:
         _optimizers = [{"name": opt[0].name, "hyperparameters": opt[1]} for opt in self.optimizers]
         _benchmarks = []
         for bench in self.benchmarks:
-            _priors = {}
-            for k, v in bench[1]["priors"].items():
-                assert isinstance(v, Config), "Priors must be Config objects"
-                _priors = {k: v.values}
+            _priors = None
+            if bench[1]["priors"]:
+                _priors = configpriors_to_dict(bench[1]["priors"])
             _benchmarks.append(
                 {
                     "name": bench[0].name,
@@ -223,17 +224,22 @@ class Study:
             match opt:
                 case Mapping():
                     assert "name" in opt, f"Optimizer name not found in {opt}"
-                    assert "hyperparameters" in opt, f"Optimizer hyperparameters not found in {opt}"
-                    _optimizers.append(tuple(opt.values()))
+                    if len(opt) == 1 or not opt.get("hyperparameters"):
+                        _optimizers.append((opt["name"], {}))
+                    else:
+                        _optimizers.append(tuple(opt.values()))
                 case str():
-                    _optimizers.append(opt)
+                    _optimizers.append((opt, {}))
                 case tuple():
-                    assert len(opt) == 2, "Each Optimizer must only have a name and hyperparameters"  # noqa: PLR2004
+                    assert len(opt) <= 2, "Each Optimizer must only have a name and hyperparameters"  # noqa: PLR2004
                     assert isinstance(opt[0], str), "Expected str for optimizer name"
-                    assert isinstance(opt[1], Mapping), (
-                        "Expected Mapping for Optimizer hyperparameters"
-                    )
-                    _optimizers.append(opt)
+                    if len(opt) == 1:
+                        _optimizers.append((opt[0], {}))
+                    else:
+                        assert isinstance(opt[1], Mapping), (
+                            "Expected Mapping for Optimizer hyperparameters"
+                        )
+                        _optimizers.append(opt)
                 case _:
                     raise ValueError(
                         f"Invalid type for optimizer: {type(opt)}. "
@@ -260,7 +266,7 @@ class Study:
                 case str():
                     _benchmarks.append(bench)
                 case tuple():
-                    assert len(bench) == 2, "Each Benchmark must only have a name and objectives"  # noqa: PLR2004
+                    assert len(bench) == 2, "Each Benchmark must only have a name and a Mapping"  # noqa: PLR2004
                     assert isinstance(bench[0], str), "Expected str for benchmark name"
                     assert isinstance(bench[1], Mapping), (
                         "Expected Mapping for Benchmark objectives and fidelities"
@@ -574,7 +580,7 @@ class Study:
                 if isinstance(costs, list) and len(costs) == 1:
                     costs = costs[0]
 
-                priors = objs_fids.get("priors", {})
+                priors = objs_fids.get("priors")
 
                 match fidelities, bench.fidelities:
                     case None, None:
@@ -604,12 +610,7 @@ class Study:
                         )
 
                 if priors:
-                    for k, v in priors.items():
-                        if isinstance(v, dict):
-                            priors[k] = Config(
-                                config_id=k,
-                                values=v,
-                            )
+                    priors = dict_to_configpriors(priors)
 
 
                 _problem = Problem.problem(
@@ -822,7 +823,7 @@ class Study:
                     logger.info(f"Running {len(self.experiments)} experiments sequentially")
                     for i, run in enumerate(self.experiments, start=1):
                         if not disable_env:
-                            run.create_env(hposuite=f"-e {Path.cwd()}")
+                            run.create_env(hposuite=f"-e {HPOSUITE_EDITABLE}")
                         logger.info(f"Running experiment {i}/{len(self.experiments)}")
                         run.run(
                             continuations=continuations,

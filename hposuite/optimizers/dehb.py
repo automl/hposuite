@@ -20,7 +20,7 @@ class DEHB_Optimizer(Optimizer):
     env = Env(
         name="dehb-0.1.2",
         python_version="3.10",
-        requirements=("dehb==0.1.2",),
+        requirements=("dehb==0.1.2"),
     )
 
     support = Problem.Support(

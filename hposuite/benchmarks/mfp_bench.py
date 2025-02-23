@@ -174,8 +174,6 @@ def lcbench_surrogate(datadir: Path | None = None) -> Iterator[BenchmarkDescript
         Iterator[BenchmarkDescription]: An iterator over BenchmarkDescription objects
         for each task in the LCBench surrogate Benchmark.
     """
-    if datadir is not None and "yahpo" in os.listdir(datadir):
-        datadir = datadir / "yahpo"
     import mfpbench
 
     from hposuite.utils import HiddenPrints
@@ -183,16 +181,21 @@ def lcbench_surrogate(datadir: Path | None = None) -> Iterator[BenchmarkDescript
     env = Env(
         name="py310-mfpbench-1.9-yahpo",
         requirements=(
-            "mf-prior-bench==1.9.0",
+            "mf-prior-bench>=1.9.0",
             "yahpo-gym==1.0.1",
             "ConfigSpace==0.6.1",
             "xgboost>=1.7"
         ),
         post_install=_download_data_cmd("yahpo", datadir=datadir),
     )
+    if datadir is not None and "yahpo" in os.listdir(datadir):
+        datadir = datadir / "yahpo"
     for req in env.requirements:
         if not is_package_installed(req):
-            mfp_logger.error(f"Please install the required package: {req}", stacklevel=2)
+            mfp_logger.error(
+                f"Please install the required package for yahpo-lcbench: {req}",
+                stacklevel=2
+            )
             return
     with HiddenPrints():        # NOTE: To stop yahpo-lcbench from printing garbage
         for task_id in _lcbench_task_ids:
@@ -284,7 +287,7 @@ def lcbench_tabular(datadir: Path | None = None) -> Iterator[BenchmarkDescriptio
         name="py310-mfpbench-1.9-lcbench-tabular",
         python_version="3.10",
         requirements=(
-            "mf-prior-bench==1.9.0",
+            "mf-prior-bench>=1.9.0",
             "pandas>2",
             "pyarrow"
         ),
@@ -292,7 +295,10 @@ def lcbench_tabular(datadir: Path | None = None) -> Iterator[BenchmarkDescriptio
     )
     for req in env.requirements:
         if not is_package_installed(req):
-            mfp_logger.error(f"Please install the required package: {req}", stacklevel=2)
+            mfp_logger.error(
+                f"Please install the required package for lcbench_tabular: {req}",
+                stacklevel=2
+            )
             return
     for task_id in task_ids:
         yield BenchmarkDescription(
@@ -340,12 +346,12 @@ def mfh() -> Iterator[BenchmarkDescription]:
     env = Env(
         name="py310-mfpbench-1.9-mfh",
         python_version="3.10",
-        requirements=("mf-prior-bench==1.9.0",),
+        requirements=("mf-prior-bench>=1.9.0",),
         post_install=(),
     )
     for req in env.requirements:
         if not is_package_installed(req):
-            mfp_logger.error(f"Please install the required package: {req}", stacklevel=2)
+            mfp_logger.error(f"Please install the required package for mfh: {req}", stacklevel=2)
             return
     for correlation in ("bad", "good", "moderate", "terrible"):
         for dims in (3, 6):
@@ -382,24 +388,27 @@ def jahs(datadir: Path | None = None) -> Iterator[BenchmarkDescription]:
         Iterator[BenchmarkDescription]: An iterator over BenchmarkDescription objects
         for each task in JAHSBench.
     """
-    if datadir is not None and "jahs" in os.listdir(datadir):
-        datadir = datadir / "jahs"
     import mfpbench
     task_ids = ("CIFAR10", "ColorectalHistology", "FashionMNIST")
     env = Env(
         name="py310-mfpbench-1.9-jahs",
         python_version="3.10",
         requirements=(
-            "mf-prior-bench==1.9.0",
-            "jahs-bench==1.1.0",
+            "mf-prior-bench>=1.9.0",
+            "jahs-bench>=1.1.0",
             "pandas<1.4",
-            "ConfigSpace<=0.6.1",
+            "ConfigSpace==0.4.21",
         ),
         post_install=_download_data_cmd("jahs", datadir=datadir),
     )
+    if datadir is not None and "jahs" in os.listdir(datadir):
+        datadir = datadir / "jahs"
     for req in env.requirements:
         if not is_package_installed(req):
-            mfp_logger.error(f"Please install the required package: {req}", stacklevel=2)
+            mfp_logger.error(
+                f"Please install the required package for jahs_bench: {req}",
+                stacklevel=2
+            )
             return
     for task_id in task_ids:
         name = f"jahs-{task_id}"
@@ -446,18 +455,18 @@ def pd1(datadir: Path | None = None) -> Iterator[BenchmarkDescription]:
         Iterator[BenchmarkDescription]: An iterator over BenchmarkDescription objects
         for each PD1 benchmark.
     """
-    if datadir is not None and "pd1" in os.listdir(datadir):
-        datadir = datadir / "pd1"
     import mfpbench
     env = Env(
         name="py310-mfpbench-1.9-pd1",
         python_version="3.10",
-        requirements=("mf-prior-bench==1.9.0","xgboost>=1.7"),
+        requirements=("mf-prior-bench>=1.9.0","xgboost[scikit-learn]>=1.7"),
         post_install=_download_data_cmd("pd1", datadir=datadir),
     )
+    if datadir is not None and "pd1" in os.listdir(datadir):
+        datadir = datadir / "pd1"
     for req in env.requirements:
         if not is_package_installed(req):
-            mfp_logger.error(f"Please install the required package: {req}", stacklevel=2)
+            mfp_logger.error(f"Please install the required package for pd1: {req}", stacklevel=2)
             return
     yield BenchmarkDescription(
         name="pd1-cifar100-wide_resnet-2048",
@@ -535,7 +544,7 @@ def mfpbench_benchmarks(datadir: Path | None = None) -> Iterator[BenchmarkDescri
     if datadir is None:
         datadir=Path(__file__).parent.parent.parent.absolute() / "data"
     yield from lcbench_surrogate(datadir)
-    # yield from lcbench_tabular(datadir)
+    yield from lcbench_tabular(datadir)
     yield from mfh()
     yield from jahs(datadir)
     yield from pd1(datadir)

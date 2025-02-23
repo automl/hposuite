@@ -134,7 +134,9 @@ class Run:
                 raise ValueError("Invalid combination of benchmark and optimizer environments")
 
 
-    def _set_paths(self, expdir: Path) -> None:
+    def _set_paths(self, expdir: Path | str) -> None:
+        if isinstance(expdir, str):
+            expdir = Path(expdir)
         self.expdir = expdir
         self.working_dir = self.expdir.absolute().resolve() / self.name
         self.complete_flag = self.working_dir / "complete.flag"
@@ -148,14 +150,18 @@ class Run:
         self.post_install_steps = self.working_dir / "venv_post_install.sh"
         self.run_yaml_path = self.working_dir / "run_config.yaml"
         self.env_path = self.expdir / "envs" / self.env.identifier
+        self.env_error_file = self.env_path / "error.txt"
+        self.env_complete_file = self.env_path / "complete.txt"
 
 
     @property
     def venv(self) -> Venv:
+        """Creates and returns an hpoglue Venv object using the specified environment path."""
         return Venv(self.env_path)
 
     @property
     def conda(self) -> Venv:
+        """Creates and returns an hpoglue Conda object using the specified environment path."""
         raise NotImplementedError("Conda not implemented yet.")
 
     def run(  # noqa: C901, PLR0912
@@ -164,7 +170,7 @@ class Run:
         continuations: bool = True,
         on_error: Literal["raise", "continue"] = "raise",
         overwrite: Run.State | str | Sequence[Run.State | str] | bool = False,
-        progress_bar: bool = True,
+        progress_bar: bool = False,
         disable_env: bool = False,
     ) -> Report:
         """Run the Run.
@@ -257,8 +263,6 @@ class Run:
                     raise NotImplementedError("Continue not yet implemented!") from e
                 case _:
                     raise RuntimeError(f"Invalid value for `on_error`: {on_error}") from e
-        # logger.info(f"COMPLETED running {self.name}")
-        # logger.info(f"Saving {self.name} at {self.working_dir}")
         logger.info(f"Results dumped at {self.df_path.absolute()}")
         return self.post_process(history=_hist)
 
@@ -284,7 +288,7 @@ class Run:
         return report
 
 
-    def create_env(
+    def create_env(  # noqa: C901, PLR0912, PLR0915
         self,
         *,
         how: Literal["venv", "conda"] = "venv",
@@ -311,8 +315,22 @@ class Run:
         with self.venv_requirements_file.open("w") as f:
             f.write("\n".join(requirements))
 
-        if self.env_path.exists():
-            return
+
+        pi_flag = False
+
+        if self.env_complete_file.exists():
+            logger.info(f"Environment already installed: {self.env.identifier}")
+            if self.env.post_install:
+                with self.env_complete_file.open("r") as f:
+                    if "post_install" in f.read():
+                        logger.info("Post install already ran.")
+                        return
+            else:
+                return
+
+        elif self.env_error_file.exists() or self.env_path.exists():
+            logger.info(f"Cleaning up incomplete environment: {self.env.identifier}")
+            shutil.rmtree(self.env_path)
 
         self.env_path.parent.mkdir(parents=True, exist_ok=True)
 
@@ -322,24 +340,50 @@ class Run:
         logger.info(f"Installing env: {self.env.identifier}")
         match how:
             case "venv":
-                logger.info(f"Creating environment {self.env.identifier} at {self.env_path}")
-                self.venv.create(
-                    path=self.env_path,
-                    python_version=self.env.python_version,
-                    requirements_file=self.venv_requirements_file,
-                    exists_ok=False,
-                )
-                if self.env.post_install:
-                    logger.info(f"Running post install for {self.env.identifier}")
-                    with self.post_install_steps.open("w") as f:
-                        f.write("\n".join(self.env.post_install))
-                    self.venv.run(self.env.post_install)
+                try:
+                    logger.info(f"Creating environment {self.env.identifier} at {self.env_path}")
+                    self.venv.create(
+                        path=self.env_path,
+                        python_version=self.env.python_version,
+                        requirements_file=self.venv_requirements_file,
+                        exists_ok=False,
+                    )
+                    try:
+                        if self.env_error_file.exists() and self.env_error_file.is_file():
+                            self.env_error_file.unlink()
+                    except Exception as e:
+                        logger.error(f"Error removing error file: {e}")
+                        raise e
+                    self.env_complete_file.touch()
+                except Exception as e:
+                    with self.env_error_file.open("w") as f:
+                        f.write(str(e))
+                    raise e
+                try:
+                    if self.env.post_install and not pi_flag:
+                        logger.info(f"Running post install for {self.env.identifier}")
+                        with self.post_install_steps.open("w") as f:
+                            f.write("\n".join(self.env.post_install))
+                        self.venv.run(self.env.post_install)
+                        with self.env_complete_file.open("w") as f:
+                            f.write("post_install")
+                except Exception as e:
+                    logger.error(f"Error running post install steps: {e}")
+                    raise e
             case "conda":
                 raise NotImplementedError("Conda not implemented yet.")
             case _:
                 raise ValueError(f"Invalid value for `how`: {how}")
 
     def to_dict(self) -> dict[str, Any]:
+        """Convert the Run instance to a dictionary representation.
+
+        Returns:
+            A dictionary containing the object's data with keys:
+                - "problem": The dictionary representation of the hpoglue Problem.
+                - "seed": The seed value.
+                - "expdir": The string representation of the study directory.
+        """
         return {
             "problem": self.problem.to_dict(),
             "seed": self.seed,
@@ -348,21 +392,34 @@ class Run:
 
     @classmethod
     def from_yaml(cls, path: Path) -> Run:
+        """Create a Run instance from a YAML file."""
+        if isinstance(path, str):
+            path = Path(path)
         with path.open("r") as file:
             return Run.from_dict(yaml.safe_load(file))
 
     def write_yaml(self) -> None:
+        """Writes the current object's data to a YAML file."""
         self.run_yaml_path.parent.mkdir(parents=True, exist_ok=True)
         with self.run_yaml_path.open("w") as file:
             yaml.dump(self.to_dict(), file, sort_keys=False)
 
     @classmethod
-    def from_dict(cls, data: dict[str, Any]) -> Run:
+    def from_dict(cls, data):
+        """Create a Run instance from a dictionary.
 
+        Args:
+            data: A dictionary containing the data to create a Run instance.
+                - "problem": An hpoglue Problem instance saved as a dictionary.
+                - "seed": The seed value for the Run instance.
+
+        Returns:
+            A new instance of Run created from the provided dictionary.
+        """
+        from hposuite.utils import GlueWrapperFunctions
         return Run(
-            problem=Problem.from_dict(data["problem"]),
+            problem=GlueWrapperFunctions.problem_from_dict(data=data["problem"]),
             seed=data["seed"],
-            expdir=Path(data["expdir"]),
         )
 
     def state(self) -> Run.State:
@@ -513,7 +570,7 @@ class Run:
             """
             problem = self.problem
 
-            def _encode_result(_r: Result) -> dict[str, Any]:
+            def _encode_result(_r: Result) -> dict[str, Any]:  # noqa: C901, PLR0912
                 _rparts: dict[str, Any] = {
                     "config.id": _r.config.config_id,
                     "query.id": _r.query.query_id,
@@ -665,7 +722,8 @@ class Run:
                 if not isinstance(self.problem.objectives, tuple):
                     raise ValueError(
                         "Incumbent trajectory only supported for single objective."
-                        f" Problem {self.problem.name} has {len(self.problem.objectives)} objectives"
+                        f" Problem {self.problem.name} has "
+                        f"{len(self.problem.objectives)} objectives"
                         f" for run {self.run.name}"
                     )
 
@@ -706,7 +764,7 @@ class Run:
             """
             problem = run.problem
 
-            def _row_to_result(series: pd.Series) -> Result:
+            def _row_to_result(series: pd.Series) -> Result:  # noqa: C901, PLR0912, PLR0915
                 _row = series.to_dict()
                 _result_values: dict[str, Any] = {}
                 match problem.objectives:

@@ -27,7 +27,7 @@ class RandomSearch(Optimizer):
         tabular=False,
     )
 
-    mem_req_mb = 100  # noqa: N815
+    mem_req_mb = 100
 
     def __init__(
         self,
@@ -109,7 +109,7 @@ class RandomSearchWithPriors(Optimizer):
         self.config_space = problem.config_space
         self.config_space.seed(seed)
         self.problem = problem
-        _priors: Mapping[str, Config] = self.problem.priors
+        _priors: Mapping[str, Config] = self.problem.priors[1]
         self.priors = {
             obj: _create_normal_prior(
                 config_space=self.config_space,

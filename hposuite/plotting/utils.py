@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import argparse
 import logging
-from collections import defaultdict
+from collections.abc import Mapping
 from itertools import cycle
 from pathlib import Path
 from typing import Any, TypeAlias, TypeVar
@@ -10,6 +10,7 @@ from typing import Any, TypeAlias, TypeVar
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
+import yaml
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
@@ -35,6 +36,7 @@ SECOND_OBJ_MINIMIZE_COL = "problem.objective.2.minimize"
 BUDGET_USED_COL = "result.budget_used_total"
 BUDGET_TOTAL_COL = "problem.budget.total"
 FIDELITY_COL = "result.fidelity.1.value"
+FIDELITY_NAME_COL = "problem.fidelity.1.name"
 FIDELITY_MIN_COL = "problem.fidelity.1.min"
 FIDELITY_MAX_COL = "problem.fidelity.1.max"
 CONTINUATIONS_COL = "result.continuations_cost.1"
@@ -46,6 +48,8 @@ def plot_results(  # noqa: C901, PLR0912, PLR0915
     budget_type: str,
     budget: int,
     objective: str,
+    fidelity: str | None,
+    cost: str | None,
     minimize: bool,
     save_dir: Path,
     benchmarks_name: str,
@@ -204,20 +208,24 @@ def plot_results(  # noqa: C901, PLR0912, PLR0915
             )
     plt.xlabel(f"{budget_type}")
     plt.ylabel(f"{objective}")
-    plt.title(f"Performance of Optimizers on {benchmarks_name}")
+    plot_suffix = f"{benchmarks_name}.{objective=}.{fidelity=}.{cost=}"
+    plt.title(f"Plot for optimizers on {plot_suffix}")
     if logscale:
         plt.xscale("log")
     if len(optimizers) == 1:
-        plt.title(f"Performance of {optimizers[0]} on {benchmarks_name}")
+        plt.title(f"Performance of {optimizers[0]} on {plot_suffix}")
     plt.legend()
     save_dir.mkdir(parents=True, exist_ok=True)
-    plt.savefig(save_dir / f"{benchmarks_name}_performance.png")
-    logger.info(f"Saved plot to {(save_dir / f'{benchmarks_name}_performance.png').absolute()}")
-    if show:
-        plt.show()
+
+    optimizers = ",".join(optimizers)
+
+    save_path = save_dir / f"{optimizers}.{plot_suffix}.png"
+    plt.savefig(save_path)
+    logger.info(f"Saved plot to {save_path.absolute()}")
+    plt.show()
 
 
-def agg_data(  # noqa: C901, PLR0912
+def agg_data(  # noqa: C901, PLR0912, PLR0915
     study_dir: Path,
     save_dir: Path,
     figsize: tuple[int, int] = (20, 10),
@@ -227,7 +235,7 @@ def agg_data(  # noqa: C901, PLR0912
     logscale: bool = False,
 ) -> None:
     """Aggregate the data from the run directory for plotting."""
-    df_agg = defaultdict(lambda: defaultdict(lambda: defaultdict(dict)))
+    # df_agg = defaultdict(lambda: defaultdict(lambda: defaultdict(dict)))
     budget_type: str | None = None
     budget: int | None = None
     objective: str | None = None
@@ -257,6 +265,8 @@ def agg_data(  # noqa: C901, PLR0912
         case _:
             raise ValueError(f"Unsupported type for optimizer_spec: {type(optimizer_spec)}")
 
+    benchmarks_dict: Mapping[str, Mapping[tuple[str, str, str], pd.DataFrame]] = {}
+
     for benchmark in benchmarks_in_dir:
         for file in study_dir.rglob("*.parquet"):
             if benchmark not in file.name:
@@ -265,57 +275,93 @@ def agg_data(  # noqa: C901, PLR0912
                 optimizers_in_dir is not None
                 and not any(spec in file.name for spec in optimizers_in_dir)
             ):
-                    continue
+                continue
             _df = pd.read_parquet(file)
 
-            instance = _df[OPTIMIZER_COL].iloc[0]
-            if _df[HP_COL].iloc[0] is not None:
-                instance = f"{instance}_{_df[HP_COL].iloc[0]}"
+            with (file.parent / "run_config.yaml").open("r") as f:
+                run_config = yaml.safe_load(f)
+            objectives = run_config["problem"]["objectives"]
+            if not isinstance(objectives, str) and len(objectives) > 1:
+                raise NotImplementedError("Plotting not yet implemented for multi-objective runs.")
+            fidelities = run_config["problem"]["fidelities"]
+            if fidelities and not isinstance(fidelities, str) and len(fidelities) > 1:
+                raise NotImplementedError("Plotting not yet implemented for many-fidelity runs.")
+            costs = run_config["problem"]["costs"]
+            if costs:
+                raise NotImplementedError("Cost-aware optimization not yet implemented in hposuite.")
+            seed = int(run_config["seed"])
 
-            objective = _df[SINGLE_OBJ_NAME].iloc[0]
-            budget_type = "TrialBudget"
-            budget = _df[BUDGET_TOTAL_COL].iloc[0]
-            minimize = _df[SINGLE_OBJ_MINIMIZE_COL].iloc[0]
-            seed = _df[SEED_COL].iloc[0]
-            res_df = _df[
-                [
-                    SINGLE_OBJ_COL,
-                    BUDGET_USED_COL,
+            benchmark_name = file.name.split("benchmark=")[-1].split(".")[0]
+            all_plots_dict = benchmarks_dict.setdefault(benchmark_name, {})
+            conf_tuple = (objectives, fidelities, costs)
+            if conf_tuple not in all_plots_dict:
+                all_plots_dict[conf_tuple] = [_df]
+            else:
+                all_plots_dict[conf_tuple].append(_df)
+
+
+    for benchmark, conf_dict in benchmarks_dict.items():
+        for conf_tuple, seed_dfs in conf_dict.items():
+            df_agg = {}
+            objective = conf_tuple[0]
+            fidelity = conf_tuple[1]
+            cost = conf_tuple[2]
+            for _df in seed_dfs:
+                if _df.empty:
+                    continue
+
+                instance = _df[OPTIMIZER_COL].iloc[0]
+                if _df[HP_COL].iloc[0] is not None:
+                    instance = f"{instance}_{_df[HP_COL].iloc[0]}"
+                budget_type = "TrialBudget"
+                budget = _df[BUDGET_TOTAL_COL].iloc[0]
+                minimize = _df[SINGLE_OBJ_MINIMIZE_COL].iloc[0]
+                seed = _df[SEED_COL].iloc[0]
+                res_df = _df[
+                    [
+                        SINGLE_OBJ_COL,
+                        BUDGET_USED_COL,
+                    ]
                 ]
-            ]
-            if FIDELITY_COL in _df.columns:
-                res_df = pd.concat(
-                    [
-                        res_df,
-                        _df[FIDELITY_COL],
-                        _df[FIDELITY_MIN_COL],
-                        _df[FIDELITY_MAX_COL],
-                    ],
-                    axis=1,
-                )
-            if CONTINUATIONS_COL in _df.columns:
-                res_df = pd.concat(
-                    [
-                        res_df,
-                        _df[CONTINUATIONS_COL],
-                    ],
-                    axis=1,
-                )
-            df_agg[instance][int(seed)] = {"results": res_df}
-            assert budget_type is not None
-            assert budget is not None
-            assert objective is not None
-        plot_results(
-            report=df_agg,
-            budget_type=budget_type,
-            budget=budget,
-            objective=objective,
-            minimize=minimize,
-            save_dir=save_dir,
-            benchmarks_name=benchmark,
-            figsize=figsize,
-            logscale=logscale,
-        )
+                if FIDELITY_COL in _df.columns:
+                    res_df = pd.concat(
+                        [
+                            res_df,
+                            _df[FIDELITY_COL],
+                            _df[FIDELITY_MIN_COL],
+                            _df[FIDELITY_MAX_COL],
+                        ],
+                        axis=1,
+                    )
+                if CONTINUATIONS_COL in _df.columns:
+                    res_df = pd.concat(
+                        [
+                            res_df,
+                            _df[CONTINUATIONS_COL],
+                        ],
+                        axis=1,
+                    )
+                if instance not in df_agg:
+                    df_agg[instance] = {}
+                if int(seed) not in df_agg[instance]:
+                    df_agg[instance][int(seed)] = {"results": res_df}
+                assert budget_type is not None
+                assert budget is not None
+                assert objective is not None
+            plot_results(
+                report=df_agg,
+                budget_type=budget_type,
+                budget=budget,
+                objective=objective,
+                fidelity=fidelity,
+                cost=cost,
+                minimize=minimize,
+                save_dir=save_dir,
+                benchmarks_name=benchmark,
+                figsize=figsize,
+                logscale=logscale,
+            )
+            df_agg.clear()
 
 
 def scale(
@@ -420,9 +466,10 @@ if __name__ == "__main__":
         "--benchmark_spec", "-bs",
         nargs="+",
         type=str,
-        help="Specification of the benchmark to plot \n"
-        " (e.g., 'benchmark=pd1-cifar100-wide_resnet-2048',"
-        " 'benchmark=pd1-cifar100-wide_resnet-2048.objective=valid_error_rate.fidelity=epochs'"
+        help="Specification of the benchmark to plot. \n"
+        " (e.g., 'benchmark=pd1-cifar100-wide_resnet-2048', \n"
+        " 'benchmark=pd1-cifar100-wide_resnet-2048.objective=valid_error_rate.fidelity=epochs', \n"
+        " 'benchmark=pd1-imagenet-resnet-512 benchmark=pd1-cifar100-wide_resnet-2048') \n"
     )
     parser.add_argument(
         "--optimizer_spec", "-os",
@@ -431,6 +478,7 @@ if __name__ == "__main__":
         help="Specification of the optimizer to plot \n"
         " (e.g., 'optimizer=DEHB', \n"
         " 'optimizer=DEHB.eta=3', \n"
+        " 'optimizer=DEHB optimizer=SMAC_Hyperband.eta=3') \n"
     )
     parser.add_argument(
         "--output_dir",

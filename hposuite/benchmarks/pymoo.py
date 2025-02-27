@@ -21,10 +21,9 @@ def get_pymoo_space(
     """Get ConfigSpace from pymoo problem."""
     n_var = pymoo_prob.n_var
     xl, xu = pymoo_prob.xl, pymoo_prob.xu
-    hps = [Float(name=f"x{i}", bounds=[xl[i], xu[i]]) for i in range(n_var)]
-    space = ConfigurationSpace()
-    space.add(hps)
-    return space
+    return ConfigurationSpace(
+        {f"x{i}": (xl[i], xu[i]) for i in range(n_var)}
+    )
 
 
 def _pymoo_query_function(

@@ -42,7 +42,7 @@ FIDELITY_MAX_COL = "problem.fidelity.1.max"
 CONTINUATIONS_COL = "result.continuations_cost.1"
 
 
-def plot_results(  # noqa: C901, PLR0912, PLR0915
+def plot_results(  # noqa: C901, PLR0912, PLR0913, PLR0915
     *,
     report: dict[str, Any],
     budget_type: str,
@@ -50,10 +50,10 @@ def plot_results(  # noqa: C901, PLR0912, PLR0915
     objective: str,
     fidelity: str | None,
     cost: str | None,
-    minimize: bool,
+    to_minimize: bool,
     save_dir: Path,
     benchmarks_name: str,
-    show: bool = False,
+    regret_bound: float | None = None,
     figsize: tuple[int, int] = (20, 10),
     logscale: bool = False,
 ) -> None:
@@ -92,7 +92,7 @@ def plot_results(  # noqa: C901, PLR0912, PLR0915
         seed_cont_dict = {}
         for seed in report[instance]:
             results = report[instance][seed]["results"]
-            cost_list = results[SINGLE_OBJ_COL].values.astype(np.float64)
+            cost_list: pd.Series = results[SINGLE_OBJ_COL].values.astype(np.float64)
 
             if FIDELITY_COL in results.columns:
 
@@ -138,7 +138,7 @@ def plot_results(  # noqa: C901, PLR0912, PLR0915
         std = pd.Series(seed_cost_df.std(axis=1), name=f"std_{instance}")
         optim_res_dict[instance]["means"] = means
         optim_res_dict[instance]["std"] = std
-        means = means.cummin() if minimize else means.cummax()
+        means = means.cummin() if to_minimize else means.cummax()
         means = means.drop_duplicates()
         std = std.loc[means.index]
         means[budget] = means.iloc[-1]
@@ -178,7 +178,7 @@ def plot_results(  # noqa: C901, PLR0912, PLR0915
             std_cont = pd.Series(seed_cont_df.std(axis=1), name=f"std_{instance}")
             optim_res_dict[instance]["cont_means"] = means_cont
             optim_res_dict[instance]["cont_std"] = std_cont
-            means_cont = means_cont.cummin() if minimize else means_cont.cummax()
+            means_cont = means_cont.cummin() if to_minimize else means_cont.cummax()
             means_cont = means_cont.drop_duplicates()
             std_cont = std_cont.loc[means_cont.index]
             col_next = next(colors_mean)
@@ -222,7 +222,6 @@ def plot_results(  # noqa: C901, PLR0912, PLR0915
     save_path = save_dir / f"{optimizers}.{plot_suffix}.png"
     plt.savefig(save_path)
     logger.info(f"Saved plot to {save_path.absolute()}")
-    plt.show()
 
 
 def agg_data(  # noqa: C901, PLR0912, PLR0915
@@ -355,7 +354,7 @@ def agg_data(  # noqa: C901, PLR0912, PLR0915
                 objective=objective,
                 fidelity=fidelity,
                 cost=cost,
-                minimize=minimize,
+                to_minimize=minimize,
                 save_dir=save_dir,
                 benchmarks_name=benchmark,
                 figsize=figsize,

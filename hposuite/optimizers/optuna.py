@@ -143,7 +143,7 @@ class OptunaOptimizer(Optimizer):
         )
 
 
-def _configspace_to_optuna_distributions(
+def _configspace_to_optuna_distributions(  # noqa: C901, PLR0912
     config_space: CS.ConfigurationSpace,
 ) -> dict[str, BaseDistribution]:
     from optuna.distributions import (
@@ -152,11 +152,21 @@ def _configspace_to_optuna_distributions(
         IntDistribution as Int,
     )
 
-    if len(config_space.conditions) > 0:
-        raise NotImplementedError("Conditions are not yet supported!")
+    from hposuite.utils import compare_installed_CS_version_vs_required
 
-    if len(config_space.forbidden_clauses) > 0:
-        raise NotImplementedError("Forbiddens are not yet supported!")
+    if compare_installed_CS_version_vs_required(required_version="1.0") == "<":
+        if len(config_space.get_conditions()) > 0:
+            raise NotImplementedError("Conditions are not yet supported!")
+        if len(config_space.get_forbiddens()) > 0:
+            raise NotImplementedError("Forbiddens are not yet supported!")
+
+
+    else:
+        if len(config_space.conditions) > 0:
+            raise NotImplementedError("Conditions are not yet supported!")
+
+        if len(config_space.forbidden_clauses) > 0:
+            raise NotImplementedError("Forbiddens are not yet supported!")
 
     optuna_space: dict[str, BaseDistribution] = {}
     for hp in list(config_space.values()):

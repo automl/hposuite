@@ -133,3 +133,22 @@ def get_current_installed_hposuite_version() -> str:
             return line.split(": ")[1]
 
     raise RuntimeError(f"Could not find hposuite version in {lines}.")
+
+
+def get_current_ConfigSpace_version() -> version.Version:  # noqa: N802
+    """Retrieve the currently installed version of ConfigSpace."""
+    pkg_dict = {dist.name: dist.version for dist in importlib.metadata.distributions()}
+    if "ConfigSpace" in pkg_dict:
+        return version.parse(pkg_dict["ConfigSpace"])
+    raise RuntimeError("ConfigSpace is not installed.")
+
+
+def compare_installed_CS_version_vs_required(required_version: str) -> str:  # noqa: N802
+    """Compare the installed ConfigSpace version with the required version."""
+    installed_version = get_current_ConfigSpace_version()
+    required_version = version.parse(required_version)
+    if installed_version < required_version:
+        return "<"
+    if installed_version == required_version:
+        return "=="
+    return ">"

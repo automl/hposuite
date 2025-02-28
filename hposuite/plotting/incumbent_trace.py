@@ -5,7 +5,7 @@ import logging
 from collections.abc import Mapping
 from itertools import cycle
 from pathlib import Path
-from typing import Any, TypeAlias, TypeVar
+from typing import Any, Literal, TypeAlias, TypeVar
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -39,23 +39,26 @@ FIDELITY_COL = "result.fidelity.1.value"
 FIDELITY_NAME_COL = "problem.fidelity.1.name"
 FIDELITY_MIN_COL = "problem.fidelity.1.min"
 FIDELITY_MAX_COL = "problem.fidelity.1.max"
+BENCHMARK_FIDELITY_NAME = "benchmark.fidelity.1.name"
+BENCHMARK_FIDELITY_COL = "benchmark.fidelity.1.value"
+BENCHMARK_FIDELITY_MIN_COL = "benchmark.fidelity.1.min"
+BENCHMARK_FIDELITY_MAX_COL = "benchmark.fidelity.1.max"
 CONTINUATIONS_COL = "result.continuations_cost.1"
 
 
 def plot_results(  # noqa: C901, PLR0912, PLR0913, PLR0915
     *,
     report: dict[str, Any],
-    budget_type: str,
-    budget: int,
     objective: str,
     fidelity: str | None,
     cost: str | None,
     to_minimize: bool,
     save_dir: Path,
     benchmarks_name: str,
-    regret_bound: float | None = None,
+    regret_bound: float | None = None,  # noqa: ARG001
     figsize: tuple[int, int] = (20, 10),
     logscale: bool = False,
+    error_bars: Literal["std", "sem"] = "std",
 ) -> None:
     """Plot the results for the optimizers on the given benchmark."""
     marker_list = [
@@ -94,29 +97,22 @@ def plot_results(  # noqa: C901, PLR0912, PLR0913, PLR0915
             results = report[instance][seed]["results"]
             cost_list: pd.Series = results[SINGLE_OBJ_COL].values.astype(np.float64)
 
-            if FIDELITY_COL in results.columns:
-
-                # Automatically set budget to TrialBudget if Non-Multifidelity Optimizers are used
-                if (
-                    np.all(results[FIDELITY_COL].to_numpy() == results[FIDELITY_COL].iloc[0])
-                    or
-                    results[FIDELITY_COL].iloc[0] is None
-                ):
-                    budget_type = "TrialBudget"
-
-                # Automatically set budget to FidelityBudget if Multifidelity Optimizers are used
-                if results[FIDELITY_COL].iloc[0] is not None:
-                    budget_type = "FidelityBudget"
+            budget_type = "TrialBudget" if fidelity is None else "FidelityBudget"
             match budget_type:
                 case "FidelityBudget":
-                    budget_list = results[FIDELITY_COL].values.astype(np.float64)
-                    budget_list = np.cumsum(budget_list)
-                    budget = budget_list[-1]
-                    budget_type = "FidelityBudget"
+                    if FIDELITY_COL in results.columns:
+                        budget_list = results[FIDELITY_COL].values.astype(np.float64)
+                        budget_list = np.cumsum(budget_list)
+                        budget_type = "FidelityBudget"
+                    else:
+                        budget_list = np.cumsum(
+                            results[BENCHMARK_FIDELITY_MAX_COL].values.astype(np.float64)
+                        )
                 case "TrialBudget":
                     budget_list = results[BUDGET_USED_COL].values.astype(np.float64)
                 case _:
                     raise NotImplementedError(f"Budget type {budget_type} not implemented")
+            budget = budget_list[-1]
 
             if (
                 CONTINUATIONS_COL in results.columns
@@ -135,14 +131,20 @@ def plot_results(  # noqa: C901, PLR0912, PLR0913, PLR0915
         seed_cost_df = seed_cost_df.ffill(axis=0)
         seed_cost_df = seed_cost_df.dropna(axis=0)
         means = pd.Series(seed_cost_df.mean(axis=1), name=f"means_{instance}")
-        std = pd.Series(seed_cost_df.std(axis=1), name=f"std_{instance}")
+        match error_bars:
+            case "std":
+                error = pd.Series(seed_cost_df.std(axis=1), name=f"std_{instance}")
+            case "sem":
+                error = pd.Series(seed_cost_df.sem(axis=1), name=f"sem_{instance}")
+            case _:
+                raise ValueError(f"Unsupported error bars type {error_bars}")
         optim_res_dict[instance]["means"] = means
-        optim_res_dict[instance]["std"] = std
+        optim_res_dict[instance]["error"] = error
         means = means.cummin() if to_minimize else means.cummax()
         means = means.drop_duplicates()
-        std = std.loc[means.index]
+        error = error.loc[means.index]
         means[budget] = means.iloc[-1]
-        std[budget] = std.iloc[-1]
+        error[budget] = error.iloc[-1]
         col_next = next(colors_mean)
 
         plt.step(
@@ -160,8 +162,8 @@ def plot_results(  # noqa: C901, PLR0912, PLR0913, PLR0915
         )
         plt.fill_between(
             means.index,
-            means - std,
-            means + std,
+            means - error,
+            means + error,
             alpha=0.2,
             step="post",
             color=col_next,
@@ -228,17 +230,20 @@ def agg_data(  # noqa: C901, PLR0912, PLR0915
     study_dir: Path,
     save_dir: Path,
     figsize: tuple[int, int] = (20, 10),
+    *,
     benchmark_spec: str | list[str] | None = None,
     optimizer_spec: str | list[str] | None = None,
-    *,
+    error_bars: Literal["std", "sem"] = "std",
     logscale: bool = False,
 ) -> None:
     """Aggregate the data from the run directory for plotting."""
-    # df_agg = defaultdict(lambda: defaultdict(lambda: defaultdict(dict)))
-    budget_type: str | None = None
-    budget: int | None = None
     objective: str | None = None
     minimize = True
+
+    with (study_dir / "study_config.yaml").open("r") as f:
+        study_config = yaml.safe_load(f)
+
+    all_benches = [(bench.pop("name"), bench) for bench in study_config["benchmarks"]]
 
     match benchmark_spec:
         case None:
@@ -264,7 +269,7 @@ def agg_data(  # noqa: C901, PLR0912, PLR0915
         case _:
             raise ValueError(f"Unsupported type for optimizer_spec: {type(optimizer_spec)}")
 
-    benchmarks_dict: Mapping[str, Mapping[tuple[str, str, str], pd.DataFrame]] = {}
+    benchmarks_dict: Mapping[str, Mapping[tuple[str, str, str], list[pd.DataFrame]]] = {}
 
     for benchmark in benchmarks_in_dir:
         for file in study_dir.rglob("*.parquet"):
@@ -277,6 +282,8 @@ def agg_data(  # noqa: C901, PLR0912, PLR0915
                 continue
             _df = pd.read_parquet(file)
 
+            benchmark_name = file.name.split("benchmark=")[-1].split(".")[0]
+
             with (file.parent / "run_config.yaml").open("r") as f:
                 run_config = yaml.safe_load(f)
             objectives = run_config["problem"]["objectives"]
@@ -285,12 +292,37 @@ def agg_data(  # noqa: C901, PLR0912, PLR0915
             fidelities = run_config["problem"]["fidelities"]
             if fidelities and not isinstance(fidelities, str) and len(fidelities) > 1:
                 raise NotImplementedError("Plotting not yet implemented for many-fidelity runs.")
+
+            # Add default benchmark fidelity to a blackbox Optimizer to compare it
+            # alongside MF optimizers if the latter exist in the study
+            if fidelities is None:
+                fid = next(
+                    bench[1]["fidelities"]
+                    for bench in all_benches
+                    if bench[0] == benchmark_name
+                )
+                if fid == _df[BENCHMARK_FIDELITY_NAME].iloc[0]:
+                # Study config is saved in such a way that if Blackbox Optimizers
+                # are used along with MF optimizers on MF benchmarks, the "fidelities"
+                # key in the benchmark instance in the study config is set to the fidelity
+                # being used by the MF optimizers. In that case, there is no benchmark
+                # instance with fidelity as None. In case of multiple fidelities being used
+                # for the same benchmark, separate benchmark instances are created
+                # for each fidelity.
+                # If only Blackbox Optimizers are used in the study, there is only one
+                # benchmark instance with fidelity as None.
+                # When a problem with a Blackbox Optimizer is used on a MF benchmark,
+                # each config is queried at the highest available 'first' fidelity in the
+                # benchmark. Hence, we only set `fidelities` to `fid` if the benchmark instance
+                # is the one with the default fidelity, else it would be incorrect.
+                    fidelities = fid
+
             costs = run_config["problem"]["costs"]
             if costs:
-                raise NotImplementedError("Cost-aware optimization not yet implemented in hposuite.")
+                raise NotImplementedError(
+                    "Cost-aware optimization not yet implemented in hposuite."
+                )
             seed = int(run_config["seed"])
-
-            benchmark_name = file.name.split("benchmark=")[-1].split(".")[0]
             all_plots_dict = benchmarks_dict.setdefault(benchmark_name, {})
             conf_tuple = (objectives, fidelities, costs)
             if conf_tuple not in all_plots_dict:
@@ -300,57 +332,26 @@ def agg_data(  # noqa: C901, PLR0912, PLR0915
 
 
     for benchmark, conf_dict in benchmarks_dict.items():
-        for conf_tuple, seed_dfs in conf_dict.items():
+        for conf_tuple, _all_dfs in conf_dict.items():
             df_agg = {}
             objective = conf_tuple[0]
             fidelity = conf_tuple[1]
             cost = conf_tuple[2]
-            for _df in seed_dfs:
+            for _df in _all_dfs:
                 if _df.empty:
                     continue
-
                 instance = _df[OPTIMIZER_COL].iloc[0]
                 if _df[HP_COL].iloc[0] is not None:
                     instance = f"{instance}_{_df[HP_COL].iloc[0]}"
-                budget_type = "TrialBudget"
-                budget = _df[BUDGET_TOTAL_COL].iloc[0]
                 minimize = _df[SINGLE_OBJ_MINIMIZE_COL].iloc[0]
                 seed = _df[SEED_COL].iloc[0]
-                res_df = _df[
-                    [
-                        SINGLE_OBJ_COL,
-                        BUDGET_USED_COL,
-                    ]
-                ]
-                if FIDELITY_COL in _df.columns:
-                    res_df = pd.concat(
-                        [
-                            res_df,
-                            _df[FIDELITY_COL],
-                            _df[FIDELITY_MIN_COL],
-                            _df[FIDELITY_MAX_COL],
-                        ],
-                        axis=1,
-                    )
-                if CONTINUATIONS_COL in _df.columns:
-                    res_df = pd.concat(
-                        [
-                            res_df,
-                            _df[CONTINUATIONS_COL],
-                        ],
-                        axis=1,
-                    )
                 if instance not in df_agg:
                     df_agg[instance] = {}
                 if int(seed) not in df_agg[instance]:
-                    df_agg[instance][int(seed)] = {"results": res_df}
-                assert budget_type is not None
-                assert budget is not None
+                    df_agg[instance][int(seed)] = {"results": _df}
                 assert objective is not None
             plot_results(
                 report=df_agg,
-                budget_type=budget_type,
-                budget=budget,
                 objective=objective,
                 fidelity=fidelity,
                 cost=cost,
@@ -359,6 +360,7 @@ def agg_data(  # noqa: C901, PLR0912, PLR0915
                 benchmarks_name=benchmark,
                 figsize=figsize,
                 logscale=logscale,
+                error_bars=error_bars,
             )
             df_agg.clear()
 
@@ -462,22 +464,22 @@ if __name__ == "__main__":
         "--root_dir", type=Path, help="Location of the root directory", default=Path("./")
     )
     parser.add_argument(
-        "--benchmark_spec", "-bs",
+        "--benchmark_spec", "-benches",
         nargs="+",
         type=str,
-        help="Specification of the benchmark to plot. \n"
-        " (e.g., 'benchmark=pd1-cifar100-wide_resnet-2048', \n"
-        " 'benchmark=pd1-cifar100-wide_resnet-2048.objective=valid_error_rate.fidelity=epochs', \n"
-        " 'benchmark=pd1-imagenet-resnet-512 benchmark=pd1-cifar100-wide_resnet-2048') \n"
+        help="Specification of the benchmark to plot. "
+        " (e.g., spec: `benchmark=pd1-cifar100-wide_resnet-2048`, "
+        " spec: `benchmark=pd1-cifar100-wide_resnet-2048.objective=valid_error_rate.fidelity=epochs`, " # noqa: E501
+        " spec: `benchmark=pd1-imagenet-resnet-512 benchmark=pd1-cifar100-wide_resnet-2048`)"
     )
     parser.add_argument(
-        "--optimizer_spec", "-os",
+        "--optimizer_spec", "-opts",
         type=str,
         nargs="+",
-        help="Specification of the optimizer to plot \n"
-        " (e.g., 'optimizer=DEHB', \n"
-        " 'optimizer=DEHB.eta=3', \n"
-        " 'optimizer=DEHB optimizer=SMAC_Hyperband.eta=3') \n"
+        help="Specification of the optimizer to plot - "
+        " (e.g., spec: `optimizer=DEHB`, "
+        " spec: `optimizer=DEHB.eta=3`, "
+        " spec: `optimizer=DEHB optimizer=SMAC_Hyperband.eta=3`) "
     )
     parser.add_argument(
         "--output_dir",
@@ -509,6 +511,15 @@ if __name__ == "__main__":
         action="store_true",
         help="Use log scale for the x-axis",
     )
+    parser.add_argument(
+        "--error_bars", "-eb",
+        type=str,
+        choices=["std", "sem"],
+        default="std",
+        help="Type of error bars to plot - "
+        "std: Standard deviation, "
+        "sem: Standard error of the mean"
+    )
     args = parser.parse_args()
 
     study_dir = args.output_dir / args.study_dir
@@ -522,4 +533,5 @@ if __name__ == "__main__":
         logscale=args.logscale,
         benchmark_spec=args.benchmark_spec,
         optimizer_spec=args.optimizer_spec,
+        error_bars=args.error_bars,
     )

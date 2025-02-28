@@ -25,8 +25,9 @@ ROOT_DIR = Path(__file__).absolute().resolve().parent.parent.parent
 
 SEED_COL = "run.seed"
 PROBLEM_COL = "problem.name"
-OPTIMIZER_COL = "run.opt.name"
-HP_COL = "run.opt.hp_str"
+OPTIMIZER_COL = "optimizer.name"
+BENCHMARK_COL = "benchmark.name"
+HP_COL = "optimizer.hp_str"
 SINGLE_OBJ_NAME = "problem.objective.1.name"
 SINGLE_OBJ_COL = "result.objective.1.value"
 SINGLE_OBJ_MINIMIZE_COL = "problem.objective.1.minimize"
@@ -210,7 +211,10 @@ def plot_results(  # noqa: C901, PLR0912, PLR0913, PLR0915
             )
     plt.xlabel(f"{budget_type}")
     plt.ylabel(f"{objective}")
-    plot_suffix = f"{benchmarks_name}.{objective=}.{fidelity=}.{cost=}"
+    plot_suffix = (
+        f"{benchmarks_name}.{objective=}.{fidelity=}.{cost=}."
+        f"{budget_type}={budget}.{to_minimize=}.{error_bars=}"
+    )
     plt.title(f"Plot for optimizers on {plot_suffix}")
     if logscale:
         plt.xscale("log")
@@ -235,6 +239,7 @@ def agg_data(  # noqa: C901, PLR0912, PLR0915
     optimizer_spec: str | list[str] | None = None,
     error_bars: Literal["std", "sem"] = "std",
     logscale: bool = False,
+    budget_type: Literal["TrialBudget", "FidelityBudget", None] = None,
 ) -> None:
     """Aggregate the data from the run directory for plotting."""
     objective: str | None = None
@@ -254,8 +259,10 @@ def agg_data(  # noqa: C901, PLR0912, PLR0915
             logger.info(f"Found benchmarks: {benchmarks_in_dir}")
         case str():
             benchmarks_in_dir = [benchmark_spec]
+            logger.info(f"Benchmarks specified: {benchmarks_in_dir}")
         case list():
             benchmarks_in_dir = benchmark_spec
+            logger.info(f"Benchmarks specified: {benchmarks_in_dir}")
         case _:
             raise ValueError(f"Unsupported type for benchmark_spec: {type(benchmark_spec)}")
 
@@ -272,6 +279,7 @@ def agg_data(  # noqa: C901, PLR0912, PLR0915
     benchmarks_dict: Mapping[str, Mapping[tuple[str, str, str], list[pd.DataFrame]]] = {}
 
     for benchmark in benchmarks_in_dir:
+        logger.info(f"Processing benchmark: {benchmark}")
         for file in study_dir.rglob("*.parquet"):
             if benchmark not in file.name:
                 continue
@@ -295,7 +303,7 @@ def agg_data(  # noqa: C901, PLR0912, PLR0915
 
             # Add default benchmark fidelity to a blackbox Optimizer to compare it
             # alongside MF optimizers if the latter exist in the study
-            if fidelities is None:
+            if fidelities is None and budget_type != "TrialBudget":
                 fid = next(
                     bench[1]["fidelities"]
                     for bench in all_benches
@@ -323,7 +331,7 @@ def agg_data(  # noqa: C901, PLR0912, PLR0915
                     "Cost-aware optimization not yet implemented in hposuite."
                 )
             seed = int(run_config["seed"])
-            all_plots_dict = benchmarks_dict.setdefault(benchmark_name, {})
+            all_plots_dict = benchmarks_dict.setdefault(benchmark, {})
             conf_tuple = (objectives, fidelities, costs)
             if conf_tuple not in all_plots_dict:
                 all_plots_dict[conf_tuple] = [_df]
@@ -350,6 +358,7 @@ def agg_data(  # noqa: C901, PLR0912, PLR0915
                 if int(seed) not in df_agg[instance]:
                     df_agg[instance][int(seed)] = {"results": _df}
                 assert objective is not None
+                benchmark_name = _df[BENCHMARK_COL].iloc[0]
             plot_results(
                 report=df_agg,
                 objective=objective,
@@ -357,7 +366,7 @@ def agg_data(  # noqa: C901, PLR0912, PLR0915
                 cost=cost,
                 to_minimize=minimize,
                 save_dir=save_dir,
-                benchmarks_name=benchmark,
+                benchmarks_name=benchmark.split("benchmark=")[-1].split(".")[0],
                 figsize=figsize,
                 logscale=logscale,
                 error_bars=error_bars,
@@ -520,6 +529,16 @@ if __name__ == "__main__":
         "std: Standard deviation, "
         "sem: Standard error of the mean"
     )
+    parser.add_argument(
+        "--budget_type", "-bt",
+        type=str,
+        choices=["TrialBudget", "FidelityBudget", None],
+        default=None,
+        help="Type of budget to plot. "
+        "If the study contains a mix of Blackbox and MF opts, "
+        "Blackbox opts are only plotted using TrialBudget separately."
+        "MF opts are still plotted using FidelityBudget."
+    )
     args = parser.parse_args()
 
     study_dir = args.output_dir / args.study_dir
@@ -534,4 +553,5 @@ if __name__ == "__main__":
         benchmark_spec=args.benchmark_spec,
         optimizer_spec=args.optimizer_spec,
         error_bars=args.error_bars,
+        budget_type=args.budget_type,
     )

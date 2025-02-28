@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import hashlib
 import logging
+import subprocess
 import warnings
 from collections.abc import Iterable, Mapping
 from dataclasses import dataclass, field
@@ -824,12 +825,19 @@ class Study:
                     for i, run in enumerate(self.experiments, start=1):
                         if auto_env_handling:
                             run.create_env(hposuite=f"-e {HPOSUITE_EDITABLE}")
-                        logger.info(f"Running experiment {i}/{len(self.experiments)}")
-                        run.run(
-                            continuations=continuations,
-                            overwrite=overwrite,
-                            progress_bar=False
-                        )
+                            logger.info(f"Running experiment {i}/{len(self.experiments)}")
+                            subprocess.run(
+                                f"{run.venv.python} -c "
+                                f"'{run.from_yaml(run.run_yaml_path)}"
+                                f".run(continuations={continuations}, overwrite={overwrite}, auto_env_handling={True})'",
+                            )
+                        else:
+                            logger.info(f"Running experiment {i}/{len(self.experiments)}")
+                            run.run(
+                                continuations=continuations,
+                                overwrite=overwrite,
+                                progress_bar=False
+                            )
                 case "parallel":
                     raise NotImplementedError("Parallel execution not implemented yet!")
                 case _:

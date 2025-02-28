@@ -285,7 +285,7 @@ class Run:
             results=history,
         )
         self.set_state(Run.State.COMPLETE, df=report.df())
-        return report
+        return
 
 
     def create_env(  # noqa: C901, PLR0912, PLR0915
@@ -417,10 +417,12 @@ class Run:
             A new instance of Run created from the provided dictionary.
         """
         from hposuite.utils import GlueWrapperFunctions
-        return Run(
+        run = Run(
             problem=GlueWrapperFunctions.problem_from_dict(data=data["problem"]),
             seed=data["seed"],
         )
+        run._set_paths(expdir=Path(data["expdir"]))
+        return run
 
     def state(self) -> Run.State:
         """Return the state of the run.

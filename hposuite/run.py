@@ -661,6 +661,24 @@ class Run:
                 case _:
                     raise TypeError("Must be a tuple (name, fidelitiy) or a mapping")
 
+            match problem.benchmark.fidelities:
+                case None:
+                    parts["benchmark.fidelity.count"] = 0
+                case (name, fid):
+                    parts["benchmark.fidelity.count"] = 1
+                    parts["benchmark.fidelity.1.name"] = name
+                    parts["benchmark.fidelity.1.min"] = fid.min
+                    parts["benchmark.fidelity.1.max"] = fid.max
+                case Mapping():
+                    list(problem.benchmark.fidelities)
+                    parts["benchmark.fidelity.count"] = len(problem.benchmark.fidelities)
+                    for i, (k, v) in enumerate(problem.benchmark.fidelities.items(), start=1):
+                        parts[f"benchmark.fidelity.{i}.name"] = k
+                        parts[f"benchmark.fidelity.{i}.min"] = v.min
+                        parts[f"benchmark.fidelity.{i}.max"] = v.max
+                case _:
+                    raise TypeError("Must be a tuple (name, fidelitiy) or a mapping")
+
             match problem.costs:
                 case None:
                     parts["problem.cost.count"] = 0

@@ -171,7 +171,7 @@ class Run:
         on_error: Literal["raise", "continue"] = "raise",
         overwrite: Run.State | str | Sequence[Run.State | str] | bool = False,
         progress_bar: bool = False,
-        disable_env: bool = False,
+        auto_env_handling: bool = False,
     ) -> Report:
         """Run the Run.
 
@@ -195,7 +195,7 @@ class Run:
 
             continuations: Whether to use continuations for the run.
 
-            disable_env: Whether to disable the environment for the run.
+            auto_env_handling: Whether to automatically use the created environment for this run.
         """
         from hpoglue._run import _run
 
@@ -244,7 +244,7 @@ class Run:
                 case _:
                     raise RuntimeError("continuations expects a bool value!")
 
-            self.set_state(self.State.RUNNING, disable_env=disable_env)
+            self.set_state(self.State.RUNNING, auto_env_handling=auto_env_handling)
             _hist = _run(
                 problem=self.problem,
                 seed=self.seed,
@@ -448,7 +448,7 @@ class Run:
         *,
         df: pd.DataFrame | None = None,
         err_tb: tuple[Exception, str] | None = None,
-        disable_env: bool = False,
+        auto_env_handling: bool = False,
     ) -> None:
         """Set the run to a certain state.
 
@@ -456,7 +456,7 @@ class Run:
             state: The state to set the problem to.
             df: Optional dataframe to save if setting to [`Run.State.COMPLETE`].
             err_tb: Optional error traceback to save if setting to [`Run.State.CRASHED`].
-            disable_env: Whether to disable the environment for the run.
+            auto_env_handling: Whether to automatically create the environment for this run.
         """
         _flags = (self.complete_flag, self.error_file, self.running_flag, self.queue_flag)
         match state:
@@ -480,7 +480,7 @@ class Run:
                 self.working_dir.mkdir(parents=True, exist_ok=True)
                 self.df_path.parent.mkdir(parents=True, exist_ok=True)
 
-                if not disable_env:
+                if auto_env_handling:
                     lines = subprocess.run(  # noqa: S603
                         [self.venv.pip, "freeze"],
                         check=True,
@@ -661,7 +661,7 @@ class Run:
                 case _:
                     raise TypeError("Must be a tuple (name, fidelitiy) or a mapping")
 
-            match problem.benchmark.fidelities:
+            match self.run.benchmark.fidelities:
                 case None:
                     parts["benchmark.fidelity.count"] = 0
                 case (name, fid):
@@ -670,9 +670,9 @@ class Run:
                     parts["benchmark.fidelity.1.min"] = fid.min
                     parts["benchmark.fidelity.1.max"] = fid.max
                 case Mapping():
-                    list(problem.benchmark.fidelities)
-                    parts["benchmark.fidelity.count"] = len(problem.benchmark.fidelities)
-                    for i, (k, v) in enumerate(problem.benchmark.fidelities.items(), start=1):
+                    list(self.run.benchmark.fidelities)
+                    parts["benchmark.fidelity.count"] = len(self.run.benchmark.fidelities)
+                    for i, (k, v) in enumerate(self.run.benchmark.fidelities.items(), start=1):
                         parts[f"benchmark.fidelity.{i}.name"] = k
                         parts[f"benchmark.fidelity.{i}.min"] = v.min
                         parts[f"benchmark.fidelity.{i}.max"] = v.max
@@ -702,7 +702,7 @@ class Run:
             for k, v in parts.items():
                 _df[k] = v
 
-            _df["problem.benchmark"] = problem.benchmark.name
+            _df["benchmark.name"] = self.run.benchmark.name
             match problem.budget:
                 case TrialBudget(total):
                     _df["problem.budget.kind"] = "TrialBudget"
@@ -714,17 +714,17 @@ class Run:
                     raise NotImplementedError(f"Unknown budget type {problem.budget}")
 
             _df["run.seed"] = self.run.seed
-            _df["run.opt.name"] = self.run.optimizer.name
+            _df["optimizer.name"] = self.run.optimizer.name
 
             if len(self.run.optimizer_hyperparameters) > 0:
                 for k, v in self.run.optimizer_hyperparameters.items():
-                    _df[f"run.opt.hp.{k}"] = v
+                    _df[f"optimizer.hp.{k}"] = v
 
-                _df["run.opt.hp_str"] = ",".join(
+                _df["optimizer.hp_str"] = ",".join(
                     f"{k}={v}" for k, v in self.run.optimizer_hyperparameters.items()
                 )
             else:
-                _df["run.opt.hp_str"] = "default"
+                _df["optimizer.hp_str"] = "default"
 
             _df = _df.sort_values("result.budget_used_total", ascending=True)
 

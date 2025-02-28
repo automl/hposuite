@@ -91,9 +91,9 @@ if __name__ == "__main__":
         help="Action to take on error",
     )
     parser.add_argument(
-        "--disable_env", "-de",
+        "--auto_env_handling", "-ae",
         action="store_true",
-        help="Disable environments",
+        help="Automatically create and use isolated run environments",
     )
     args = parser.parse_args()
 
@@ -115,6 +115,6 @@ if __name__ == "__main__":
         continuations=args.continuations,
         overwrite=args.overwrite,
         exec_type=args.exec_type,
-        disable_env=args.disable_env,
+        auto_env_handling=args.auto_env_handling,
     )
 

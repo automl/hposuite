@@ -215,7 +215,7 @@ class Study:
 
 
     @classmethod
-    def from_dict(cls, data: dict[str, Any]) -> Study:
+    def from_dict(cls, data: dict[str, Any]) -> Study:  # noqa: C901, PLR0912
         """Create a Study object from a dictionary."""
         # TODO: Add documentation for usage
         # TODO: Test for all allowed types in Study.create_study()
@@ -742,7 +742,7 @@ class Study:
         add_num_seeds: int | None = None,
         overwrite: bool = False,
         continuations: bool = True,
-        disable_env: bool = False,
+        auto_env_handling: bool = False,
     ) -> None:
         """Execute multiple atomic runs using a list of Optimizers and a list of Benchmarks.
 
@@ -770,7 +770,7 @@ class Study:
                     * "raise": Raise an error.
                     * "ignore": Ignore the error and continue.
 
-            disable_env: Whether to disable environment creation.
+            auto_env_handling: Whether to automatically create and use isolated run environments.
 
         """
         if add_seeds is not None and add_num_seeds is not None:
@@ -822,14 +822,13 @@ class Study:
                 case "sequential":
                     logger.info(f"Running {len(self.experiments)} experiments sequentially")
                     for i, run in enumerate(self.experiments, start=1):
-                        if not disable_env:
+                        if auto_env_handling:
                             run.create_env(hposuite=f"-e {HPOSUITE_EDITABLE}")
                         logger.info(f"Running experiment {i}/{len(self.experiments)}")
                         run.run(
                             continuations=continuations,
                             overwrite=overwrite,
-                            progress_bar=False,
-                            disable_env=disable_env,
+                            progress_bar=False
                         )
                 case "parallel":
                     raise NotImplementedError("Parallel execution not implemented yet!")
@@ -837,14 +836,13 @@ class Study:
                     raise ValueError(f"Invalid exceution type: {exec_type}")
         else:
             run = self.experiments[0]
-            if not disable_env:
+            if auto_env_handling:
                 run.create_env(hposuite=f"-e {Path.cwd()}")
             logger.info("Running single experiment")
             run.run(
                 continuations=continuations,
                 overwrite=overwrite,
                 progress_bar=False,
-                disable_env=disable_env,
             )
         logger.info(f"Completed study with {len(self.experiments)} runs")
 

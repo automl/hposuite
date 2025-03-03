@@ -192,7 +192,7 @@ def lcbench_surrogate(datadir: Path | None = None) -> Iterator[BenchmarkDescript
         datadir = datadir / "yahpo"
     for req in env.requirements:
         if not is_package_installed(req):
-            mfp_logger.error(
+            mfp_logger.warning(
                 f"Please install the required package for yahpo-lcbench: {req}",
                 stacklevel=2
             )
@@ -295,7 +295,7 @@ def lcbench_tabular(datadir: Path | None = None) -> Iterator[BenchmarkDescriptio
     )
     for req in env.requirements:
         if not is_package_installed(req):
-            mfp_logger.error(
+            mfp_logger.warning(
                 f"Please install the required package for lcbench_tabular: {req}",
                 stacklevel=2
             )
@@ -346,13 +346,13 @@ def mfh() -> Iterator[BenchmarkDescription]:
     env = Env(
         name="py310-mfpbench-1.9-mfh",
         python_version="3.10",
-        requirements=("/home/soham/repos/personal/mf-prior-bench",),
+        requirements=("mf-prior-bench>=1.9.0",),
         post_install=(),
     )
-    # for req in env.requirements:
-    #     if not is_package_installed(req):
-    #         mfp_logger.error(f"Please install the required package for mfh: {req}", stacklevel=2)
-    #         return
+    for req in env.requirements:
+        if not is_package_installed(req):
+            mfp_logger.warning(f"Please install the required package for mfh: {req}", stacklevel=2)
+            return
     for correlation in ("bad", "good", "moderate", "terrible"):
         for dims in (3, 6):
             name = f"mfh{dims}_{correlation}"
@@ -405,7 +405,7 @@ def jahs(datadir: Path | None = None) -> Iterator[BenchmarkDescription]:
         datadir = datadir / "jahs"
     for req in env.requirements:
         if not is_package_installed(req):
-            mfp_logger.error(
+            mfp_logger.warning(
                 f"Please install the required package for jahs_bench: {req}",
                 stacklevel=2
             )
@@ -466,7 +466,7 @@ def pd1(datadir: Path | None = None) -> Iterator[BenchmarkDescription]:
         datadir = datadir / "pd1"
     for req in env.requirements:
         if not is_package_installed(req):
-            mfp_logger.error(f"Please install the required package for pd1: {req}", stacklevel=2)
+            mfp_logger.warning(f"Please install the required package for pd1: {req}", stacklevel=2)
             return
     yield BenchmarkDescription(
         name="pd1-cifar100-wide_resnet-2048",
@@ -544,7 +544,7 @@ def mfpbench_benchmarks(datadir: Path | None = None) -> Iterator[BenchmarkDescri
     if datadir is None:
         datadir=Path(__file__).parent.parent.parent.absolute() / "data"
     yield from lcbench_surrogate(datadir)
-    # yield from lcbench_tabular(datadir)
+    yield from lcbench_tabular(datadir)
     yield from mfh()
     yield from jahs(datadir)
     yield from pd1(datadir)

@@ -1,37 +1,64 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+import importlib
+import logging
+import types
+from collections.abc import Generator, Iterator
 
-from hposuite.benchmarks.bbob import bbob_benchmarks
-from hposuite.benchmarks.mfp_bench import mfpbench_benchmarks
-from hposuite.benchmarks.pymoo import pymoo_benchmarks
-from hposuite.benchmarks.synthetic import ACKLEY_BENCH, BRANIN_BENCH
+from hpoglue import BenchmarkDescription, FunctionalBenchmark
 
-if TYPE_CHECKING:
-    from hpoglue import BenchmarkDescription
+from hposuite.exceptions import OptBenchNotInstalledError
+
+logger = logging.getLogger(__name__)
+logging.basicConfig(level=logging.INFO)
+
+modules = [
+    ("hposuite.benchmarks.synthetic", "ACKLEY_BENCH", "BRANIN_BENCH"),
+    ("hposuite.benchmarks.mfp_bench", "mfpbench_benchmarks"),
+    ("hposuite.benchmarks.pymoo", "pymoo_benchmarks"),
+    ("hposuite.benchmarks.bbob", "bbob_benchmarks"),
+]
+
+imported_benches = []
+
+for module_name, *attrs in modules:
+    try:
+        module = importlib.import_module(module_name)
+        for attr in attrs:
+            bench = getattr(module, attr)
+            if isinstance(bench, types.FunctionType):
+                bench = bench()
+            match bench:
+                case FunctionalBenchmark():
+                    imported_benches.append(bench.desc)
+                case BenchmarkDescription():
+                    imported_benches.append(bench)
+                case Iterator() | Generator():
+                    for b in bench:
+                        match b:
+                            case FunctionalBenchmark():
+                                imported_benches.append(b.desc)
+                            case BenchmarkDescription():
+                                imported_benches.append(b)
+                            case _:
+                                raise ValueError(f"Unexpected benchmark type: {type(b)}")
+                case _:
+                    raise ValueError(f"Unexpected benchmark type: {type(bench)}")
+    except ImportError as e:
+        logger.warning(OptBenchNotInstalledError(module_name, e.msg))
+
 
 BENCHMARKS: dict[str, BenchmarkDescription] = {}
 MF_BENCHMARKS: dict[str, BenchmarkDescription] = {}
 NON_MF_BENCHMARKS: dict[str, BenchmarkDescription] = {}
 
-BENCHMARKS[ACKLEY_BENCH.desc.name] = ACKLEY_BENCH
-BENCHMARKS[BRANIN_BENCH.desc.name] = BRANIN_BENCH
 
-for desc in mfpbench_benchmarks():
-    BENCHMARKS[desc.name] = desc
-    if desc.fidelities is not None:
-        MF_BENCHMARKS[desc.name] = desc
+for bench in imported_benches:
+    BENCHMARKS[bench.name] = bench
+    if bench.fidelities is not None:
+        MF_BENCHMARKS[bench.name] = bench
     else:
-        NON_MF_BENCHMARKS[desc.name] = desc
-
-for desc in pymoo_benchmarks():
-    BENCHMARKS[desc.name] = desc
-    NON_MF_BENCHMARKS[desc.name] = desc
-
-for desc in bbob_benchmarks():
-    BENCHMARKS[desc.name] = desc
-    NON_MF_BENCHMARKS[desc.name] = desc
-
+        NON_MF_BENCHMARKS[bench.name] = bench
 
 __all__ = [
     "BENCHMARKS",

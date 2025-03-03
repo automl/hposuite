@@ -346,7 +346,7 @@ def mfh() -> Iterator[BenchmarkDescription]:
     env = Env(
         name="py310-mfpbench-1.9-mfh",
         python_version="3.10",
-        requirements=("/home/soham/repos/personal/mf-prior-bench",),
+        requirements=("mf-prior-bench>=1.9.0",),
         post_install=(),
     )
     for req in env.requirements:

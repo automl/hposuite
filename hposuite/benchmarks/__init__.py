@@ -13,10 +13,10 @@ logger = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO)
 
 modules = [
-    ("hposuite.benchmarks.bbob", "bbob_benchmarks"),
+    ("hposuite.benchmarks.synthetic", "ACKLEY_BENCH", "BRANIN_BENCH"),
     ("hposuite.benchmarks.mfp_bench", "mfpbench_benchmarks"),
     ("hposuite.benchmarks.pymoo", "pymoo_benchmarks"),
-    ("hposuite.benchmarks.synthetic", "ACKLEY_BENCH", "BRANIN_BENCH"),
+    ("hposuite.benchmarks.bbob", "bbob_benchmarks"),
 ]
 
 imported_benches = []

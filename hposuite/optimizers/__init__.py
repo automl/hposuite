@@ -36,7 +36,7 @@ for module_name, *attrs in modules:
 
 
 
-OPTIMIZERS = {opt.name: opt for opt in imported_opt_cls}
+OPTIMIZERS: dict[str, type[Optimizer]] = {opt.name: opt for opt in imported_opt_cls}
 
 MF_OPTIMIZERS: dict[str, type[Optimizer]] = {}
 BB_OPTIMIZERS: dict[str, type[Optimizer]] = {}

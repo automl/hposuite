@@ -192,7 +192,7 @@ def lcbench_surrogate(datadir: Path | None = None) -> Iterator[BenchmarkDescript
         datadir = datadir / "yahpo"
     for req in env.requirements:
         if not is_package_installed(req):
-            mfp_logger.error(
+            mfp_logger.warning(
                 f"Please install the required package for yahpo-lcbench: {req}",
                 stacklevel=2
             )
@@ -295,7 +295,7 @@ def lcbench_tabular(datadir: Path | None = None) -> Iterator[BenchmarkDescriptio
     )
     for req in env.requirements:
         if not is_package_installed(req):
-            mfp_logger.error(
+            mfp_logger.warning(
                 f"Please install the required package for lcbench_tabular: {req}",
                 stacklevel=2
             )
@@ -351,7 +351,7 @@ def mfh() -> Iterator[BenchmarkDescription]:
     )
     for req in env.requirements:
         if not is_package_installed(req):
-            mfp_logger.error(f"Please install the required package for mfh: {req}", stacklevel=2)
+            mfp_logger.warning(f"Please install the required package for mfh: {req}", stacklevel=2)
             return
     for correlation in ("bad", "good", "moderate", "terrible"):
         for dims in (3, 6):
@@ -405,7 +405,7 @@ def jahs(datadir: Path | None = None) -> Iterator[BenchmarkDescription]:
         datadir = datadir / "jahs"
     for req in env.requirements:
         if not is_package_installed(req):
-            mfp_logger.error(
+            mfp_logger.warning(
                 f"Please install the required package for jahs_bench: {req}",
                 stacklevel=2
             )
@@ -466,7 +466,7 @@ def pd1(datadir: Path | None = None) -> Iterator[BenchmarkDescription]:
         datadir = datadir / "pd1"
     for req in env.requirements:
         if not is_package_installed(req):
-            mfp_logger.error(f"Please install the required package for pd1: {req}", stacklevel=2)
+            mfp_logger.warning(f"Please install the required package for pd1: {req}", stacklevel=2)
             return
     yield BenchmarkDescription(
         name="pd1-cifar100-wide_resnet-2048",

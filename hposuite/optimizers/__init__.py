@@ -1,42 +1,32 @@
 from __future__ import annotations
 
-import importlib
-import logging
 from typing import TYPE_CHECKING
 
-from hposuite.exceptions import OptBenchNotInstalledError
+from hposuite.optimizers.dehb import DEHB_Optimizer
+from hposuite.optimizers.hebo import HEBOOptimizer
+from hposuite.optimizers.nevergrad import NevergradOptimizer
+from hposuite.optimizers.optuna import OptunaOptimizer
+from hposuite.optimizers.random_search import RandomSearch, RandomSearchWithPriors
+from hposuite.optimizers.scikit_optimize import SkoptOptimizer
+from hposuite.optimizers.smac import SMAC_BO, SMAC_Hyperband
+from hposuite.optimizers.synetune import SyneTuneBO, SyneTuneBOHB
 
 if TYPE_CHECKING:
     from hpoglue import Optimizer
 
-logger = logging.getLogger(__name__)
-logging.basicConfig(level=logging.INFO)
-
-modules = [
-    ("hposuite.optimizers.dehb", "DEHB_Optimizer"),
-    ("hposuite.optimizers.hebo", "HEBOOptimizer"),
-    ("hposuite.optimizers.nevergrad", "NevergradOptimizer"),
-    ("hposuite.optimizers.optuna", "OptunaOptimizer"),
-    ("hposuite.optimizers.random_search", "RandomSearch", "RandomSearchWithPriors"),
-    ("hposuite.optimizers.scikit_optimize", "SkoptOptimizer"),
-    ("hposuite.optimizers.smac", "SMAC_BO", "SMAC_Hyperband"),
-    ("hposuite.optimizers.synetune", "SyneTuneBO", "SyneTuneBOHB"),
-]
-
-imported_opt_cls = []
-
-for module_name, *attrs in modules:
-    try:
-        module = importlib.import_module(module_name)
-        for attr in attrs:
-            opt = getattr(module, attr)
-            imported_opt_cls.append(opt)
-    except ImportError as e:
-        logger.warning(OptBenchNotInstalledError(module_name, e.msg))
-
-
-
-OPTIMIZERS: dict[str, type[Optimizer]] = {opt.name: opt for opt in imported_opt_cls}
+OPTIMIZERS: dict[str, type[Optimizer]] = {
+    RandomSearch.name: RandomSearch,
+    RandomSearchWithPriors.name: RandomSearchWithPriors,
+    DEHB_Optimizer.name: DEHB_Optimizer,
+    HEBOOptimizer.name: HEBOOptimizer,
+    NevergradOptimizer.name: NevergradOptimizer,
+    SMAC_BO.name: SMAC_BO,
+    SMAC_Hyperband.name: SMAC_Hyperband,
+    SyneTuneBO.name: SyneTuneBO,
+    SyneTuneBOHB.name: SyneTuneBOHB,
+    SkoptOptimizer.name: SkoptOptimizer,
+    OptunaOptimizer.name: OptunaOptimizer,
+}
 
 MF_OPTIMIZERS: dict[str, type[Optimizer]] = {}
 BB_OPTIMIZERS: dict[str, type[Optimizer]] = {}

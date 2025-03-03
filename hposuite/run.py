@@ -405,7 +405,7 @@ class Run:
             yaml.dump(self.to_dict(), file, sort_keys=False)
 
     @classmethod
-    def from_dict(cls, data):
+    def from_dict(cls, data) -> Run:
         """Create a Run instance from a dictionary.
 
         Args:
@@ -417,10 +417,12 @@ class Run:
             A new instance of Run created from the provided dictionary.
         """
         from hposuite.utils import GlueWrapperFunctions
-        return Run(
+        run = Run(
             problem=GlueWrapperFunctions.problem_from_dict(data=data["problem"]),
             seed=data["seed"],
         )
+        run._set_paths(expdir=data["expdir"])
+        return run
 
     def state(self) -> Run.State:
         """Return the state of the run.

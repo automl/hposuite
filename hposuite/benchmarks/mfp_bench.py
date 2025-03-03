@@ -351,7 +351,7 @@ def mfh() -> Iterator[BenchmarkDescription]:
     )
     for req in env.requirements:
         if not is_package_installed(req):
-            mfp_logger.error(f"Please install the required package for mfh: {req}", stacklevel=2)
+            mfp_logger.warning(f"Please install the required package for mfh: {req}", stacklevel=2)
             return
     for correlation in ("bad", "good", "moderate", "terrible"):
         for dims in (3, 6):

@@ -421,7 +421,7 @@ class Run:
             problem=GlueWrapperFunctions.problem_from_dict(data=data["problem"]),
             seed=data["seed"],
         )
-        run._set_paths(expdir=data["expdir"])
+        run._set_paths(expdir=Path(data["expdir"]))
         return run
 
     def state(self) -> Run.State:

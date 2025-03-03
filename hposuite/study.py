@@ -826,10 +826,17 @@ class Study:
                         if auto_env_handling:
                             run.create_env(hposuite=f"-e {HPOSUITE_EDITABLE}")
                             logger.info(f"Running experiment {i}/{len(self.experiments)}")
-                            subprocess.run(
-                                f"{run.venv.python} -c "
-                                f"'{run.from_yaml(run.run_yaml_path)}"
-                                f".run(continuations={continuations}, overwrite={overwrite}, auto_env_handling={True})'",
+                            run_cmd = [
+                                'from hposuite.run import Run; '
+                                f'run = Run.from_yaml("{run.run_yaml_path}");'
+                                f'run.run(continuations={continuations}, '
+                                f'overwrite={overwrite}, auto_env_handling=True)'
+                            ]
+                            cmd = [run.venv.python, "-c", *run_cmd]
+                            logger.debug(f"Running command: {cmd}")
+                            subprocess.run( # noqa: S603
+                                cmd,
+                                check=True,
                             )
                         else:
                             logger.info(f"Running experiment {i}/{len(self.experiments)}")

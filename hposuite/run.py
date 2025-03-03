@@ -285,7 +285,7 @@ class Run:
             results=history,
         )
         self.set_state(Run.State.COMPLETE, df=report.df())
-        return
+        return report
 
 
     def create_env(  # noqa: C901, PLR0912, PLR0915
@@ -405,7 +405,7 @@ class Run:
             yaml.dump(self.to_dict(), file, sort_keys=False)
 
     @classmethod
-    def from_dict(cls, data):
+    def from_dict(cls, data) -> Run:
         """Create a Run instance from a dictionary.
 
         Args:

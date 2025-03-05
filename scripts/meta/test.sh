@@ -24,7 +24,7 @@ echo "Running job $SLURM_JOB_NAME using $SLURM_JOB_CPUS_PER_NODE cpus per node w
 
 # Activate your environment
 # You can also comment out this line, and activate your environment in the login node before submitting the job
-source ~/repos/hposuite_env/bin/activate
+source ~/repos/envs/hposuite_env/bin/activate
 
 # Running the job
 start=`date +%s`

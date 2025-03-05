@@ -29,7 +29,7 @@ source ~/repos/envs/hposuite_env/bin/activate
 # Running the job
 start=`date +%s`
 
-python -m hposuite --optimizer RandomSearch Optuna --benchmark pymoo-ackley bbob-20-2-1 --budget 10 --num_seeds 3 --overwrite -study_name env_test --auto_env_handling
+python -m hposuite --optimizer RandomSearch Optuna --benchmark pymoo-ackley bbob-20-2-1 --budget 10 --num_seeds 3 --overwrite --study_name env_test --auto_env_handling
 
 end=`date +%s`
 runtime=$((end-start))

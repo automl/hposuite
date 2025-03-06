@@ -114,18 +114,18 @@ python -m hposuite.plotting.utils \
 
 For a more detailed overview, check [here](./hposuite/optimizers/README.md)
 
-| Package                                        | Optimizer         | Blackbox | Multi-Fidelity (MF) | Multi-Objective (MO) | MO-MF |
-|------------------------------------------------|-------------------|----|----|----|-------|
-| -                                              | RS                |    |    |    |       |
-| -                                              | RS with priors    |    |    |    |       |
-| [SMAC](https://github.com/automl/SMAC3)        | Black Box Facade  | ✓  |    |    |       |
-| [SMAC](https://github.com/automl/SMAC3)        | Hyperband         |    | ✓  |    |       |
-| [DEHB](https://github.com/automl/DEHB)         | DEHB              |    | ✓  |    |       |
-| [HEBO](https://github.com/huawei-noah/HEBO)    | HEBO              | ✓  |    |    |       |
-| [Nevergrad](https://github.com/facebookresearch/nevergrad) | all   | ✓  |    | ✓  |       |
-| [Optuna](https://github.com/optuna/optuna)     | TPE               | ✓  |    |    |       |
-| [Optuna](https://github.com/optuna/optuna)     | NSGA2             |    |    | ✓  |       |
-| [Scikit-Optimize](https://github.com/scikit-optimize/scikit-optimize) | all   | ✓  |    |    |       |
+| Package                                        | Optimizer         | Blackbox | Multi-Fidelity (MF) | Multi-Objective (MO) | MO-MF | Priors |
+|------------------------------------------------|-------------------|----------|---------------------|----------------------|-------|--------|
+| -                                              | RandomSearch      | ✓        |                     |                      |       |        |
+| -                                              | RandomSearch with priors     | ✓  |    |    |       | ✓        |
+| [SMAC](https://github.com/automl/SMAC3)        | Black Box Facade  | ✓  |    |    |       |         |
+| [SMAC](https://github.com/automl/SMAC3)        | Hyperband         |    | ✓  |    |       |         |
+| [DEHB](https://github.com/automl/DEHB)         | DEHB              |    | ✓  |    |       |         |
+| [HEBO](https://github.com/huawei-noah/HEBO)    | HEBO              | ✓  |    |    |       |         |
+| [Nevergrad](https://github.com/facebookresearch/nevergrad) | all   | ✓  |    | ✓  |       |         |
+| [Optuna](https://github.com/optuna/optuna)     | TPE               | ✓  |    |    |       |         |
+| [Optuna](https://github.com/optuna/optuna)     | NSGA2             |    |    | ✓  |       |         |
+| [Scikit-Optimize](https://github.com/scikit-optimize/scikit-optimize) | all   | ✓  |    |    |       |         |
 
 
 

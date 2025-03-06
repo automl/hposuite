@@ -123,13 +123,13 @@ For a more detailed overview, check [here](./hposuite/benchmarks/README.md)
 |------------------|----------------------------|------------|----|----|-----------|
 | -                | Ackley                     | Functional |    |    | [Ackley Function](https://en.wikipedia.org/wiki/Ackley_function) |
 | -                | Branin                     | Functional |    |    | [Branin Function](https://www.sfu.ca/~ssurjano/branin.html) |
-| mf-prior-bench   | MFH                        | Synthetic  | Y  |    | [MF-Hartmann Benchmark](https://github.com/automl/mf-prior-bench/blob/main/src/mfpbench/synthetic/hartmann/generators.py) |
-| -                | PD1                        | Surrogate  | Y  | Y  | [HyperBO - PD1 Benchmark](https://github.com/google-research/hyperbo?tab=readme-ov-file#pd1-benchmark) |
-| -                | JAHSbench                  | Surrogate  | Y  | Y  | [JAHSbench](https://github.com/automl/jahs_bench_201) |
-| -                | LCBench-Surrogate          | Surrogate  | Y  | Y  | [YAHPO Gym](https://github.com/slds-lmu/yahpo_gym) |
-| -                | LCBench-Tabular            | Tabular    | Y  | Y  | [LCBench-Tabular](https://github.com/automl/LCBench) |
+| mf-prior-bench   | MFH                        | Synthetic  | ✓  |    | [MF-Hartmann Benchmark](https://github.com/automl/mf-prior-bench/blob/main/src/mfpbench/synthetic/hartmann/generators.py) |
+| -                | PD1                        | Surrogate  | ✓  | ✓  | [HyperBO - PD1 Benchmark](https://github.com/google-research/hyperbo?tab=readme-ov-file#pd1-benchmark) |
+| -                | JAHSbench                  | Surrogate  | ✓  | ✓  | [JAHSbench](https://github.com/automl/jahs_bench_201) |
+| -                | LCBench-Surrogate          | Surrogate  | ✓  | ✓  | [YAHPO Gym](https://github.com/slds-lmu/yahpo_gym) |
+| -                | LCBench-Tabular            | Tabular    | ✓  | ✓  | [LCBench-Tabular](https://github.com/automl/LCBench) |
 | Pymoo            | Single Objective           | Synthetic  |    |    | [Pymoo Single-Objective Problems](https://pymoo.org/problems/test_problems.html#Single-Objective) |
-| -                | All unconstrained MO       | Synthetic  |    | Y  | [Pymoo Multi-Objective Problems](https://pymoo.org/problems/test_problems.html#Multi-Objective) |
-| -                | Many objective -DTLZ       | Synthetic  |    | Y  | [Pymoo Many-Objective Problems](https://pymoo.org/problems/test_problems.html#Many-Objective) |
+| -                | All unconstrained MO       | Synthetic  |    | ✓  | [Pymoo Multi-Objective Problems](https://pymoo.org/problems/test_problems.html#Multi-Objective) |
+| -                | Many objective -DTLZ       | Synthetic  |    | ✓  | [Pymoo Many-Objective Problems](https://pymoo.org/problems/test_problems.html#Many-Objective) |
 | IOH              | BBOB                       | Synthetic  |    |    | [BBOB](https://iohprofiler.github.io/) |
 

@@ -123,13 +123,13 @@ For a more detailed overview, check [here](./hposuite/benchmarks/README.md)
 |------------------|----------------------------|------------|----|----|-----------|
 | -                | Ackley                     | Functional |    |    | [Ackley Function](https://en.wikipedia.org/wiki/Ackley_function) |
 | -                | Branin                     | Functional |    |    | [Branin Function](https://www.sfu.ca/~ssurjano/branin.html) |
-| mf-prior-bench   | MFH                        | Synthetic  | ✓  |    | [MF-Hartmann Benchmark](https://github.com/automl/mf-prior-bench/blob/main/src/mfpbench/synthetic/hartmann/generators.py) |
-| -                | PD1                        | Surrogate  | ✓  | ✓  | [HyperBO - PD1 Benchmark](https://github.com/google-research/hyperbo?tab=readme-ov-file#pd1-benchmark) |
-| -                | JAHSbench                  | Surrogate  | ✓  | ✓  | [JAHSbench](https://github.com/automl/jahs_bench_201) |
-| -                | LCBench-Surrogate          | Surrogate  | ✓  | ✓  | [YAHPO Gym](https://github.com/slds-lmu/yahpo_gym) |
-| -                | LCBench-Tabular            | Tabular    | ✓  | ✓  | [LCBench-Tabular](https://github.com/automl/LCBench) |
-| Pymoo            | Single Objective           | Synthetic  |    |    | [Pymoo Single-Objective Problems](https://pymoo.org/problems/test_problems.html#Single-Objective) |
-| -                | All unconstrained MO       | Synthetic  |    | ✓  | [Pymoo Multi-Objective Problems](https://pymoo.org/problems/test_problems.html#Multi-Objective) |
-| -                | Many objective -DTLZ       | Synthetic  |    | ✓  | [Pymoo Many-Objective Problems](https://pymoo.org/problems/test_problems.html#Many-Objective) |
-| IOH              | BBOB                       | Synthetic  |    |    | [BBOB](https://iohprofiler.github.io/) |
+| [mf-prior-bench](https://github.com/automl/mf-prior-bench)   | MF-Hartmann        | Synthetic  | ✓  |    | [MF-Hartmann Benchmark](https://github.com/automl/mf-prior-bench/blob/main/src/mfpbench/synthetic/hartmann/generators.py) |
+| [mf-prior-bench](https://github.com/automl/mf-prior-bench)   | PD1                        | Surrogate  | ✓  | ✓  | [HyperBO - PD1 Benchmark](https://github.com/google-research/hyperbo?tab=readme-ov-file#pd1-benchmark) |
+| [mf-prior-bench](https://github.com/automl/mf-prior-bench)  | JAHSbench                  | Surrogate  | ✓  | ✓  | [JAHSbench](https://github.com/automl/jahs_bench_201) |
+| [mf-prior-bench](https://github.com/automl/mf-prior-bench)  | LCBench-Surrogate          | Surrogate  | ✓  | ✓  | [YAHPO Gym](https://github.com/slds-lmu/yahpo_gym) |
+| [mf-prior-bench](https://github.com/automl/mf-prior-bench)  | LCBench-Tabular            | Tabular    | ✓  | ✓  | [LCBench-Tabular](https://github.com/automl/LCBench) |
+| [Pymoo](https://pymoo.org/)            | Single-Objective           | Synthetic  |    |    | [Pymoo Single-Objective Problems](https://pymoo.org/problems/test_problems.html#Single-Objective) |
+| [Pymoo](https://pymoo.org/)     | Multi-Objective (unconstrained)       | Synthetic  |    | ✓  | [Pymoo Multi-Objective Problems](https://pymoo.org/problems/test_problems.html#Multi-Objective) |
+| [Pymoo](https://pymoo.org/)     | Many-Objective       | Synthetic  |    | ✓  | [Pymoo Many-Objective Problems](https://pymoo.org/problems/test_problems.html#Many-Objective) |
+| [IOH](https://iohprofiler.github.io/)              | BBOB                       | Synthetic  |    |    | [BBOB](https://numbbo.github.io/coco/testsuites/bbob) |
 

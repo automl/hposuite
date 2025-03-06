@@ -5,25 +5,25 @@
 | Ackley          | -                                            | Functional | none       | value                    | -               |
 | Branin          | -                                            | Functional | none       | value                    | -               |
 | MF-Hartmann     | mfh3_good                                    | Synthetic  | z          | value                    | fid_cost        |
-| -               | mfh3_bad                                     | -          | z          | value                    | fid_cost        |
-| -               | mfh3_moderate                                | -          | z          | value                    | fid_cost        |
-| -               | mfh3_terrible                                | -          | z          | value                    | fid_cost        |
-| -               | mfh6_good                                    | -          | z          | value                    | fid_cost        |
-| -               | mfh6_bad                                     | -          | z          | value                    | fid_cost        |
-| -               | mfh6_moderate                                | -          | z          | value                    | fid_cost        |
-| -               | mfh6_terrible                                | -          | z          | value                    | fid_cost        |
+| MF-Hartmann     | mfh3_bad                                     | -          | z          | value                    | fid_cost        |
+| MF-Hartmann     | mfh3_moderate                                | -          | z          | value                    | fid_cost        |
+| MF-Hartmann     | mfh3_terrible                                | -          | z          | value                    | fid_cost        |
+| MF-Hartmann     | mfh6_good                                    | -          | z          | value                    | fid_cost        |
+| MF-Hartmann     | mfh6_bad                                     | -          | z          | value                    | fid_cost        |
+| MF-Hartmann     | mfh6_moderate                                | -          | z          | value                    | fid_cost        |
+| MF-Hartmann     | mfh6_terrible                                | -          | z          | value                    | fid_cost        |
 | PD1             | pd1-cifar100-wide_resnet-2048                | Surrogate  | epoch      | valid_error_rate         | train_cost      |
-| -               | pd1-imagenet-resnet-512                      | -          | epoch      | valid_error_rate         | train_cost      |
-| -               | pd1-lm1b-transformer-2048                    | -          | epoch      | valid_error_rate         | train_cost      |
-| -               | pd1-translate_wmt-xformer_translate-64       | -          | epoch      | valid_error_rate         | train_cost      |
+| PD1             | pd1-imagenet-resnet-512                      | -          | epoch      | valid_error_rate         | train_cost      |
+| PD1             | pd1-lm1b-transformer-2048                    | -          | epoch      | valid_error_rate         | train_cost      |
+| PD1             | pd1-translate_wmt-xformer_translate-64       | -          | epoch      | valid_error_rate         | train_cost      |
 | JAHSbench       | jahs-CIFAR10                                 | Surrogate  | epoch      | valid_acc                | runtime         |
-| -               | jahs-ColorectalHistology                     | -          | epoch      | valid_acc                | runtime         |
-| -               | jahs-FashionMNIST                            | -          | epoch      | valid_acc                | runtime         |
+| JAHSbench       | jahs-ColorectalHistology                     | -          | epoch      | valid_acc                | runtime         |
+| JAHSbench       | jahs-FashionMNIST                            | -          | epoch      | valid_acc                | runtime         |
 | LCBench-Tabular | Task IDs ([listed below](#lcbench-task-ids)) | Tabular    | epoch      | val_accuracy, val_cross_entropy, val_balanced_accuracy        | time            |
 | Pymoo           | Single Objective ([listed below](#pymoo-single-objective))          | Synthetic  | -          | value                    | -               |
-| -               | Multi-Objective ([listed below](#pymoo-multi-objective))           | Synthetic  | -          | value1, value2           | -               |
-| -               | Many-Objective ([listed below](#pymoo-many-objective))            | Synthetic  | -          | value1, value2, value3   | -               |
-| BBOB            | 24 single objective, noiseless functions in 6 dimensions and 3 instances ([lsited below](#bbob-functions)) | Synthetic | -        | value | -           |
+| Pymoo           | Multi-Objective ([listed below](#pymoo-multi-objective))           | Synthetic  | -          | value1, value2           | -               |
+| Pymoo           | Many-Objective ([listed below](#pymoo-many-objective))            | Synthetic  | -          | value1, value2, value3   | -               |
+| BBOB            | 24 single objective, noiseless functions in 6 dimensions and 3 instances ([listed below](#bbob-functions)) | Synthetic | -        | value | -           |
 
 
 

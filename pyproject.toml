@@ -43,19 +43,19 @@ namespaces = false
 [project.optional-dependencies]
 dev = ["ruff", "mypy", "pre-commit"]
 notebook = ["ipykernel"]
-all = ["smac", "optuna", "dehb", "skopt", "nevergrad", "pymoo", "mf-prior-bench"]
-optimizers = ["smac", "optuna", "dehb", "skopt", "nevergrad", "hebo"]
-benchmarks = ["pymoo", "mf-prior-bench", "bbob"]
+all = ["smac", "optuna", "dehb", "scikit-optimize", "nevergrad", "hebo", "pymoo", "mf-prior-bench", "ioh"]
+optimizers = ["smac", "optuna", "dehb", "scikit-optimize", "nevergrad", "hebo"]
+benchmarks = ["pymoo", "mf-prior-bench", "ioh"]
 smac = ["smac"]
 optuna = ["optuna"]
 dehb = ["dehb"]
-hebo = ["hebo"]
 skopt = ["scikit-optimize"]
 nevergrad = ["nevergrad"]
-yahpo-gym = ["yahpo-gym"] # NOTE: Doesn't support ConfigSpace>0.6.1
+hebo = ["hebo"]
 pymoo = ["pymoo"]
-bbob = ["bbob"]
-syne-tune = ["syne-tune[basic]", "syne-tune[gpsearchers]"]     # NOTE: install separately, throws PYYAML build errors
+mfpbench = ["mf-prior-bench"]
+bbob = ["ioh"]
+yahpo-gym = ["yahpo-gym"] # NOTE: Doesn't support ConfigSpace>0.6.1
 
 [project.urls]
 source = "https://github.com/automl/hposuite/"

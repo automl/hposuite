@@ -9,10 +9,10 @@ from hposuite import create_study
 study = create_study(
     name="hposuite_demo",
     output_dir="./hposuite-output",
-    optimizers=[...],
-    benchmarks=[...],
+    optimizers=[...],   #Eg: "RandomSearch"
+    benchmarks=[...],   #Eg: "ackley"
     num_seeds=5,
-    budget=100,
+    budget=100,         # Number of iterations
 )
 
 study.optimize()
@@ -42,11 +42,13 @@ pip install hposuite # Current not functional
 > [!TIP]
 > * `pip install hposuite["notebook"]` - For usage in a notebook
 > * `pip install hposuite["all]` - To install hposuite with all available optimizers and benchmarks
-> * `pip install hposuite["all_opts]` - To install hposuite with all available optimizers only
-> * `pip install hposuite["all_benchmarks]` - To install hposuite with all available benchmarks only
+> * `pip install hposuite["optimizers]` - To install hposuite with all available optimizers only
+> * `pip install hposuite["benchmarks]` - To install hposuite with all available benchmarks only
 
+
+<!-- TODO: Fix this -->
 > [!NOTE]
-> * mf-prior-bench is not installed when doing `pip install hposuite["all]` or `pip install hposuite["all_benchmarks]` \
+> * mf-prior-bench is not installed when doing `pip install hposuite["all]` or `pip install hposuite["benchmarks]` \
 It has to be installed separately using `pip intall mf-prior-bench` and then the ConfigSpace version has to be \
 upgraded using `pip install "ConfigSpace>=1.0"`
 
@@ -97,7 +99,37 @@ The `Study` directory and the individual `Run` directory paths are logged when r
 ### Plotting
 
 ```bash
-python -m hposuite.plotting.utils --save_dir <abspath_study_output_dir> --study_dir <study_directory_hash>
+python -m hposuite.plotting.utils \
+--study_dir <study directory name>
+--output_dir <abspath of dir where study dir is stored>
+--save_dir <path relative to study_dir to store the plots> \ 
 ```
 
-`--save_dir` is set by default to `./hposuite-output`
+`--save_dir` is set by default to `study_dir/plots`
+`--output_dir` by default is `../hposuite-output`
+
+
+
+### Overview of available Optimizers
+
+For a more detailed overview, check [here](./hposuite/optimizers/README.md)
+
+
+### Overview of available Benchmarks
+
+For a more detailed overview, check [here](./hposuite/benchmarks/README.md)
+
+| Package          | Benchmark                  | Type       | MF | MO | Reference |
+|------------------|----------------------------|------------|----|----|-----------|
+| -                | Ackley                     | Functional |    |    | [Ackley Function](https://en.wikipedia.org/wiki/Ackley_function) |
+| -                | Branin                     | Functional |    |    | [Branin Function](https://www.sfu.ca/~ssurjano/branin.html) |
+| mf-prior-bench   | MFH                        | Synthetic  | Y  |    | [MF-Hartmann Benchmark](https://github.com/automl/mf-prior-bench/blob/main/src/mfpbench/synthetic/hartmann/generators.py) |
+| -                | PD1                        | Surrogate  | Y  | Y  | [HyperBO - PD1 Benchmark](https://github.com/google-research/hyperbo?tab=readme-ov-file#pd1-benchmark) |
+| -                | JAHSbench                  | Surrogate  | Y  | Y  | [JAHSbench](https://github.com/automl/jahs_bench_201) |
+| -                | LCBench-Surrogate          | Surrogate  | Y  | Y  | [YAHPO Gym](https://github.com/slds-lmu/yahpo_gym) |
+| -                | LCBench-Tabular            | Tabular    | Y  | Y  | [LCBench-Tabular](https://github.com/automl/LCBench) |
+| Pymoo            | Single Objective           | Synthetic  |    |    | [Pymoo Single-Objective Problems](https://pymoo.org/problems/test_problems.html#Single-Objective) |
+| -                | All unconstrained MO       | Synthetic  |    | Y  | [Pymoo Multi-Objective Problems](https://pymoo.org/problems/test_problems.html#Multi-Objective) |
+| -                | Many objective -DTLZ       | Synthetic  |    | Y  | [Pymoo Many-Objective Problems](https://pymoo.org/problems/test_problems.html#Many-Objective) |
+| IOH              | BBOB                       | Synthetic  |    |    | [BBOB](https://iohprofiler.github.io/) |
+

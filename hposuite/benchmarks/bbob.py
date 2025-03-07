@@ -127,20 +127,20 @@ def bbob_desc() -> BenchmarkDescription:
     for f_id, dim, ins in product(bbob_functions_dict.keys(), bbob_dims, bbob_instances):
         bbob_function = _get_bbob_fn((f_id, int(dim), int(ins)))
         yield BenchmarkDescription(
-                name=f"bbob-{f_id}-{dim}-{ins}",
-                config_space=_get_bbob_space(bbob_function=bbob_function),
-                load=partial(_bbob_surrogate_bench, bbob_function=bbob_function),
-                metrics={
-                    "value": Measure.metric((-np.inf, np.inf), minimize=True),
-                },
-                test_metrics=None,
-                costs=None,
-                fidelities=None,
-                has_conditionals=False,
-                is_tabular=False,
-                env=env,
-                mem_req_mb=1024,
-            )
+            name=f"bbob-{f_id}-{dim}-{ins}",
+            config_space=_get_bbob_space(bbob_function=bbob_function),
+            load=partial(_bbob_surrogate_bench, bbob_function=bbob_function),
+            metrics={
+                "value": Measure.metric((-np.inf, np.inf), minimize=True),
+            },
+            test_metrics=None,
+            costs=None,
+            fidelities=None,
+            has_conditionals=False,
+            is_tabular=False,
+            env=env,
+            mem_req_mb=1024,
+        )
 
 
 def bbob_benchmarks():

@@ -24,7 +24,7 @@ class RandomSearch(Optimizer):
         fidelities=(None,),
         objectives=("single", "many"),
         cost_awareness=(None, "single", "many"),
-        tabular=False,
+        tabular=True,
     )
 
     mem_req_mb = 100
@@ -59,10 +59,10 @@ class RandomSearch(Optimizer):
             case ConfigurationSpace():
                 config = Config(
                     config_id=str(self._counter),
-                    values=self.config_space.sample_configuration().get_dictionary(),
+                    values=dict(self.config_space.sample_configuration()),
                 )
             case list():
-                index = int(self.rng.integers(len(self.config_space)))
+                index = self.rng.integers(len(self.config_space))
                 config = self.config_space[index]
             case _:
                 raise TypeError("Config space must be a ConfigSpace or a list of Configs")
@@ -73,7 +73,9 @@ class RandomSearch(Optimizer):
             case (name, fidelity):
                 fidelity = (name, fidelity.max)
             case Mapping():
-                fidelity = {name: fidelity.max for name, fidelity in self.problem.fidelities.items()}
+                fidelity = {
+                    name: fidelity.max for name, fidelity in self.problem.fidelities.items()
+                }
             case _:
                 raise ValueError("Fidelity must be a string or a list of strings")
 

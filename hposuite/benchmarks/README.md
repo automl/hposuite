@@ -22,7 +22,7 @@
 | Pymoo           | Many-Objective ([listed below](#pymoo-many-objective))            | Synthetic  | -          | value1, value2, value3   | -               |
 | BBOB            | 24 single objective, noiseless functions in 6 dimensions and 3 instances ([listed below](#bbob-functions)) | Synthetic | -        | value | -           |
 
-
+-----------------------------------------------------------------------------------
 
 ### LCBench Tabular task IDs:
 

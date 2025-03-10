@@ -59,7 +59,7 @@ class NevergradOptimizer(Optimizer):
         problem: Problem,
         seed: int,
         working_directory: Path,
-        **kwargs: Any,
+        optimizer_name: str = "NGOpt",
     ) -> None:
         """Create a Nevergrad Optimizer instance for a given Problem."""
         self._parametrization: dict[str, parameter.Parameter]
@@ -76,7 +76,6 @@ class NevergradOptimizer(Optimizer):
         self.problem = problem
         self.working_directory = working_directory
 
-        optimizer_name = kwargs.get("opt", "NGOpt")
         if optimizer_name not in list(ext_opts.keys()) + opt_list:
             raise ValueError(f"Unknown optimizer: {optimizer_name}!")
 

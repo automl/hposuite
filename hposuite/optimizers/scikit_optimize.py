@@ -49,7 +49,9 @@ class SkoptOptimizer(Optimizer):
         problem: Problem,
         seed: int,
         working_directory: Path,
-        **kwargs: Any,
+        base_estimator: str = "GP",
+        acq_func: str = "gp_hedge",
+        acq_optimizer: str = "auto",
     ) -> None:
         """Create an Skopt Optimizer instance for a given problem statement."""
         import skopt
@@ -64,13 +66,10 @@ class SkoptOptimizer(Optimizer):
             case _:
                 raise TypeError("Config space must be a list or a ConfigurationSpace!")
 
-        base_estimator = kwargs.get("base_estimator", "GP")
         assert base_estimator in base_estimators, f"base_estimator must be one of {base_estimators}"
 
-        acq_func = kwargs.get("acq_func", "gp_hedge")
         assert acq_func in acq_funcs, f"acq_func must be one of {acq_funcs}"
 
-        acq_optimizer = kwargs.get("acq_optimizer", "auto")
         assert acq_optimizer in acq_optimizers, f"acq_optimizer must be one of {acq_optimizers}"
 
         self.optimizer: skopt.optimizer.Optimizer

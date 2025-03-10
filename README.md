@@ -49,10 +49,6 @@ pip install hposuite # Current not functional
 <!-- TODO: Fix this -->
 > [!NOTE]
 > * We **recommend** doing doing `pip install hposuite["all"]` to install all available benchmarks and optimizers
-> * The **LCBench Surrogate** benchmark from `yahpo_gym` is not readily supported due to conflicts in ConfigSpace versions. 
-If you want to use it install it separately using `pip install yahpo_gym`. Only Optimizers supporting `ConfigSpace==0.7`
-can be used with it (all optimizers available in hposuite support this version of ConfigSpace). The LCBench Surrogate Benchmark
-can be queried through the `mf-prior-bench` api.
 
 ### Installation from source
 
@@ -143,7 +139,6 @@ For a more detailed overview, check [here](./hposuite/benchmarks/README.md)
 | -                | Branin                     | Functional |    |    | [Branin Function](https://www.sfu.ca/~ssurjano/branin.html) |
 | [mf-prior-bench](https://github.com/automl/mf-prior-bench)   | MF-Hartmann        | Synthetic  | ✓  |    | [MF-Hartmann Benchmark](https://github.com/automl/mf-prior-bench/blob/main/src/mfpbench/synthetic/hartmann/generators.py) |
 | [mf-prior-bench](https://github.com/automl/mf-prior-bench)   | PD1                        | Surrogate  | ✓  | ✓  | [HyperBO - PD1 Benchmark](https://github.com/google-research/hyperbo?tab=readme-ov-file#pd1-benchmark) |
-| [mf-prior-bench](https://github.com/automl/mf-prior-bench)  | JAHSbench                  | Surrogate  | ✓  | ✓  | [JAHSbench](https://github.com/automl/jahs_bench_201) |
 | [mf-prior-bench](https://github.com/automl/mf-prior-bench)  | LCBench-Tabular            | Tabular    | ✓  | ✓  | [LCBench-Tabular](https://github.com/automl/LCBench) |
 | [Pymoo](https://pymoo.org/)            | Single-Objective           | Synthetic  |    |    | [Pymoo Single-Objective Problems](https://pymoo.org/problems/test_problems.html#Single-Objective) |
 | [Pymoo](https://pymoo.org/)     | Multi-Objective (unconstrained)       | Synthetic  |    | ✓  | [Pymoo Multi-Objective Problems](https://pymoo.org/problems/test_problems.html#Multi-Objective) |

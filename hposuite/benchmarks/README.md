@@ -16,10 +16,7 @@
 | PD1             | pd1-imagenet-resnet-512                      | -          | epoch      | valid_error_rate         | train_cost      |
 | PD1             | pd1-lm1b-transformer-2048                    | -          | epoch      | valid_error_rate         | train_cost      |
 | PD1             | pd1-translate_wmt-xformer_translate-64       | -          | epoch      | valid_error_rate         | train_cost      |
-| JAHSbench       | jahs-CIFAR10                                 | Surrogate  | epoch      | valid_acc                | runtime         |
-| JAHSbench       | jahs-ColorectalHistology                     | -          | epoch      | valid_acc                | runtime         |
-| JAHSbench       | jahs-FashionMNIST                            | -          | epoch      | valid_acc                | runtime         |
-| LCBench-Tabular | Task IDs ([listed below](#lcbench-task-ids)) | Tabular    | epoch      | val_accuracy, val_cross_entropy, val_balanced_accuracy        | time            |
+| LCBench-Tabular | Task IDs ([listed below](#lcbench-tabular-task-ids)) | Tabular    | epoch      | val_accuracy, val_cross_entropy, val_balanced_accuracy        | time            |
 | Pymoo           | Single Objective ([listed below](#pymoo-single-objective))          | Synthetic  | -          | value                    | -               |
 | Pymoo           | Multi-Objective ([listed below](#pymoo-multi-objective))           | Synthetic  | -          | value1, value2           | -               |
 | Pymoo           | Many-Objective ([listed below](#pymoo-many-objective))            | Synthetic  | -          | value1, value2, value3   | -               |
@@ -27,7 +24,7 @@
 
 
 
-### LCBench task IDs:
+### LCBench Tabular task IDs:
 
 > [!TIP]
 > * get the corresponding benchmark in `hposuite` as `lcbench_tabular-{task_id}`

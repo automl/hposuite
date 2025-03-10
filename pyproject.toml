@@ -55,7 +55,6 @@ hebo = ["hebo"]
 pymoo = ["pymoo"]
 mfpbench = ["mf-prior-bench"]
 bbob = ["ioh"]
-yahpo-gym = ["yahpo-gym"] # NOTE: Doesn't support ConfigSpace>0.6.1
 
 [project.urls]
 source = "https://github.com/automl/hposuite/"

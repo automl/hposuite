@@ -1,20 +1,26 @@
 ## Detailed Optimizers Table
 
-### Detailed Overview of Available Optimizers  
+| Package                                        | Optimizer                   | Optimizer Name in `hposuite`    | Blackbox | Multi-Fidelity (MF) | Multi-Objective (MO) | MO-MF | Priors | Hyperparameters                               | Tabular Benchmarks |
+|------------------------------------------------|-----------------------------|---------------------------|----------|---------------------|----------------------|-------|--------|-----------------------------------------------|-------------------|
+| -                                              | RandomSearch                | `"RandomSearch"`          | ✓        |                     |                      |       |        | None                                          | ✓                 |
+| -                                              | RandomSearch with priors    | `"RandomSearchWithPriors"` | ✓        |                     |                      |       | ✓      | None                                          |                   |
+| [SMAC](https://github.com/automl/SMAC3)        | Black Box Facade            | `"SMAC_BO"`                  | ✓        |                     |                      |       |        | `xi`                                          |                   |
+| [SMAC](https://github.com/automl/SMAC3)        | Hyperband                   | `"SMACHyperband"`             |          | ✓                   |                      |       |        | `eta`                                         |                   |
+| [DEHB](https://github.com/automl/DEHB)         | DEHB                        | `"DEHB"`                  |          | ✓                   |                      |       |        | `eta`                                         |                   |
+| [HEBO](https://github.com/huawei-noah/HEBO)    | HEBO                        | `"HEBO"`                  | ✓        |                     |                      |       |        | None                                          |                   |
+| [Nevergrad](https://github.com/facebookresearch/nevergrad) | all             | default: `"NGOpt"`. Others [see below](#Nevergrad-optimizers-choice)            | ✓        |                     | ✓                    |       |        | optimizer choice [see below](#Nevergrad-optimizers-choice) |                   |
+| [Optuna](https://github.com/optuna/optuna)     | TPE                         | `"Optuna"` (TPE is automatically selected for single-objective problems)                   | ✓        |                     |                      |       |        | None                                          |                   |
+| [Optuna](https://github.com/optuna/optuna)     | NSGA2                       | `"Optuna"` (NSGA2 is automatically selected for multi-objective problems)                |          |                     | ✓                    |       |        | None                                          |                   |
+| [Scikit-Optimize](https://github.com/scikit-optimize/scikit-optimize) | all  | `"Scikit_Optimize"`      | ✓        |                     |                      |       |        | `acq_func`, `base_estimator`, `acq_optimizer`  [see here for details](#Scikit-Optimize-hyperparameters) |                   |
 
-| Package                                        | Optimizer                   | Blackbox | Multi-Fidelity (MF) | Multi-Objective (MO) | MO-MF | Priors | Hyperparameters                               | Tabular Benchmarks |
-|------------------------------------------------|-----------------------------|----------|---------------------|----------------------|-------|--------|-----------------------------------------------|-------------------|
-| -                                              | RandomSearch                | ✓        |                     |                      |       |        | None                                          | ✓                 |
-| -                                              | RandomSearch with priors    | ✓        |                     |                      |       | ✓      | None                                          |                   |
-| [SMAC](https://github.com/automl/SMAC3)        | Black Box Facade            | ✓        |                     |                      |       |        | `xi`                                          |                   |
-| [SMAC](https://github.com/automl/SMAC3)        | Hyperband                   |          | ✓                   |                      |       |        | `eta`                                         |                   |
-| [DEHB](https://github.com/automl/DEHB)         | DEHB                        |          | ✓                   |                      |       |        | `eta`                                         |                   |
-| [HEBO](https://github.com/huawei-noah/HEBO)    | HEBO                        | ✓        |                     |                      |       |        | None                                          |                   |
-| [Nevergrad](https://github.com/facebookresearch/nevergrad) | all             | ✓        |                     | ✓                    |       |        | optimizer choice [see below](#Nevergrad-optimizers-choice) |                   |
-| [Optuna](https://github.com/optuna/optuna)     | TPE                         | ✓        |                     |                      |       |        | None                                          |                   |
-| [Optuna](https://github.com/optuna/optuna)     | NSGA2                       |          |                     | ✓                    |       |        | None                                          |                   |
-| [Scikit-Optimize](https://github.com/scikit-optimize/scikit-optimize) | all  | ✓        |                     |                      |       |        | `acq_func`, `base_estimator`, `acq_optimizer`  [see here for details](#Scikit-Optimize-hyperparameters) |                   |
 
+
+> [!TIP]
+> * Get all available Optimizers using the following code snippet:
+> ```python 
+> from hposuite.optimizers import OPTIMIZERS
+> print(OPTIMIZERS.keys())
+> ```
 
 -----------------------------------------------------
 ### Nevergrad optimizers choice

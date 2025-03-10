@@ -46,7 +46,6 @@ pip install hposuite # Current not functional
 > * `pip install hposuite["benchmarks"]` - To install hposuite with all available benchmarks only
 
 
-<!-- TODO: Fix this -->
 > [!NOTE]
 > * We **recommend** doing doing `pip install hposuite["all"]` to install all available benchmarks and optimizers
 
@@ -87,6 +86,17 @@ study.optimize()
 
 ```
 
+### View all available Optimizers and Benchmarks
+
+
+```python 
+from hposuite.optimizers import OPTIMIZERS
+from hposuite.benchmarks import BENCHMARKS
+print(OPTIMIZERS.keys())
+print(BENCHMARKS.keys())
+```
+
+
 
 ### Results
 
@@ -112,18 +122,21 @@ python -m hposuite.plotting.utils \
 
 For a more detailed overview, check [here](./hposuite/optimizers/README.md)
 
-| Package                                        | Optimizer         | Blackbox | Multi-Fidelity (MF) | Multi-Objective (MO) | MO-MF | Priors |
-|------------------------------------------------|-------------------|----------|---------------------|----------------------|-------|--------|
-| -                                              | RandomSearch      | ✓        |                     |                      |       |        |
-| -                                              | RandomSearch with priors     | ✓  |    |    |       | ✓        |
-| [SMAC](https://github.com/automl/SMAC3)        | Black Box Facade  | ✓  |    |    |       |         |
-| [SMAC](https://github.com/automl/SMAC3)        | Hyperband         |    | ✓  |    |       |         |
-| [DEHB](https://github.com/automl/DEHB)         | DEHB              |    | ✓  |    |       |         |
-| [HEBO](https://github.com/huawei-noah/HEBO)    | HEBO              | ✓  |    |    |       |         |
-| [Nevergrad](https://github.com/facebookresearch/nevergrad) | all   | ✓  |    | ✓  |       |         |
-| [Optuna](https://github.com/optuna/optuna)     | TPE               | ✓  |    |    |       |         |
-| [Optuna](https://github.com/optuna/optuna)     | NSGA2             |    |    | ✓  |       |         |
-| [Scikit-Optimize](https://github.com/scikit-optimize/scikit-optimize) | all   | ✓  |    |    |       |         |
+### Overview of Available Optimizers  
+
+| Package                                        | Optimizer                   | Optimizer Name in `hposuite`    | Blackbox | Multi-Fidelity (MF) | Multi-Objective (MO) | MO-MF | Priors |
+|------------------------------------------------|-----------------------------|---------------------------|----------|---------------------|----------------------|-------|--------|
+| -                                              | RandomSearch                | `"RandomSearch"`          | ✓        |                     |                      |       |        |
+| -                                              | RandomSearch with priors    | `"RandomSearchWithPriors"` | ✓        |                     |                      |       | ✓      |
+| [SMAC](https://github.com/automl/SMAC3)        | Black Box Facade            | `"SMAC_BO"`               | ✓        |                     |                      |       |        |
+| [SMAC](https://github.com/automl/SMAC3)        | Hyperband                   | `"SMACHyperband"`         |          | ✓                   |                      |       |        |
+| [DEHB](https://github.com/automl/DEHB)         | DEHB                        | `"DEHB"`                  |          | ✓                   |                      |       |        |
+| [HEBO](https://github.com/huawei-noah/HEBO)    | HEBO                        | `"HEBO"`                  | ✓        |                     |                      |       |        |
+| [Nevergrad](https://github.com/facebookresearch/nevergrad) | all  | default: `"NGOpt"`. Others [see here](./hposuite/optimizers/README.md#Nevergrad-optimizers-choice) | ✓  |    | ✓  |       |        |
+| [Optuna](https://github.com/optuna/optuna)     | TPE                         | `"Optuna"` (TPE is automatically selected for single-objective problems) | ✓  |    |    |       |        |
+| [Optuna](https://github.com/optuna/optuna)     | NSGA2                       | `"Optuna"` (NSGA2 is automatically selected for multi-objective problems) |    |    | ✓  |       |        |
+| [Scikit-Optimize](https://github.com/scikit-optimize/scikit-optimize) | all  | `"Scikit_Optimize"`      | ✓  |    |    |       |        |
+
 
 
 

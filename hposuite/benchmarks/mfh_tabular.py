@@ -18,15 +18,7 @@ def _get_mfh_space(
     """Returns a list of all possible configurations for the MF Hartmann's Tabular Benchmark."""
     table = _get_mfh_table(function_name, datadir)
     config_keys = [k for k in table.columns if "X" in k]
-    return [
-        Config(config_id=str(i), values=config)  # enforcing str for id
-        for i, config in enumerate(
-            table[config_keys]
-            .drop_duplicates()
-            .sort_values(by=config_keys)  # Sorting to ensure table config order is consistent
-            .to_dict(orient="records"),
-        )
-    ]
+    return TabularBenchmark.get_tabular_config_space(table, config_keys)
 
 
 def _get_mfh_table(
@@ -69,7 +61,9 @@ def mfh_tabular_desc(datadir: str | Path | None = None) -> BenchmarkDescription:
                 space = _get_mfh_space(name, datadir)
             except FileNotFoundError:
                 warnings.warn(  # noqa: B028
-                    f"Could not find mfh Tabular Benchmark data for {name}. Skipping."
+                    f"Could not find mfh Tabular Benchmark data for {name}. Skipping. "
+                    f"Run `python -m hposuite.benchmarks.create_tabular --benchmark {name} "
+                    f"-suite mfh_tabular --task {name}` to create the benchmark data."
                 )
                 continue
             yield BenchmarkDescription(
@@ -102,6 +96,6 @@ def mfh_tabular_benchmarks(datadir: str | Path | None = None) :
         datadir = Path(datadir).resolve()
 
     if datadir is None:
-        datadir = Path("data", "mfh-tabular").resolve()
+        datadir = Path("data", "mfh_tabular").resolve()
 
     yield from mfh_tabular_desc(datadir=datadir)

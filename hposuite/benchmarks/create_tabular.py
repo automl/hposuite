@@ -174,7 +174,7 @@ if __name__ == "__main__":
         "--tabular_suite_name", "-suite",
         type=str,
         required=True,
-        help="Name of the tabular benchmark suite. Eg: bbob-tabular"
+        help="Name of the tabular benchmark suite. Eg: bbob_tabular"
     )
     parser.add_argument(
         "--task", "-t",

@@ -57,15 +57,7 @@ def _get_bbob_space(
     """Returns a list of all possible configurations for the BBOB function's Tabular Benchmark."""
     table = _get_bbob_table(function_name, datadir)
     config_keys = [k for k in table.columns if "x" in k]
-    return [
-        Config(config_id=str(i), values=config)  # enforcing str for id
-        for i, config in enumerate(
-            table[config_keys]
-            .drop_duplicates()
-            .sort_values(by=config_keys)  # Sorting to ensure table config order is consistent
-            .to_dict(orient="records"),
-        )
-    ]
+    return TabularBenchmark.get_tabular_config_space(table, config_keys)
 
 
 def _get_bbob_table(
@@ -106,7 +98,10 @@ def bbob_tabular_desc(datadir: str | Path | None = None) -> BenchmarkDescription
             space = _get_bbob_space(function_name, datadir)
         except FileNotFoundError:
             warnings.warn(  # noqa: B028
-                f"Could not find BBOB Tabular Benchmark data for {function_name}. Skipping."
+                f"Could not find BBOB Tabular Benchmark data for {function_name}. Skipping. "
+                f"Run `python -m hposuite.benchmarks.create_tabular "
+                f"--benchmark bbob-{function_name} -suite bbob_tabular --task {function_name}`"
+                "to create the benchmark data."
             )
             continue
         yield BenchmarkDescription(
@@ -135,6 +130,6 @@ def bbob_tabular_benchmarks(datadir: str | Path | None = None) :
         datadir = Path(datadir).resolve()
 
     if datadir is None:
-        datadir = Path("data", "bbob-tabular").resolve()
+        datadir = Path("data", "bbob_tabular").resolve()
 
     yield from bbob_tabular_desc(datadir=datadir)

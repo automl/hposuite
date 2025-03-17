@@ -1,3 +1,9 @@
+[![image](https://img.shields.io/pypi/v/hposuite.svg)](https://pypi.python.org/pypi/hposuite)
+[![image](https://img.shields.io/pypi/l/hposuite.svg)](https://pypi.python.org/pypi/hposuite)
+[![image](https://img.shields.io/pypi/pyversions/hposuite.svg)](https://pypi.python.org/pypi/hposuite)
+[![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
+
+
 # hposuite
 A lightweight framework for benchmarking HPO algorithms
 
@@ -36,7 +42,7 @@ source hposuite_env/bin/activate
 ### Installing from PyPI
 
 ```bash
-pip install hposuite # Current not functional
+pip install hposuite
 ```
 
 > [!TIP]
@@ -47,7 +53,7 @@ pip install hposuite # Current not functional
 
 
 > [!NOTE]
-> * We **recommend** doing doing `pip install hposuite["all"]` to install all available benchmarks and optimizers
+> * We **recommend** doing doing `pip install hposuite["all"]` to install all available benchmarks and optimizers, along with `ipykernel` for running the notebook examples
 
 ### Installation from source
 
@@ -124,18 +130,18 @@ For a more detailed overview, check [here](./hposuite/optimizers/README.md)
 
 ### Overview of Available Optimizers  
 
-| Package                                        | Optimizer                   | Optimizer Name in `hposuite`    | Blackbox | Multi-Fidelity (MF) | Multi-Objective (MO) | MO-MF | Priors |
-|------------------------------------------------|-----------------------------|---------------------------|----------|---------------------|----------------------|-------|--------|
-| -                                              | RandomSearch                | `"RandomSearch"`          | ✓        |                     |                      |       |        |
-| -                                              | RandomSearch with priors    | `"RandomSearchWithPriors"` | ✓        |                     |                      |       | ✓      |
-| [SMAC](https://github.com/automl/SMAC3)        | Black Box Facade            | `"SMAC_BO"`               | ✓        |                     |                      |       |        |
-| [SMAC](https://github.com/automl/SMAC3)        | Hyperband                   | `"SMACHyperband"`         |          | ✓                   |                      |       |        |
-| [DEHB](https://github.com/automl/DEHB)         | DEHB                        | `"DEHB"`                  |          | ✓                   |                      |       |        |
-| [HEBO](https://github.com/huawei-noah/HEBO)    | HEBO                        | `"HEBO"`                  | ✓        |                     |                      |       |        |
-| [Nevergrad](https://github.com/facebookresearch/nevergrad) | all  | default: `"NGOpt"`. Others [see here](./hposuite/optimizers/README.md#Nevergrad-optimizers-choice) | ✓  |    | ✓  |       |        |
-| [Optuna](https://github.com/optuna/optuna)     | TPE                         | `"Optuna"` (TPE is automatically selected for single-objective problems) | ✓  |    |    |       |        |
-| [Optuna](https://github.com/optuna/optuna)     | NSGA2                       | `"Optuna"` (NSGA2 is automatically selected for multi-objective problems) |    |    | ✓  |       |        |
-| [Scikit-Optimize](https://github.com/scikit-optimize/scikit-optimize) | all  | `"Scikit_Optimize"`      | ✓  |    |    |       |        |
+| Optimizer Package                                                     | Blackbox | Multi-Fidelity (MF) | Multi-Objective (MO) | MO-MF | Priors |
+|-----------------------------------------------------------------------|----------|---------------------|----------------------|-------|--------|
+| RandomSearch                                                          | ✓        |                     |                      |       |        |
+| RandomSearch with priors                                              | ✓        |                     |                      |       | ✓      |
+| [SMAC](https://github.com/automl/SMAC3)                               | ✓        |                     |                      |       |        |
+| [SMAC](https://github.com/automl/SMAC3)                               |          | ✓                   |                      |       |        |
+| [DEHB](https://github.com/automl/DEHB)                                |          | ✓                   |                      |       |        |
+| [HEBO](https://github.com/huawei-noah/HEBO)                           | ✓        |                     |                      |       |        |
+| [Nevergrad](https://github.com/facebookresearch/nevergrad)            | ✓        |                     | ✓                    |       |        |
+| [Optuna](https://github.com/optuna/optuna)                            | ✓        |                     |                      |       |        |
+| [Optuna](https://github.com/optuna/optuna)                            |          |                     | ✓                    |       |        |
+| [Scikit-Optimize](https://github.com/scikit-optimize/scikit-optimize) | ✓        |                     |                      |       |        |
 
 
 
@@ -146,15 +152,12 @@ For a more detailed overview, check [here](./hposuite/optimizers/README.md)
 
 For a more detailed overview, check [here](./hposuite/benchmarks/README.md)
 
-| Package          | Benchmark                  | Type       | Multi-Fidelity | Multi-Objective | Reference |
-|------------------|----------------------------|------------|----|----|-----------|
-| -                | Ackley                     | Functional |    |    | [Ackley Function](https://en.wikipedia.org/wiki/Ackley_function) |
-| -                | Branin                     | Functional |    |    | [Branin Function](https://www.sfu.ca/~ssurjano/branin.html) |
-| [mf-prior-bench](https://github.com/automl/mf-prior-bench)   | MF-Hartmann        | Synthetic  | ✓  |    | [MF-Hartmann Benchmark](https://github.com/automl/mf-prior-bench/blob/main/src/mfpbench/synthetic/hartmann/generators.py) |
-| [mf-prior-bench](https://github.com/automl/mf-prior-bench)   | PD1                        | Surrogate  | ✓  | ✓  | [HyperBO - PD1 Benchmark](https://github.com/google-research/hyperbo?tab=readme-ov-file#pd1-benchmark) |
-| [mf-prior-bench](https://github.com/automl/mf-prior-bench)  | LCBench-Tabular            | Tabular    | ✓  | ✓  | [LCBench-Tabular](https://github.com/automl/LCBench) |
-| [Pymoo](https://pymoo.org/)            | Single-Objective           | Synthetic  |    |    | [Pymoo Single-Objective Problems](https://pymoo.org/problems/test_problems.html#Single-Objective) |
-| [Pymoo](https://pymoo.org/)     | Multi-Objective (unconstrained)       | Synthetic  |    | ✓  | [Pymoo Multi-Objective Problems](https://pymoo.org/problems/test_problems.html#Multi-Objective) |
-| [Pymoo](https://pymoo.org/)     | Many-Objective       | Synthetic  |    | ✓  | [Pymoo Many-Objective Problems](https://pymoo.org/problems/test_problems.html#Many-Objective) |
-| [IOH](https://iohprofiler.github.io/)              | BBOB                       | Synthetic  |    |    | [BBOB](https://numbbo.github.io/coco/testsuites/bbob) |
+| Benchmark Package                            | Type       | Multi-Fidelity | Multi-Objective |
+|------------------|------------|----|----|
+| Ackley                                      | Synthetic |    |    |
+| Branin                                     | Synthetic |    |    |
+| [mf-prior-bench](https://github.com/automl/mf-prior-bench)           | Synthetic, Surrogate  | ✓  |  ✓  | 
+| [LCBench-Tabular](https://github.com/automl/LCBench)              | Tabular    | ✓  | ✓  |
+| [Pymoo](https://pymoo.org/)         | Synthetic     |      |     | 
+| [IOH](https://iohprofiler.github.io/) (BBOB)                              | Synthetic  |    |    | 
 

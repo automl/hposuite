@@ -36,8 +36,18 @@ license = { file = "LICENSE" }
 
 [tool.setuptools.packages.find]
 where = ["."]
-include = ["hposuite"]
-exclude = ["configs", "examples", "tests", "scripts"]
+include = [
+  "hposuite",
+  "hposuite.*",
+]
+
+exclude = [
+  "configs",
+  "examples",
+  "tests",
+  "scripts",
+  "data"
+]
 namespaces = false
 
 [project.optional-dependencies]

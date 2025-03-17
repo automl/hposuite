@@ -53,6 +53,7 @@ namespaces = false
 [project.optional-dependencies]
 dev = ["ruff", "mypy", "pre-commit"]
 notebook = ["ipykernel"]
+
 all = [
   "ipykernel",
   "smac",
@@ -62,9 +63,10 @@ all = [
   "nevergrad",
   "hebo",
   "pymoo",
-  "mf-prior-bench[pd1]",
-  "ioh"
+  "mf-prior-bench[pd1]>=1.10.0",
+  "ioh>=0.3.14"
 ]
+
 optimizers = [
   "smac",
   "optuna",
@@ -73,7 +75,13 @@ optimizers = [
   "nevergrad",
   "hebo"
 ]
-benchmarks = ["pymoo", "mf-prior-bench[pd1]", "ioh"]
+
+benchmarks = [
+  "pymoo",
+  "mf-prior-bench[pd1]>=1.10.0",
+  "ioh>=0.3.14"
+]
+
 smac = ["smac"]
 optuna = ["optuna"]
 dehb = ["dehb"]
@@ -81,8 +89,8 @@ skopt = ["scikit-optimize"]
 nevergrad = ["nevergrad"]
 hebo = ["hebo"]
 pymoo = ["pymoo"]
-mfpbench = ["mf-prior-bench[pd1]"]
-bbob = ["ioh"]
+mfpbench = ["mf-prior-bench[pd1]>=1.10.0"]
+bbob = ["ioh>=0.3.14"]
 
 [project.urls]
 source = "https://github.com/automl/hposuite/"

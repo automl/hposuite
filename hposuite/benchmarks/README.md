@@ -33,7 +33,7 @@
 
 -----------------------------------------------------------------------------------
 
-### LCBench Tabular task IDs:
+### LCBench Tabular OpenML task IDs:
 
 > [!TIP]
 > * get the corresponding benchmark in `hposuite` as `lcbench_tabular-{task_id}`
@@ -78,6 +78,8 @@
 
 ### Pymoo Problems
 
+Learn more about Pymoo Test Problems [here](https://pymoo.org/problems/test_problems.html)
+
 #### Pymoo Single-Objective  
 
 - `"ackley"`  
@@ -117,6 +119,8 @@
 
 
 ### BBOB Functions
+
+Learn more about BBOB functions [here](https://numbbo.github.io/coco/testsuites/bbob)
 
 > [!TIP]
 > * In `hposuite` BBOB functions are available in dimensions: (2, 3, 5, 10, 20, 40) and instances: (0, 1, 2)

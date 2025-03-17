@@ -158,5 +158,5 @@ For a more detailed overview, check [here](./hposuite/benchmarks/README.md)
 | [mf-prior-bench](https://github.com/automl/mf-prior-bench)           | Synthetic, Surrogate  | ✓  |  ✓  | 
 | [LCBench-Tabular](https://github.com/automl/LCBench)              | Tabular    | ✓  | ✓  |
 | [Pymoo](https://pymoo.org/)         | Synthetic     |      |     | 
-| [IOH](https://iohprofiler.github.io/) (BBOB)                              | Synthetic  |    |    | 
+| [IOH](https://iohprofiler.github.io/) ([BBOB](https://numbbo.github.io/coco/testsuites/bbob))                | Synthetic  |    |    | 
 

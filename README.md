@@ -2,6 +2,7 @@
 [![image](https://img.shields.io/pypi/l/hposuite.svg)](https://pypi.python.org/pypi/hposuite)
 [![image](https://img.shields.io/pypi/pyversions/hposuite.svg)](https://pypi.python.org/pypi/hposuite)
 [![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
+[![Link](https://img.shields.io/badge/hpoglue-rgb(50,50,200))](https://github.com/automl/hpoglue)
 
 
 # hposuite
@@ -134,13 +135,11 @@ For a more detailed overview, check [here](./hposuite/optimizers/README.md)
 |-----------------------------------------------------------------------|----------|---------------------|----------------------|-------|--------|
 | RandomSearch                                                          | ✓        |                     |                      |       |        |
 | RandomSearch with priors                                              | ✓        |                     |                      |       | ✓      |
-| [SMAC](https://github.com/automl/SMAC3)                               | ✓        |                     |                      |       |        |
-| [SMAC](https://github.com/automl/SMAC3)                               |          | ✓                   |                      |       |        |
+| [SMAC](https://github.com/automl/SMAC3)                               | ✓        | ✓                   | ✓                    | ✓     |        |
 | [DEHB](https://github.com/automl/DEHB)                                |          | ✓                   |                      |       |        |
 | [HEBO](https://github.com/huawei-noah/HEBO)                           | ✓        |                     |                      |       |        |
 | [Nevergrad](https://github.com/facebookresearch/nevergrad)            | ✓        |                     | ✓                    |       |        |
-| [Optuna](https://github.com/optuna/optuna)                            | ✓        |                     |                      |       |        |
-| [Optuna](https://github.com/optuna/optuna)                            |          |                     | ✓                    |       |        |
+| [Optuna](https://github.com/optuna/optuna)                            | ✓        |                     | ✓                    |       |        |
 | [Scikit-Optimize](https://github.com/scikit-optimize/scikit-optimize) | ✓        |                     |                      |       |        |
 
 

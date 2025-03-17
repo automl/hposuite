@@ -16,7 +16,7 @@ if TYPE_CHECKING:
     from smac.runhistory import TrialInfo
 
 
-def _dummy_target_function(*args: Any, budget: int | float, seed: int) -> NoReturn:
+def _dummy_target_function(*args: Any, budget: int | float, seed: int) -> NoReturn:  # noqa: ARG001
     raise RuntimeError("This should never be called!")
 
 
@@ -43,10 +43,15 @@ class SMAC_Optimizer(Optimizer):
 
         Args:
             problem: Problem statement.
+
             seed: Random seed for the optimizer.
+
             working_directory: Working directory to store SMAC run.
+
             config_space: Configuration space to optimize over.
+
             optimizer: SMAC optimizer instance.
+
             fidelity: Fidelity space to optimize over, if any.
         """
         self.problem = problem
@@ -141,8 +146,11 @@ class SMAC_BO(SMAC_Optimizer):
 
         Args:
             problem: Problem statement.
+
             seed: Random seed for the optimizer.
+
             working_directory: Working directory to store SMAC run.
+
             xi: Exploration-exploitation trade-off parameter. Defaults to 0.0.
         """
         config_space = problem.config_space
@@ -232,8 +240,11 @@ class SMAC_Hyperband(SMAC_Optimizer):
 
         Args:
             problem: Problem statement.
+
             seed: Random seed for the optimizer.
+
             working_directory: Working directory to store SMAC run.
+
             eta: Hyperband eta parameter. Defaults to 3.
         """
         config_space = problem.config_space
@@ -272,7 +283,7 @@ class SMAC_Hyperband(SMAC_Optimizer):
             case TrialBudget():
                 budget = problem.budget.total
             case CostBudget():
-                raise ValueError("SMAC BO does not support cost-aware benchmarks!")
+                raise ValueError("SMAC Hyperband does not support cost-aware benchmarks!")
             case _:
                 raise TypeError("Budget must be a TrialBudget or a CostBudget!")
 
@@ -298,6 +309,105 @@ class SMAC_Hyperband(SMAC_Optimizer):
                 logging_level=False,
                 target_function=_dummy_target_function,
                 intensifier=HyperbandFacade.get_intensifier(scenario, eta=eta),
+                overwrite=True,
+            ),
+        )
+
+
+class SMAC_BOHB(SMAC_Optimizer):
+    """SMAC BOHB."""
+
+    name = "SMAC_BOHB"
+    support = Problem.Support(
+        fidelities=("single",),
+        objectives=("single", "many"),
+        cost_awareness=(None,),
+        tabular=False,
+    )
+    mem_req_mb = 1024
+
+    def __init__(  # noqa: PLR0912
+        self,
+        *,
+        problem: Problem,
+        seed: int,
+        working_directory: Path,
+        eta: int = 3,
+    ):
+        """Create a SMAC BOHB Optimizer instance for a given problem statement.
+
+        Args:
+            problem: Problem statement.
+
+            seed: Random seed for the optimizer.
+
+            working_directory: Working directory to store SMAC run.
+
+            eta: BOHB eta parameter. Defaults to 3.
+                According to the paper, changing this doesn't seem to make a difference.
+        """
+        config_space = problem.config_space
+        match config_space:
+            case ConfigurationSpace():
+                pass
+            case list():
+                raise ValueError("SMAC does not support tabular benchmarks!")
+            case _:
+                raise TypeError("Config space must be a list or a ConfigurationSpace!")
+
+        min_fidelity: float | int
+        max_fidelity: float | int
+        match problem.fidelities:
+            case None:
+                raise ValueError("SMAC BOHB requires a fidelity space!")
+            case Mapping():
+                raise ValueError("SMAC BOHB does not support many-fidelity!")
+            case (_, fidelity):
+                _fid = fidelity
+                min_fidelity = fidelity.min
+                max_fidelity = fidelity.max
+            case _:
+                raise TypeError("Fidelity must be a string or a list of strings!")
+
+        match problem.objectives:
+            case Mapping():
+                metric_names = list(problem.objectives.keys())
+            case (metric_name, _):
+                metric_names = metric_name
+            case _:
+                raise TypeError("Objective must be a tuple of (name, metric) or a mapping")
+
+        working_directory.mkdir(parents=True, exist_ok=True)
+        match problem.budget:
+            case TrialBudget():
+                budget = problem.budget.total
+            case CostBudget():
+                raise ValueError("SMAC BOHB does not support cost-aware benchmarks!")
+            case _:
+                raise TypeError("Budget must be a TrialBudget or a CostBudget!")
+
+        from smac import MultiFidelityFacade, Scenario
+
+        scenario = Scenario(
+            configspace=config_space,
+            deterministic=True,
+            objectives=metric_names,
+            n_trials=budget,
+            seed=seed,
+            output_directory=working_directory / "smac-output",
+            min_budget=min_fidelity,
+            max_budget=max_fidelity,
+        )
+        super().__init__(
+            problem=problem,
+            seed=seed,
+            working_directory=working_directory,
+            fidelity=_fid,
+            optimizer=MultiFidelityFacade(
+                scenario=scenario,
+                logging_level=False,
+                target_function=_dummy_target_function,
+                intensifier=MultiFidelityFacade.get_intensifier(scenario, eta=eta),
                 overwrite=True,
             ),
         )

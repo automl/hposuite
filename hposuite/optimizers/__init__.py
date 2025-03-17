@@ -19,7 +19,7 @@ modules = [
     ("hposuite.optimizers.optuna", "OptunaOptimizer"),
     ("hposuite.optimizers.random_search", "RandomSearch", "RandomSearchWithPriors"),
     ("hposuite.optimizers.scikit_optimize", "SkoptOptimizer"),
-    ("hposuite.optimizers.smac", "SMAC_BO", "SMAC_Hyperband"),
+    ("hposuite.optimizers.smac", "SMAC_BO", "SMAC_Hyperband", "SMAC_BOHB"),
 ]
 
 imported_opt_cls = []

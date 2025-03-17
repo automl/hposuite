@@ -40,6 +40,7 @@ FIDELITY_COL = "result.fidelity.1.value"
 FIDELITY_NAME_COL = "problem.fidelity.1.name"
 FIDELITY_MIN_COL = "problem.fidelity.1.min"
 FIDELITY_MAX_COL = "problem.fidelity.1.max"
+BENCHMARK_COUNT_FIDS = "benchmark.fidelity.count"
 BENCHMARK_FIDELITY_NAME = "benchmark.fidelity.1.name"
 BENCHMARK_FIDELITY_COL = "benchmark.fidelity.1.value"
 BENCHMARK_FIDELITY_MIN_COL = "benchmark.fidelity.1.min"
@@ -212,8 +213,8 @@ def plot_results(  # noqa: C901, PLR0912, PLR0913, PLR0915
     plt.xlabel(f"{budget_type}")
     plt.ylabel(f"{objective}")
     plot_suffix = (
-        f"{benchmarks_name}.{objective=}.{fidelity=}.{cost=}."
-        f"{budget_type}={budget}.{to_minimize=}.{error_bars=}"
+        f"{benchmarks_name}, {objective=}, \n{fidelity=}, {cost=}, "
+        f"{budget_type}={budget}, {to_minimize=}, {error_bars=}"
     )
     plt.title(f"Plot for optimizers on {plot_suffix}")
     if logscale:
@@ -224,6 +225,8 @@ def plot_results(  # noqa: C901, PLR0912, PLR0913, PLR0915
     save_dir.mkdir(parents=True, exist_ok=True)
 
     optimizers = ",".join(optimizers)
+
+    plot_suffix = plot_suffix.replace("\n", "")
 
     save_path = save_dir / f"{optimizers}.{plot_suffix}.png"
     plt.savefig(save_path)
@@ -303,7 +306,8 @@ def agg_data(  # noqa: C901, PLR0912, PLR0915
 
             # Add default benchmark fidelity to a blackbox Optimizer to compare it
             # alongside MF optimizers if the latter exist in the study
-            if fidelities is None and budget_type != "TrialBudget":
+            bench_num_fids = _df[BENCHMARK_COUNT_FIDS].iloc[0]
+            if fidelities is None and budget_type != "TrialBudget" and bench_num_fids >= 1:
                 fid = next(
                     bench[1]["fidelities"]
                     for bench in all_benches
@@ -536,7 +540,7 @@ if __name__ == "__main__":
         default=None,
         help="Type of budget to plot. "
         "If the study contains a mix of Blackbox and MF opts, "
-        "Blackbox opts are only plotted using TrialBudget separately."
+        "Blackbox opts are only plotted using TrialBudget separately. "
         "MF opts are still plotted using FidelityBudget."
     )
     args = parser.parse_args()

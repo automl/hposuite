@@ -384,8 +384,10 @@ class Run:
                 - "seed": The seed value.
                 - "expdir": The string representation of the study directory.
         """
+        _problem = self.problem.to_dict()
+        _problem["priors"] = list(_problem["priors"]) if _problem["priors"] else None
         return {
-            "problem": self.problem.to_dict(),
+            "problem": _problem,
             "seed": self.seed,
             "expdir": str(self.expdir),
         }

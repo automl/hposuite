@@ -192,6 +192,7 @@ class Study:
             _priors = None
             if bench[1]["priors"]:
                 _priors = configpriors_to_dict(bench[1]["priors"])
+                _priors = list(_priors)
             _benchmarks.append(
                 {
                     "name": bench[0].name,

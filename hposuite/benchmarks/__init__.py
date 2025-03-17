@@ -32,16 +32,12 @@ for module_name, *attrs in modules:
             if isinstance(bench, types.FunctionType):
                 bench = bench()
             match bench:
-                case FunctionalBenchmark():
-                    imported_benches.append(bench.desc)
-                case BenchmarkDescription():
+                case FunctionalBenchmark() | BenchmarkDescription():
                     imported_benches.append(bench)
                 case Iterator() | Generator():
                     for b in bench:
                         match b:
-                            case FunctionalBenchmark():
-                                imported_benches.append(b.desc)
-                            case BenchmarkDescription():
+                            case FunctionalBenchmark() | BenchmarkDescription():
                                 imported_benches.append(b)
                             case _:
                                 raise ValueError(f"Unexpected benchmark type: {type(b)}")
@@ -58,10 +54,14 @@ NON_MF_BENCHMARKS: dict[str, BenchmarkDescription] = {}
 
 for bench in imported_benches:
     BENCHMARKS[bench.name] = bench
-    if bench.fidelities is not None:
-        MF_BENCHMARKS[bench.name] = bench
+    _bench = bench
+    if isinstance(_bench, FunctionalBenchmark):
+        _bench = _bench.desc
+
+    if _bench.fidelities is not None:
+        MF_BENCHMARKS[_bench.name] = _bench
     else:
-        NON_MF_BENCHMARKS[bench.name] = bench
+        NON_MF_BENCHMARKS[_bench.name] = _bench
 
 __all__ = [
     "BENCHMARKS",

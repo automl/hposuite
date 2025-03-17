@@ -2,8 +2,7 @@ from __future__ import annotations
 
 from collections.abc import Iterator
 from functools import partial
-from pathlib import Path
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
 
 import numpy as np
 from hpoglue import BenchmarkDescription, Measure, Result, SurrogateBenchmark
@@ -60,7 +59,7 @@ def mfh() -> Iterator[BenchmarkDescription]:
     """
     import mfpbench
     env = Env(
-        name="py310-mfpbench-1.9-mfh",
+        name="py310-mfpbench-1.10-mfh",
         python_version="3.10",
         requirements=("mf-prior-bench>=1.10.0",),
         post_install=(),

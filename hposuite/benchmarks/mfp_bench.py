@@ -49,6 +49,14 @@ warnings.filterwarnings("ignore", category=DeprecationWarning)
 warnings.filterwarnings("ignore", category=UserWarning)
 
 
+pd1_benchmarks = (
+    "cifar100_wideresnet_2048",
+    "imagenet_resnet_512",
+    "lm1b_transformer_2048",
+    "translatewmt_xformer_64",
+)
+
+
 def _get_surrogate_benchmark(
     description: BenchmarkDescription,
     *,
@@ -60,6 +68,15 @@ def _get_surrogate_benchmark(
 
     if datadir is not None:
         datadir = Path(datadir).absolute().resolve()
+        if benchmark_name in pd1_benchmarks:
+            if "pd1" in os.listdir(datadir):
+                datadir = datadir / "pd1"
+            else:
+                raise ValueError(
+                    f"Could not find pd1-{benchmark_name} Benchmark data in {datadir}. "
+                    "Download the benchmark data using the command: \n"
+                    f'python -m mfpbench download --benchmark "pd1" --data-dir {datadir}'
+                )
         kwargs["datadir"] = datadir
     bench = mfpbench.get(benchmark_name, **kwargs)
     query_function = partial(_mfpbench_surrogate_query_function, benchmark=bench)
@@ -100,7 +117,7 @@ def mfh() -> Iterator[BenchmarkDescription]:
     """
     import mfpbench
     env = Env(
-        name="py310-mfpbench-1.9-mfh",
+        name="py310-mfpbench-1.10-mfh",
         python_version="3.10",
         requirements=("mf-prior-bench>=1.10.0",),
         post_install=(),
@@ -146,27 +163,18 @@ def pd1(datadir: Path | None = None) -> Iterator[BenchmarkDescription]:
     """
     import mfpbench
     env = Env(
-        name="py310-mfpbench-1.9-pd1",
+        name="py310-mfpbench-1.10-pd1",
         python_version="3.10",
         requirements=("mf-prior-bench[pd1]>=1.10.0",),
         post_install=_download_data_cmd("pd1", datadir=datadir),
     )
-    if datadir is not None:
-        if "pd1" in os.listdir(datadir):
-            datadir = datadir / "pd1"
-        else:
-            warnings.warn(
-                f"Could not find pd1 Benchmark data in {datadir}. Skipping.",
-                stacklevel=2
-            )
-            return
     for req in env.requirements:
         if not is_package_installed(req):
             mfp_logger.warning(f"Please install the required package for pd1: {req}", stacklevel=2)
             return
     yield BenchmarkDescription(
         name="pd1-cifar100-wide_resnet-2048",
-        config_space=mfpbench.get("cifar100_wideresnet_2048", datadir=datadir).space,
+        config_space=mfpbench.pd1.benchmarks.PD1cifar100_wideresnet_2048._create_space(),
         load=partial(
             _get_surrogate_benchmark, benchmark_name="cifar100_wideresnet_2048", datadir=datadir
         ),
@@ -181,7 +189,7 @@ def pd1(datadir: Path | None = None) -> Iterator[BenchmarkDescription]:
     )
     yield BenchmarkDescription(
         name="pd1-imagenet-resnet-512",
-        config_space=mfpbench.get("imagenet_resnet_512", datadir=datadir).space,
+        config_space=mfpbench.pd1.benchmarks.PD1imagenet_resnet_512._create_space(),
         load=partial(
             _get_surrogate_benchmark, benchmark_name="imagenet_resnet_512", datadir=datadir
         ),
@@ -196,7 +204,7 @@ def pd1(datadir: Path | None = None) -> Iterator[BenchmarkDescription]:
     )
     yield BenchmarkDescription(
         name="pd1-lm1b-transformer-2048",
-        config_space=mfpbench.get("lm1b_transformer_2048", datadir=datadir).space,
+        config_space=mfpbench.pd1.benchmarks.PD1lm1b_transformer_2048._create_space(),
         load=partial(
             _get_surrogate_benchmark, benchmark_name="lm1b_transformer_2048", datadir=datadir
         ),
@@ -211,7 +219,7 @@ def pd1(datadir: Path | None = None) -> Iterator[BenchmarkDescription]:
     )
     yield BenchmarkDescription(
         name="pd1-translate_wmt-xformer_translate-64",
-        config_space=mfpbench.get("translatewmt_xformer_64", datadir=datadir).space,
+        config_space=mfpbench.pd1.benchmarks.PD1translatewmt_xformer_64._create_space(),
         load=partial(
             _get_surrogate_benchmark, benchmark_name="translatewmt_xformer_64", datadir=datadir
         ),

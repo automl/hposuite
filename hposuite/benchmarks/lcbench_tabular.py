@@ -226,7 +226,7 @@ def lcbench_tabular(datadir: Path | None = None) -> Iterator[BenchmarkDescriptio
         datadir = Path("data", "lcbench_tabular").absolute().resolve()
 
     env = Env(
-        name="py310-mfpbench-1.9-lcbench-tabular",
+        name="py310-lcbench-tabular",
         python_version="3.10",
         requirements=(
             "pandas",

@@ -8,13 +8,15 @@ from ConfigSpace import ConfigurationSpace
 from hpoglue import Config, Optimizer, Problem, Query
 from hpoglue.budget import CostBudget, TrialBudget
 from hpoglue.env import Env
+from smac import BlackBoxFacade, Scenario
+from smac.runhistory import StatusType, TrialValue
 
 if TYPE_CHECKING:
     from hpoglue import Result
     from smac.runhistory import TrialInfo
 
 
-def _dummy_target_function(*args: Any, budget: int | float, seed: int) -> NoReturn:
+def _dummy_target_function(*args: Any, budget: int | float, seed: int) -> NoReturn:  # noqa: ARG001
     raise RuntimeError("This should never be called!")
 
 
@@ -87,8 +89,6 @@ class Ex_Blackbox_Opt(Optimizer):
             case _:
                 raise TypeError("Budget must be a TrialBudget or a CostBudget!")
 
-        from smac import BlackBoxFacade, Scenario
-
         scenario = Scenario(
             configspace=config_space,
             deterministic=True,
@@ -104,8 +104,6 @@ class Ex_Blackbox_Opt(Optimizer):
         self.config_space = config_space
         self._trial_lookup: dict[Hashable, TrialInfo] = {}
         self._seed = seed
-
-        from smac import BlackBoxFacade, Scenario
 
         scenario = Scenario(
             configspace=self.config_space,
@@ -141,8 +139,6 @@ class Ex_Blackbox_Opt(Optimizer):
 
     def tell(self, result: Result) -> None:
         """Tell SMAC the result of the query."""
-        from smac.runhistory import StatusType, TrialValue
-
         match self.problem.objectives:
             case Mapping():
                 cost = [

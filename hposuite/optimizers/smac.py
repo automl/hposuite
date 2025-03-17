@@ -8,6 +8,8 @@ from ConfigSpace import ConfigurationSpace
 from hpoglue import Config, Optimizer, Problem, Query
 from hpoglue.budget import CostBudget, TrialBudget
 from hpoglue.env import Env
+from smac import BlackBoxFacade, HyperbandFacade, MultiFidelityFacade, Scenario
+from smac.runhistory import StatusType, TrialValue
 
 if TYPE_CHECKING:
     from hpoglue import Result
@@ -93,8 +95,6 @@ class SMAC_Optimizer(Optimizer):
 
     def tell(self, result: Result) -> None:
         """Tell SMAC the result of the query."""
-        from smac.runhistory import StatusType, TrialValue
-
         match self.problem.objectives:
             case Mapping():
                 cost = [
@@ -187,8 +187,6 @@ class SMAC_BO(SMAC_Optimizer):
                 raise ValueError("SMAC BO does not support cost-aware benchmarks!")
             case _:
                 raise TypeError("Budget must be a TrialBudget or a CostBudget!")
-
-        from smac import BlackBoxFacade, Scenario
 
         scenario = Scenario(
             configspace=config_space,
@@ -287,8 +285,6 @@ class SMAC_Hyperband(SMAC_Optimizer):
             case _:
                 raise TypeError("Budget must be a TrialBudget or a CostBudget!")
 
-        from smac import HyperbandFacade, Scenario
-
         scenario = Scenario(
             configspace=config_space,
             deterministic=True,
@@ -385,8 +381,6 @@ class SMAC_BOHB(SMAC_Optimizer):
                 raise ValueError("SMAC BOHB does not support cost-aware benchmarks!")
             case _:
                 raise TypeError("Budget must be a TrialBudget or a CostBudget!")
-
-        from smac import MultiFidelityFacade, Scenario
 
         scenario = Scenario(
             configspace=config_space,

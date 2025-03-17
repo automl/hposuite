@@ -1,4 +1,4 @@
-from hposuite.study import create_study
+from hposuite import create_study
 
 if __name__ == "__main__":
     study = create_study(

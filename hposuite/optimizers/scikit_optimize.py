@@ -4,9 +4,9 @@ import logging
 from collections.abc import Mapping
 from pathlib import Path
 from typing import TYPE_CHECKING
-from typing_extensions import Any
 
 import ConfigSpace as CS  # noqa: N817
+import skopt
 from hpoglue import Config, Optimizer, Problem, Query
 from hpoglue.env import Env
 
@@ -54,8 +54,6 @@ class SkoptOptimizer(Optimizer):
         acq_optimizer: str = "auto",
     ) -> None:
         """Create an Skopt Optimizer instance for a given problem statement."""
-        import skopt
-
         self.config_space = problem.config_space
         self._space: list[Space]
         match self.config_space:

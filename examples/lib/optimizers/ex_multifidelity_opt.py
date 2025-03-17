@@ -8,13 +8,15 @@ from ConfigSpace import ConfigurationSpace
 from hpoglue import Config, Optimizer, Problem, Query
 from hpoglue.budget import CostBudget, TrialBudget
 from hpoglue.env import Env
+from smac import HyperbandFacade, Scenario
+from smac.runhistory import StatusType, TrialValue
 
 if TYPE_CHECKING:
     from hpoglue import Result
     from smac.runhistory import TrialInfo
 
 
-def _dummy_target_function(*args: Any, budget: int | float, seed: int) -> NoReturn:
+def _dummy_target_function(*args: Any, budget: int | float, seed: int) -> NoReturn:     # noqa: ARG001
     raise RuntimeError("This should never be called!")
 
 
@@ -101,8 +103,6 @@ class Ex_Multifidelity_Opt(Optimizer):
         self._fidelity = _fid
         self._seed = seed
 
-        from smac import HyperbandFacade, Scenario
-
         scenario = Scenario(
             configspace=self.config_space,
             deterministic=True,
@@ -150,8 +150,6 @@ class Ex_Multifidelity_Opt(Optimizer):
 
     def tell(self, result: Result) -> None:
         """Tell SMAC the result of the query."""
-        from smac.runhistory import StatusType, TrialValue
-
         match self.problem.objectives:
             case Mapping():
                 cost = [

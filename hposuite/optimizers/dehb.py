@@ -5,6 +5,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 from ConfigSpace import ConfigurationSpace
+from dehb import DEHB
 from hpoglue import Config, Optimizer, Problem, Query
 from hpoglue.env import Env
 
@@ -43,8 +44,6 @@ class DEHB_Optimizer(Optimizer):
         # TODO(eddiebergman): Add more DEHB parameters
     ):
         """Create a DEHB Optimizer instance for a given problem statement."""
-        from dehb import DEHB
-
         config_space = problem.config_space
         match config_space:
             case ConfigurationSpace():

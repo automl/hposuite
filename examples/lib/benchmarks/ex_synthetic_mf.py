@@ -62,7 +62,7 @@ def mfh() -> Iterator[BenchmarkDescription]:
     env = Env(
         name="py310-mfpbench-1.9-mfh",
         python_version="3.10",
-        requirements=("mf-prior-bench==1.9.0",),
+        requirements=("mf-prior-bench>=1.10.0",),
         post_install=(),
     )
     for correlation in ("bad", "good", "moderate", "terrible"):

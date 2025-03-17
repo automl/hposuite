@@ -3,14 +3,14 @@ name = "hposuite"
 version = "0.1.0"
 requires-python = ">=3.10"
 dependencies = [
-  "pandas>=2,<3", 
-  "matplotlib>=3,<4", 
-  "tqdm", 
+  "hpoglue>=0.2.3",
+  "pandas>=2,<3",
+  "matplotlib>=3,<4",
+  "tqdm",
   "more_itertools",
   "pyyaml",
   "pyarrow",
   "ConfigSpace>=1.0",
-  "hpoglue>=0.2.2"
   ]
 authors = [
   { name = "Soham Basu", email = "soham.basu07@gmail.com" },
@@ -43,9 +43,27 @@ namespaces = false
 [project.optional-dependencies]
 dev = ["ruff", "mypy", "pre-commit"]
 notebook = ["ipykernel"]
-all = ["smac", "optuna", "dehb", "scikit-optimize", "nevergrad", "hebo", "pymoo", "mf-prior-bench", "ioh"]
-optimizers = ["smac", "optuna", "dehb", "scikit-optimize", "nevergrad", "hebo"]
-benchmarks = ["pymoo", "mf-prior-bench", "ioh"]
+all = [
+  "ipykernel",
+  "smac",
+  "optuna",
+  "dehb",
+  "scikit-optimize",
+  "nevergrad",
+  "hebo",
+  "pymoo",
+  "mf-prior-bench[pd1]",
+  "ioh"
+]
+optimizers = [
+  "smac",
+  "optuna",
+  "dehb",
+  "scikit-optimize",
+  "nevergrad",
+  "hebo"
+]
+benchmarks = ["pymoo", "mf-prior-bench[pd1]", "ioh"]
 smac = ["smac"]
 optuna = ["optuna"]
 dehb = ["dehb"]
@@ -53,7 +71,7 @@ skopt = ["scikit-optimize"]
 nevergrad = ["nevergrad"]
 hebo = ["hebo"]
 pymoo = ["pymoo"]
-mfpbench = ["mf-prior-bench"]
+mfpbench = ["mf-prior-bench[pd1]"]
 bbob = ["ioh"]
 
 [project.urls]

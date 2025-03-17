@@ -133,9 +133,9 @@ For a more detailed overview, check [here](./hposuite/optimizers/README.md)
 
 | Optimizer Package                                                     | Blackbox | Multi-Fidelity (MF) | Multi-Objective (MO) | MO-MF | Priors |
 |-----------------------------------------------------------------------|----------|---------------------|----------------------|-------|--------|
-| RandomSearch                                                          | ✓        |                     |                      |       |        |
-| RandomSearch with priors                                              | ✓        |                     |                      |       | ✓      |
-| [SMAC](https://github.com/automl/SMAC3)                               | ✓        | ✓                   | ✓                    | ✓     |        |
+| RandomSearch                                                          | ✓        |                     | ✓                    |       |        |
+| RandomSearch with priors                                              | ✓        |                     | ✓                    |       | ✓      |
+| [SMAC](https://github.com/automl/SMAC3)                               | ✓        | ✓                   | ✓                    |       |        |
 | [DEHB](https://github.com/automl/DEHB)                                |          | ✓                   |                      |       |        |
 | [HEBO](https://github.com/huawei-noah/HEBO)                           | ✓        |                     |                      |       |        |
 | [Nevergrad](https://github.com/facebookresearch/nevergrad)            | ✓        |                     | ✓                    |       |        |

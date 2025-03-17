@@ -9,6 +9,7 @@ Initial Release
 * Clean up main README Optimizers table
 * Create detailed README docs for each Optimizer in a separate folder (add more details like continuations, etc.)
 * Add README for synthetic tabular benchmarks (mfh_tabular and bbob_tabular)
+* Add steps to download LCBench-Tabular and PD1 benchmarks
 
 # Version 0.1.2
 

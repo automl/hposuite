@@ -151,12 +151,6 @@ def _get_lcbench_space(task_id: str, datadir: Path | str | None = None) -> list[
 
 
 def _load_lcbench_table(task_id: str, datadir: Path | str | None = None) -> pd.DataFrame:
-    if not datadir.exists():
-        print(      # noqa: T201
-            f"Data directory {datadir.resolve()} does not exist. "
-            "Run `python -m hposuite.benchmarks.lcbench_tabular setup` "
-            "to download and process the benchmark data."
-        )
     return pd.read_parquet(datadir / f"{task_id}.parquet")
 
 
@@ -248,12 +242,21 @@ def lcbench_tabular(datadir: Path | None = None) -> Iterator[BenchmarkDescriptio
             )
             return
     for task_id in task_ids:
-        yield BenchmarkDescription(
-            name=f"lcbench_tabular-{task_id}",
-            config_space=_get_lcbench_space(
+        try:
+            space = _get_lcbench_space(
                 task_id=task_id,
                 datadir=datadir
-            ),
+            )
+        except FileNotFoundError:
+            logger.error(
+                f"Data directory {datadir.resolve()} does not exist. "
+                "Run `python -m hposuite.benchmarks.lcbench_tabular setup` "
+                "to download and process the benchmark data."
+            )
+            return
+        yield BenchmarkDescription(
+            name=f"lcbench_tabular-{task_id}",
+            config_space=space,
             load=partial(_get_lcbench_tabular_bench, task_id=task_id, datadir=datadir),
             is_tabular=True,
             fidelities={
@@ -287,7 +290,11 @@ def _setup_cmd(datadir: Path | None = None) -> tuple[str, ...]:
 def lcbench_tabular_benchmarks(datadir: Path | None = None) -> Iterator[BenchmarkDescription]:
     """Generator function that yields benchmark descriptions from the lcbench_tabular benchmark."""
     if datadir is None:
-        datadir = Path("data", "lcbench_tabular").absolute().resolve()
+        datadir = (
+            Path(__file__).parent.parent.parent.absolute().resolve()
+            / "data"
+            / "lcbench_tabular"
+        )
     elif "lcbench_tabular" in os.listdir(datadir):
         datadir = datadir / "lcbench_tabular"
     yield from lcbench_tabular(datadir=datadir)

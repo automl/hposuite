@@ -114,7 +114,7 @@ The `Study` directory and the individual `Run` directory paths are logged when r
 ### Plotting
 
 ```bash
-python -m hposuite.plotting.utils \
+python -m hposuite.plotting.incumbent_trace \
 --study_dir <study directory name>
 --output_dir <abspath of dir where study dir is stored>
 --save_dir <path relative to study_dir to store the plots> \ 

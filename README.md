@@ -2,8 +2,7 @@
 [![image](https://img.shields.io/pypi/l/hposuite)](https://pypi.python.org/pypi/hposuite)
 [![image](https://img.shields.io/pypi/pyversions/hposuite.svg)](https://pypi.python.org/pypi/hposuite)
 [![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
-[![Link](https://img.shields.io/badge/hpoglue-rgb(50,50,200))](https://github.com/automl/hpoglue)
-
+[![GitHub](https://img.shields.io/badge/GitHub-hpoglue-rgb(50,50,200)?logo=github&logoColor=white)](https://github.com/automl/hpoglue)
 
 # hposuite
 A lightweight framework for benchmarking HPO algorithms

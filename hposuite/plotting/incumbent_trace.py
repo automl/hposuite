@@ -61,6 +61,7 @@ def plot_results(  # noqa: C901, PLR0912, PLR0913, PLR0915
     figsize: tuple[int, int] = (20, 10),
     logscale: bool = False,
     error_bars: Literal["std", "sem"] = "std",
+    plot_file_name: str | None = None,
 ) -> None:
     """Plot the results for the optimizers on the given benchmark."""
     marker_list = [
@@ -229,6 +230,11 @@ def plot_results(  # noqa: C901, PLR0912, PLR0913, PLR0915
     plot_suffix = plot_suffix.replace("\n", "")
 
     save_path = save_dir / f"{optimizers}.{plot_suffix}.png"
+    if plot_file_name:
+        save_path = save_dir / f"{plot_file_name}.png"
+        if save_path.exists():
+            logger.warning(f"{save_path} already exists. Using default plot name.")
+            save_path = save_dir / f"{optimizers}.{plot_suffix}.png"
     plt.savefig(save_path)
     logger.info(f"Saved plot to {save_path.absolute()}")
 
@@ -243,6 +249,7 @@ def agg_data(  # noqa: C901, PLR0912, PLR0915
     error_bars: Literal["std", "sem"] = "std",
     logscale: bool = False,
     budget_type: Literal["TrialBudget", "FidelityBudget", None] = None,
+    plot_file_name: str | None = None,
 ) -> None:
     """Aggregate the data from the run directory for plotting."""
     objective: str | None = None
@@ -374,6 +381,7 @@ def agg_data(  # noqa: C901, PLR0912, PLR0915
                 figsize=figsize,
                 logscale=logscale,
                 error_bars=error_bars,
+                plot_file_name=plot_file_name,
             )
             df_agg.clear()
 
@@ -543,6 +551,12 @@ if __name__ == "__main__":
         "Blackbox opts are only plotted using TrialBudget separately. "
         "MF opts are still plotted using FidelityBudget."
     )
+    parser.add_argument(
+        "--plot_file_name", "-pname",
+        type=str,
+        help="Name of the plot file to save",
+        default=None
+    )
     args = parser.parse_args()
 
     study_dir = args.output_dir / args.study_dir
@@ -558,4 +572,5 @@ if __name__ == "__main__":
         optimizer_spec=args.optimizer_spec,
         error_bars=args.error_bars,
         budget_type=args.budget_type,
+        plot_file_name=args.plot_file_name
     )

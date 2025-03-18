@@ -6,6 +6,7 @@ Initial Release
 
 # Version 0.1.1
 
+* Add option to add custom filenames for plots
 * Clean up main README Optimizers table
 * Create detailed README docs for each Optimizer in a separate folder (add more details like continuations, etc.)
 * Add README for synthetic tabular benchmarks (mfh_tabular and bbob_tabular)
@@ -13,12 +14,12 @@ Initial Release
 
 # Version 0.1.2
 
-* Add some basic tests
+* Utility function for checking compatible Optimizer-Benchmark pairs without running
+* Have the option for `all` in `hposuite.create_study()` to run an Optimizer on all available benchmarks and vice-versa
 
 # Version 0.1.3
 
-* Utility function for checking compatible Optimizer-Benchmark pairs without running
-* Have the option for `all` in `hposuite.create_study()` to run an Optimizer on all available benchmarks and vice-versa
+* Convert to Categorical Spaces for Optimizers that don't support Tabular Benchmarks
 
 # Version 0.1.4
 
@@ -31,4 +32,8 @@ Initial Release
 
 # Version 0.1.5
 
-* Convert to Categorical Spaces for Optimizers that don't support Tabular Benchmarks
+* Add some basic tests
+
+# Version 0.1.6
+
+* Add Neps Optimizers after Neps Ask-Tell is released

@@ -97,11 +97,11 @@ study.optimize()
 
 ```bash
 python -m hposuite \
---optimizer RandomSearch Scikit_Optimize \
---benchmark ackley \
---num_seeds 3 \
---budget 50 \
---study_name test_study
+    --optimizer RandomSearch Scikit_Optimize \
+    --benchmark ackley \
+    --num_seeds 3 \
+    --budget 50 \
+    --study_name test_study
 ```
 
 ### View all available Optimizers and Benchmarks

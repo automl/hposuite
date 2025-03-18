@@ -1,7 +1,4 @@
-"""hposuite interface for Scikit_Optimize.
-Find the README for Scikit_Optimize here:
-https://github.com/automl/hposuite/blob/main/hposuite/optimizers/readme_docs/scikit_optimize.md .
-"""
+"""hposuite interface for Scikit_Optimize."""
 
 from __future__ import annotations
 

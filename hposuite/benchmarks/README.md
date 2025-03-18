@@ -1,6 +1,6 @@
 ## Detailed Benchmarks Table
 
-| Benchmark       | Task                                         | Type       | Fidelities    | Main Metrics                    | Cost Metrics    |
+| Benchmark       | Task (exact string in hposuite)              | Type       | Fidelities    | Main Metrics                    | Cost Metrics    |
 |-----------------|----------------------------------------------|------------|--------------|----------------------------------|-----------------|
 | Ackley          | -                                            | Synthetic  | -            | `"value"`                        | -               |
 | Branin          | -                                            | Synthetic  | -            | `"value"`                        | -               |
@@ -21,6 +21,8 @@
 | Pymoo           | Multi-Objective ([listed below](#pymoo-multi-objective))   | Synthetic  | -       | `"value1"`, `"value2"`            | -           |
 | Pymoo           | Many-Objective ([listed below](#pymoo-many-objective))    | Synthetic  | -       | `"value1"`, `"value2"`, `"value3"`     | -           |
 | BBOB            | 24 single objective, noiseless functions in 6 dimensions and 3 instances ([listed below](#bbob-functions)) | Synthetic | -  | `"value"`       | -        |
+
+| BBOB Tabular    | [See here](#bbob-tabular)                     | Tabular   | -            | `"value"`                         |                 |
 
 
 

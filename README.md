@@ -138,20 +138,20 @@ python -m hposuite.plotting.incumbent_trace \
 
 ### Overview of available Optimizers
 
-For a more detailed overview, check [here](https://github.com/automl/hposuite/blob/main/hposuite/optimizers/readme_docs/)
+For a more detailed overview, check [here](https://github.com/automl/hposuite/blob/main/hposuite/optimizers/README.md)
 
 ### Overview of Available Optimizers  
 
-| Optimizer Package                                                     | Blackbox | Multi-Fidelity (MF) | Multi-Objective (MO) | MO-MF | Priors |
-|-----------------------------------------------------------------------|----------|---------------------|----------------------|-------|--------|
-| RandomSearch                                                          | ✓        |                     | ✓                    |       |        |
-| RandomSearch with priors                                              | ✓        |                     | ✓                    |       | ✓      |
-| [SMAC](https://github.com/automl/SMAC3)                               | ✓        | ✓                   | ✓                    |       |        |
-| [DEHB](https://github.com/automl/DEHB)                                |          | ✓                   |                      |       |        |
-| [HEBO](https://github.com/huawei-noah/HEBO)                           | ✓        |                     |                      |       |        |
-| [Nevergrad](https://github.com/facebookresearch/nevergrad)            | ✓        |                     | ✓                    |       |        |
-| [Optuna](https://github.com/optuna/optuna)                            | ✓        |                     | ✓                    |       |        |
-| [Scikit-Optimize](https://github.com/scikit-optimize/scikit-optimize) | ✓        |                     |                      |       |        |
+| Optimizer Package                                                     | Blackbox | Multi-Fidelity (MF) | Multi-Objective (MO) | Expert Priors |
+|-----------------------------------------------------------------------|----------|---------------------|----------------------|---------------|
+| RandomSearch                                                          | ✓        |                     | ✓                    |               |
+| RandomSearch with priors                                              | ✓        |                     | ✓                    | ✓             |
+| [SMAC](https://github.com/automl/SMAC3)                               | ✓        | ✓                   | ✓                    |               |
+| [DEHB](https://github.com/automl/DEHB)                                |          | ✓                   |                      |               |
+| [HEBO](https://github.com/huawei-noah/HEBO)                           | ✓        |                     |                      |               |
+| [Nevergrad](https://github.com/facebookresearch/nevergrad)            | ✓        |                     | ✓                    |               |
+| [Optuna](https://github.com/optuna/optuna)                            | ✓        |                     | ✓                    |               |
+| [Scikit-Optimize](https://github.com/scikit-optimize/scikit-optimize) | ✓        |                     |                      |               |
 
 
 
@@ -163,11 +163,13 @@ For a more detailed overview, check [here](https://github.com/automl/hposuite/bl
 For a more detailed overview, check [here](https://github.com/automl/hposuite/blob/main/hposuite/benchmarks/README.md)
 
 | Benchmark Package                            | Type       | Multi-Fidelity | Multi-Objective |
-|------------------|------------|----|----|
-| Ackley                                      | Synthetic |    |    |
-| Branin                                     | Synthetic |    |    |
-| [mf-prior-bench](https://github.com/automl/mf-prior-bench)           | Synthetic, Surrogate  | ✓  |  ✓  | 
+|----------------------------------------------|------------|----------------|-----------------|
+| Ackley                                       | Synthetic  |    |    |
+| Branin                                       | Synthetic  |    |    |
+| [mf-prior-bench](https://github.com/automl/mf-prior-bench)          | Synthetic, Surrogate  | ✓  |  ✓  |
+| MF-Hartmann Tabular                          | Tabular    | ✓  |    | 
 | [LCBench-Tabular](https://github.com/automl/LCBench)              | Tabular    | ✓  | ✓  |
-| [Pymoo](https://pymoo.org/)         | Synthetic     |      |     | 
-| [IOH](https://iohprofiler.github.io/) ([BBOB](https://numbbo.github.io/coco/testsuites/bbob))                | Synthetic  |    |    | 
+| [Pymoo](https://pymoo.org/)                  | Synthetic  |    |    | 
+| [IOH](https://iohprofiler.github.io/) ([BBOB](https://numbbo.github.io/coco/testsuites/bbob))                | Synthetic  |    |    |
+| BBOB Tabular                                 | Tabular    |    |    |
 

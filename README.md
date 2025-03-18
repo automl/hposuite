@@ -15,8 +15,8 @@ from hposuite import create_study
 study = create_study(
     name="hposuite_demo",
     output_dir="./hposuite-output",
-    optimizers=[...],   #Eg: "RandomSearch"
-    benchmarks=[...],   #Eg: "ackley"
+    optimizers=[...],   # Eg: "RandomSearch"
+    benchmarks=[...],   # Eg: "ackley"
     num_seeds=5,
     budget=100,         # Number of iterations
 )
@@ -26,10 +26,10 @@ study.optimize()
 
 > [!TIP]
 > * See below for example of [Running multiple Optimizers on multiple Benchmarks](#Simple-example-to-run-multiple-Optimizers-on-multiple-benchmarks)
-> * Check this example [notebook](examples/hposuite_demo.ipynb) for more demo examples
-> * This [notebook](examples/opt_bench_usage_examples.ipynb) contains usage examples for Optimizer and Benchmark combinations
-> * This [notebook](examples/study_usage_examples.ipynb) demonstrates some of the features of hposuite's Study
-> * This [notebook](examples/plots_and_comparisons.ipynb) shows how to plot results for comparison
+> * Check this example [notebook](https://github.com/automl/hposuite/blob/main/examples/hposuite_demo.ipynb) for more demo examples
+> * This [notebook](https://github.com/automl/hposuite/blob/main/examples/opt_bench_usage_examples.ipynb) contains usage examples for Optimizer and Benchmark combinations
+> * This [notebook](https://github.com/automl/hposuite/blob/main/examples/study_usage_examples.ipynb) demonstrates some of the features of hposuite's Study
+> * This [notebook](https://github.com/automl/hposuite/blob/main/examples/plots_and_comparisons.ipynb) shows how to plot results for comparison
 > * Check out [hpoglue](https://github.com/automl/hpoglue) for core HPO API for interfacing an Optimizer and Benchmark
 
 ## Installation

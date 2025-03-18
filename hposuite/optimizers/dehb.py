@@ -1,3 +1,8 @@
+"""hposuite interface for the DEHB Optimizer.
+Find the README for DEHB here:
+https://github.com/automl/hposuite/blob/main/hposuite/optimizers/readme_docs/dehb.md .
+"""
+
 from __future__ import annotations
 
 from collections.abc import Mapping

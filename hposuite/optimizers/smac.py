@@ -1,3 +1,8 @@
+"""hposuite interface for SMAC Optimizers.
+Find the README for SMAC here:
+https://github.com/automl/hposuite/blob/main/hposuite/optimizers/readme_docs/smac.md .
+"""
+
 from __future__ import annotations
 
 from collections.abc import Hashable, Mapping

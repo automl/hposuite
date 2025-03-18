@@ -1,3 +1,8 @@
+"""hposuite interface for the RandomSearch Optimizers.
+Find the README for RandomSearch here:
+https://github.com/automl/hposuite/blob/main/hposuite/optimizers/readme_docs/random_search.md .
+"""
+
 from __future__ import annotations
 
 import copy

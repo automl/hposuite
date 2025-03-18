@@ -1,3 +1,8 @@
+"""hposuite interface for the Nevergrad Suite of Optimizers.
+Find the README for Nevergrad here:
+https://github.com/automl/hposuite/blob/main/hposuite/optimizers/readme_docs/nevergrad.md .
+"""
+
 from __future__ import annotations
 
 import logging

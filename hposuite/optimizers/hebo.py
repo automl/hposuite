@@ -1,3 +1,8 @@
+"""hposuite interface for the HEBO Optimizer.
+Find the README for HEBO here:
+https://github.com/automl/hposuite/blob/main/hposuite/optimizers/readme_docs/hebo.md .
+"""
+
 from __future__ import annotations
 
 from collections.abc import Mapping

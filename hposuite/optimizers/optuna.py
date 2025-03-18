@@ -1,3 +1,8 @@
+"""hposuite interface for the Optuna Optimizers package.
+Find the README for Optuna here:
+https://github.com/automl/hposuite/blob/main/hposuite/optimizers/readme_docs/optuna.md .
+"""
+
 from __future__ import annotations
 
 import logging

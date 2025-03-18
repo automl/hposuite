@@ -1,5 +1,5 @@
 [![image](https://img.shields.io/pypi/v/hposuite.svg)](https://pypi.python.org/pypi/hposuite)
-[![image](https://img.shields.io/pypi/l/hposuite.svg)](https://pypi.python.org/pypi/hposuite)
+[![image](https://img.shields.io/pypi/l/hposuite)](https://pypi.python.org/pypi/hposuite)
 [![image](https://img.shields.io/pypi/pyversions/hposuite.svg)](https://pypi.python.org/pypi/hposuite)
 [![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
 [![Link](https://img.shields.io/badge/hpoglue-rgb(50,50,200))](https://github.com/automl/hpoglue)
@@ -115,9 +115,10 @@ The `Study` directory and the individual `Run` directory paths are logged when r
 
 ```bash
 python -m hposuite.plotting.incumbent_trace \
---study_dir <study directory name>
---output_dir <abspath of dir where study dir is stored>
---save_dir <path relative to study_dir to store the plots> \ 
+--study_dir <study directory name> \
+--output_dir <abspath of dir where study dir is stored> \
+--save_dir <path relative to study_dir to store the plots> \ # optional
+--plot_file_name <file_name for saving the plot> \ # optional
 ```
 
 `--save_dir` is set by default to `study_dir/plots`
@@ -127,7 +128,7 @@ python -m hposuite.plotting.incumbent_trace \
 
 ### Overview of available Optimizers
 
-For a more detailed overview, check [here](./hposuite/optimizers/README.md)
+For a more detailed overview, check [here](https://github.com/automl/hposuite/blob/main/hposuite/optimizers/readme_docs/)
 
 ### Overview of Available Optimizers  
 
@@ -149,7 +150,7 @@ For a more detailed overview, check [here](./hposuite/optimizers/README.md)
 
 ### Overview of available Benchmarks
 
-For a more detailed overview, check [here](./hposuite/benchmarks/README.md)
+For a more detailed overview, check [here](https://github.com/automl/hposuite/blob/main/hposuite/benchmarks/README.md)
 
 | Benchmark Package                            | Type       | Multi-Fidelity | Multi-Objective |
 |------------------|------------|----|----|

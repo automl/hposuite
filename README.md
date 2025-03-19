@@ -148,8 +148,6 @@ python -m hposuite.plotting.incumbent_trace \
 
 For a more detailed overview, check [here](https://github.com/automl/hposuite/blob/main/hposuite/optimizers/README.md)
 
-### Overview of Available Optimizers  
-
 | Optimizer Package                                                     | Blackbox | Multi-Fidelity (MF) | Multi-Objective (MO) | Expert Priors |
 |-----------------------------------------------------------------------|----------|---------------------|----------------------|---------------|
 | RandomSearch                                                          | ✓        |                     | ✓                    |               |

@@ -43,10 +43,10 @@ class SMAC_Optimizer(Optimizer):
         optimizer: AbstractFacade,
         fidelity: Fidelity | None,
     ):
-        """Create a SMAC Optimizer instance for a given problem statement.
+        """Create a SMAC Optimizer instance for a given problem.
 
         Args:
-            problem: Problem statement.
+            problem: The problem to optimize.
 
             seed: Random seed for the optimizer.
 
@@ -144,16 +144,18 @@ class SMAC_BO(SMAC_Optimizer):
         working_directory: Path,
         xi: float = 0.0,
     ):
-        """Create a SMAC BO Optimizer instance for a given problem statement.
+        """Create a SMAC BO Optimizer instance for a given problem.
 
         Args:
-            problem: Problem statement.
+            problem: The problem to optimize.
 
             seed: Random seed for the optimizer.
 
             working_directory: Working directory to store SMAC run.
 
-            xi: Exploration-exploitation trade-off parameter. Defaults to 0.0.
+            xi: Expected Improvement.
+            Controls the balance between exploration and exploitation of the acquisition function.
+            Defaults to 0.0.
         """
         config_space = problem.config_space
         match config_space:
@@ -236,16 +238,18 @@ class SMAC_Hyperband(SMAC_Optimizer):
         working_directory: Path,
         eta: int = 3,
     ):
-        """Create a SMAC Hyperband Optimizer instance for a given problem statement.
+        """Create a SMAC Hyperband Optimizer instance for a given problem.
 
         Args:
-            problem: Problem statement.
+            problem: The problem to optimize.
 
             seed: Random seed for the optimizer.
 
             working_directory: Working directory to store SMAC run.
 
-            eta: Hyperband eta parameter. Defaults to 3.
+            eta: Sets the aggressiveness of Hyperband's aggressive
+                early stopping by retaining 1/eta configurations every round.
+                Defaults to 3.
         """
         config_space = problem.config_space
         match config_space:
@@ -332,16 +336,18 @@ class SMAC_BOHB(SMAC_Optimizer):
         working_directory: Path,
         eta: int = 3,
     ):
-        """Create a SMAC BOHB Optimizer instance for a given problem statement.
+        """Create a SMAC BOHB Optimizer instance for a given problem.
 
         Args:
-            problem: Problem statement.
+            problem: The problem to optimize.
 
             seed: Random seed for the optimizer.
 
             working_directory: Working directory to store SMAC run.
 
-            eta: BOHB eta parameter. Defaults to 3.
+            eta: Sets the aggressiveness of Hyperband's aggressive
+                early stopping by retaining 1/eta configurations every round.
+                Defaults to 3.
                 According to the paper, changing this doesn't seem to make a difference.
         """
         config_space = problem.config_space

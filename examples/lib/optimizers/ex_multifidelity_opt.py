@@ -45,10 +45,10 @@ class Ex_Multifidelity_Opt(Optimizer):
         working_directory: Path,
         eta: int = 3,
     ):
-        """Create a SMAC Optimizer instance for a given problem statement.
+        """Create a SMAC Optimizer instance for a given problem.
 
         Args:
-            problem: Problem statement.
+            problem: The problem to optimize.
             seed: Random seed for the optimizer.
             working_directory: Working directory to store SMAC run.
             config_space: Configuration space to optimize over.

@@ -46,10 +46,10 @@ class Ex_Blackbox_Opt(Optimizer):
         working_directory: Path,
         xi: float = 0.0,
     ):
-        """Create a SMAC BO Optimizer instance for a given problem statement.
+        """Create a SMAC BO Optimizer instance for a given problem.
 
         Args:
-            problem: Problem statement.
+            problem: The problem to optimize.
             seed: Random seed for the optimizer.
             working_directory: Working directory to store SMAC run.
             xi: Exploration-exploitation trade-off parameter. Defaults to 0.0.

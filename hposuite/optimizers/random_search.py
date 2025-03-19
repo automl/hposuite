@@ -38,7 +38,7 @@ class RandomSearch(Optimizer):
         seed: int,
         working_directory: Path,  # noqa: ARG002
     ):
-        """Create a Random Search Optimizer instance for a given problem statement."""
+        """Create a Random Search Optimizer instance for a given problem."""
         config_space = problem.config_space
         match config_space:
             case ConfigurationSpace():

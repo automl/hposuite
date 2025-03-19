@@ -48,7 +48,7 @@ class Ex_MO_Opt(Optimizer):
         working_directory: Path,
         **kwargs: Any,
     ) -> None:
-        """Create an Optuna Optimizer instance for a given problem statement."""
+        """Create an Optuna Optimizer instance for a given problem."""
         import optuna
         from optuna.samplers import NSGAIISampler
 

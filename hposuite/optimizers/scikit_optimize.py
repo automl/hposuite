@@ -55,7 +55,7 @@ class SkoptOptimizer(Optimizer):
         acq_func: str = "gp_hedge",
         acq_optimizer: str = "auto",
     ) -> None:
-        """Create an Skopt Optimizer instance for a given problem statement."""
+        """Create an Skopt Optimizer instance for a given problem."""
         self.config_space = problem.config_space
         self._space: list[Space]
         match self.config_space:

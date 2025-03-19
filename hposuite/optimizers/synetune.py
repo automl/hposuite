@@ -40,7 +40,7 @@ class SyneTuneOptimizer(Optimizer):
         working_directory: Path,
         optimizer: TrialScheduler,
     ):
-        """Create a SyneTune Optimizer instance for a given problem statement."""
+        """Create a SyneTune Optimizer instance for a given problem."""
         working_directory.mkdir(parents=True, exist_ok=True)
         self.problem = problem
         self.optimizer = optimizer
@@ -113,10 +113,10 @@ class SyneTuneBO(SyneTuneOptimizer):
         working_directory: Path,
         **kwargs: Any,
     ):
-        """Create a SyneTune Bayesian Optimization instance for a given problem statement.
+        """Create a SyneTune Bayesian Optimization instance for a given problem.
 
         Args:
-            problem: The problem statement.
+            problem: The problem to optimize.
             seed: The random seed.
             working_directory: The working directory to store the results.
             **kwargs: Additional arguments for the BayesianOptimization.
@@ -204,12 +204,12 @@ class SyneTuneBOHB(SyneTuneOptimizer):
         problem: Problem,
         seed: int,
         working_directory: Path,
-        **kwargs: Any,
+        **kwargs: Any,  # noqa: ARG002
     ):
-        """Create a SyneTune BOHB instance for a given problem statement.
+        """Create a SyneTune BOHB instance for a given problem.
 
         Args:
-            problem: The problem statement.
+            problem: The problem to optimize.
             seed: The random seed.
             working_directory: The working directory to store the results.
             **kwargs: Additional arguments for the BayesianOptimization.

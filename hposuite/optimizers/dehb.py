@@ -45,7 +45,21 @@ class DEHB_Optimizer(Optimizer):
         verbose: bool = False,
         # TODO(eddiebergman): Add more DEHB parameters
     ):
-        """Create a DEHB Optimizer instance for a given problem statement."""
+        """Create a DEHB Optimizer instance for a given problem.
+
+        Args:
+            problem: The problem to optimize.
+
+            seed: The random seed to use.
+
+            working_directory: The directory to store DEHB's output.
+
+            eta: Sets the aggressiveness of Hyperband's aggressive
+                early stopping by retaining 1/eta configurations every round.
+                Defaults to 3.
+
+            verbose: Whether to enable verbose logging
+        """
         config_space = problem.config_space
         match config_space:
             case ConfigurationSpace():

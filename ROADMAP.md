@@ -8,9 +8,10 @@ Initial Release
 
 * Add option to add custom filenames for plots
 * Clean up main README Optimizers table
-* Create detailed README docs for each Optimizer in a separate folder (add more details like continuations, etc.)
+* Add more details to larger Optimizers README table
 * Add README for synthetic tabular benchmarks (mfh_tabular and bbob_tabular)
 * Add steps to download LCBench-Tabular and PD1 benchmarks
+* Create version tag
 
 # Version 0.1.2
 

@@ -47,7 +47,7 @@
 
 -----------------------------------------------------------------------------------
 
-### Download and setup certain Benchmarks
+### Download and setup Benchmarks
 
 #### LCBench Tabular
 
@@ -212,7 +212,7 @@ where `function_id`, `dimension` and `instance` are the same as in [bbob](#bbob-
         --benchmark bbob-f1-2-0 \   # full bbob function name in hposuite
         --tabular_suite_name bbob_tabular \     # name of the tabular suite
         --task f1-2-0 \     # Name of the task in the bbob_tabular benchmark suite
-        -n_samples 2000     # Number of configurations to generate
+        --n_samples 2000     # Number of configurations to generate
     ```
 
 #### MF-Hartmann Tabular Generation
@@ -224,6 +224,6 @@ where `function_id`, `dimension` and `instance` are the same as in [bbob](#bbob-
         --benchmark mfh3_good \   # full mfh function name in hposuite
         --tabular_suite_name mfh_tabular \     # name of the tabular suite
         --task mfh3_good \     # Name of the task in the mfh_tabular benchmark suite
-        -n_samples 2000     # Number of configurations to generate
+        --n_samples 2000     # Number of configurations to generate
     ```
 

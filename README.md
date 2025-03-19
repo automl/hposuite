@@ -53,7 +53,7 @@ pip install hposuite
 
 
 > [!NOTE]
-> * We **recommend** doing doing `pip install hposuite["all"]` to install all available benchmarks and optimizers, along with `ipykernel` for running the notebook examples
+> * We **recommend** doing `pip install hposuite["all"]` to install all available benchmarks and optimizers, along with `ipykernel` for running the notebook examples
 
 ### Installation from source
 
@@ -117,9 +117,17 @@ print(BENCHMARKS.keys())
 
 ### Results
 
-hposuite saves the Studies by default to `./hposuite-output/` (relative to the current working directory).
-Results are saved in the `Run` subdirectories within the main `Study` directory as parquet files. \
+hposuite saves the `Study` by default to `../hposuite-output/` (relative to the current working directory).
+Results are saved in the `Run` subdirectories within the main `Study` directory as `.parquet` files. \
 The `Study` directory and the individual `Run` directory paths are logged when running `Study.optimize()`
+
+To view the result dataframe, use the following code snippet:
+```python
+import pandas as pd
+df = pd.read_parquet("<full path to the result .parquet file>")
+print(df)
+print(df.columns)
+```
 
 ### Plotting
 

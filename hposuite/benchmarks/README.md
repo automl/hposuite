@@ -21,9 +21,15 @@
 | Pymoo           | Multi-Objective ([listed below](#pymoo-multi-objective))   | Synthetic  | -       | `"value1"`, `"value2"`            | -           |
 | Pymoo           | Many-Objective ([listed below](#pymoo-many-objective))    | Synthetic  | -       | `"value1"`, `"value2"`, `"value3"`     | -           |
 | BBOB            | 24 single objective, noiseless functions in 6 dimensions and 3 instances ([listed below](#bbob-functions)) | Synthetic | -  | `"value"`       | -        |
-
-| BBOB Tabular    | [See here](#bbob-tabular)                     | Tabular   | -            | `"value"`                         |                 |
-
+| BBOB Tabular    | [See here](#bbob-tabular)                    | Tabular    | -            | `"value"`                        | -               |
+| MF-Hartmann Tabular    | `"mfh_tabular-mfh3_good"`             | Tabular    | `"z"`        | `"value"`                        | `"fid_cost"`    |
+| MF-Hartmann Tabular    | `"mfh_tabular-mfh3_bad"`              | Tabular    | `"z"`        | `"value"`                        | `"fid_cost"`    |
+| MF-Hartmann Tabular    | `"mfh_tabular-mfh3_moderate"`         | Tabular    | `"z"`        | `"value"`                        | `"fid_cost"`    |
+| MF-Hartmann Tabular    | `"mfh_tabular-mfh3_terrible"`         | Tabular    | `"z"`        | `"value"`                        | `"fid_cost"`    |
+| MF-Hartmann Tabular    | `"mfh_tabular-mfh6_good"`             | Tabular    | `"z"`        | `"value"`                        | `"fid_cost"`    |
+| MF-Hartmann Tabular    | `"mfh_tabular-mfh6_bad"`              | Tabular    | `"z"`        | `"value"`                        | `"fid_cost"`    |
+| MF-Hartmann Tabular    | `"mfh_tabular-mfh6_moderate"`         | Tabular    | `"z"`        | `"value"`                        | `"fid_cost"`    |
+| MF-Hartmann Tabular    | `"mfh_tabular-mfh6_terrible"`         | Tabular    | `"z"`        | `"value"`                        | `"fid_cost"`    |
 
 
 > [!TIP]
@@ -33,7 +39,33 @@
 > print(BENCHMARKS.keys())
 > ```
 
+
+
+> [!TIP]
+> * MF-Hartmann Tabular and BBOB Tabular benchmarks are synthetic tabular benchmarks, i.e, they are generated from the respective synthetic benchmark suites.
+> * To use MF-Hartmann Tabular and BBOB Tabular benchmarks, first generate them as shown [here](#generating-bbob-tabular-and-mf-hartmann-tabular-benchmarks)
+
 -----------------------------------------------------------------------------------
+
+### Download and setup certain Benchmarks
+
+#### LCBench Tabular
+
+```bash
+python -m hposuite.benchmarks.lcbench_tabular \
+    setup \
+    --datadir data  # Optional
+```
+
+#### PD1
+
+```bash
+python -m mfpbench \
+    download \
+    --benchmark pd1 \
+    --data-dir data  # Optional
+```
+
 
 ### LCBench Tabular OpenML task IDs:
 
@@ -157,5 +189,34 @@ Learn more about BBOB functions [here](https://numbbo.github.io/coco/testsuites/
 | `"f24"`        | Lunacek Bi-Rastrigin           | Multi-modal with weak global structure       |
 
 
+### Generating BBOB Tabular and MF-Hartmann Tabular benchmarks
+
+#### BBOB Tabular
+
+* `ioh>=0.3.14` must be installed
+* Run the following command to generate the tabular benchmark for the `bbob-f1-2-0` synthetic benchmark:
+    ```bash
+    python -m hposuite.benchmarks.create_tabular \
+        --benchmark bbob-f1-2-0 \   # full bbob function name in hposuite
+        --tabular_suite_name bbob_tabular \     # name of the tabular suite
+        --task f1-2-0 \     # Name of the task in the bbob_tabular benchmark suite
+        -n_samples 2000     # Number of configurations to generate
+    ```
+
+#### MF-Hartmann Tabular
+
+* `mf-prior-bench>=1.10.0` must be installed
+* Run the following command to generate the tabular benchmark for the `mfh3_good` synthetic benchmark:
+    ```bash
+    python -m hposuite.benchmarks.create_tabular \
+        --benchmark mfh3_good \   # full mfh function name in hposuite
+        --tabular_suite_name mfh_tabular \     # name of the tabular suite
+        --task mfh3_good \     # Name of the task in the mfh_tabular benchmark suite
+        -n_samples 2000     # Number of configurations to generate
+    ```
 
 
+### BBOB-Tabular Benchmark
+
+To get the corresponding `bbob_tabular` benchmark in `hposuite`, use: `"bbob_tabular-{function_id}-{dimension}-{instance}"`
+`function_id`, `dimension` and `instance` are the same as in [bbob](#bbob-functions).

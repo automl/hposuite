@@ -16,12 +16,12 @@
 | PD1             | `"pd1-imagenet-resnet-512"`                  | Surrogate  | `"epoch"`    | `"valid_error_rate"`             | `"train_cost"`  |
 | PD1             | `"pd1-lm1b-transformer-2048"`                | Surrogate  | `"epoch"`    | `"valid_error_rate"`             | `"train_cost"`  |
 | PD1             | `"pd1-translate_wmt-xformer_translate-64"`   | Surrogate  | `"epoch"`    | `"valid_error_rate"`             | `"train_cost"`  |
-| LCBench-Tabular | Task IDs ([listed below](#lcbench-tabular-task-ids)) | Tabular    | `"epoch"`    | `"val_accuracy"`, `"val_cross_entropy"`, `"val_balanced_accuracy"` | `"time"` |
+| LCBench-Tabular | Task IDs ([listed below](#lcbench-tabular-openml-task-ids)) | Tabular    | `"epoch"`    | `"val_accuracy"`, `"val_cross_entropy"`, `"val_balanced_accuracy"` | `"time"` |
 | Pymoo           | Single Objective ([listed below](#pymoo-single-objective))  | Synthetic  | -       | `"value"`                    | -           |
 | Pymoo           | Multi-Objective ([listed below](#pymoo-multi-objective))   | Synthetic  | -       | `"value1"`, `"value2"`            | -           |
 | Pymoo           | Many-Objective ([listed below](#pymoo-many-objective))    | Synthetic  | -       | `"value1"`, `"value2"`, `"value3"`     | -           |
 | BBOB            | 24 single objective, noiseless functions in 6 dimensions and 3 instances ([listed below](#bbob-functions)) | Synthetic | -  | `"value"`       | -        |
-| BBOB Tabular    | [See here](#bbob-tabular)                    | Tabular    | -            | `"value"`                        | -               |
+| BBOB Tabular    | [See here](#bbob-tabular-benchmark)                    | Tabular    | -            | `"value"`                        | -               |
 | MF-Hartmann Tabular    | `"mfh_tabular-mfh3_good"`             | Tabular    | `"z"`        | `"value"`                        | `"fid_cost"`    |
 | MF-Hartmann Tabular    | `"mfh_tabular-mfh3_bad"`              | Tabular    | `"z"`        | `"value"`                        | `"fid_cost"`    |
 | MF-Hartmann Tabular    | `"mfh_tabular-mfh3_moderate"`         | Tabular    | `"z"`        | `"value"`                        | `"fid_cost"`    |
@@ -189,9 +189,21 @@ Learn more about BBOB functions [here](https://numbbo.github.io/coco/testsuites/
 | `"f24"`        | Lunacek Bi-Rastrigin           | Multi-modal with weak global structure       |
 
 
+-------------------------------------------------------------------------------------------------------
+
+
+### BBOB-Tabular Benchmark
+
+To get the corresponding `bbob_tabular` benchmark in `hposuite`, use: `"bbob_tabular-{function_id}-{dimension}-{instance}"`,
+where `function_id`, `dimension` and `instance` are the same as in [bbob](#bbob-functions).
+
+
+-------------------------------------------------------------------------------------------------------
+
+
 ### Generating BBOB Tabular and MF-Hartmann Tabular benchmarks
 
-#### BBOB Tabular
+#### BBOB Tabular Generation
 
 * `ioh>=0.3.14` must be installed
 * Run the following command to generate the tabular benchmark for the `bbob-f1-2-0` synthetic benchmark:
@@ -203,7 +215,7 @@ Learn more about BBOB functions [here](https://numbbo.github.io/coco/testsuites/
         -n_samples 2000     # Number of configurations to generate
     ```
 
-#### MF-Hartmann Tabular
+#### MF-Hartmann Tabular Generation
 
 * `mf-prior-bench>=1.10.0` must be installed
 * Run the following command to generate the tabular benchmark for the `mfh3_good` synthetic benchmark:
@@ -215,8 +227,3 @@ Learn more about BBOB functions [here](https://numbbo.github.io/coco/testsuites/
         -n_samples 2000     # Number of configurations to generate
     ```
 
-
-### BBOB-Tabular Benchmark
-
-To get the corresponding `bbob_tabular` benchmark in `hposuite`, use: `"bbob_tabular-{function_id}-{dimension}-{instance}"`
-`function_id`, `dimension` and `instance` are the same as in [bbob](#bbob-functions).

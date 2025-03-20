@@ -20,6 +20,7 @@ modules = [
     ("hposuite.optimizers.random_search", "RandomSearch", "RandomSearchWithPriors"),
     ("hposuite.optimizers.scikit_optimize", "SkoptOptimizer"),
     ("hposuite.optimizers.smac", "SMAC_BO", "SMAC_Hyperband", "SMAC_BOHB"),
+    ("hposuite.optimizers.neps_optimizers", "NepsBO", "NepsRW", "NepsHyperbandRW"),
 ]
 
 imported_opt_cls = []

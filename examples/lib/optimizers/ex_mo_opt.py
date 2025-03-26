@@ -97,7 +97,10 @@ class Ex_MO_Opt(Optimizer):
 
     def tell(self, result: Result) -> None:
         """Tell the optimizer about the result of a query."""
-        _values = [result.values[key] for key in self.problem.objectives]
+        _values = [
+                    metric.as_minimize(result.values[name])
+                    for name, metric in self.problem.objectives.items()
+                ]
 
         assert isinstance(result.query.optimizer_info, optuna.trial.Trial)
         self.optimizer.tell(

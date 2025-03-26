@@ -108,8 +108,8 @@ class HEBOOptimizer(Optimizer):
                 and other relevant information.
         """
         match self.problem.objectives:
-            case (name, _):
-                _values = np.asarray([result.values[name]])
+            case (name, metric):
+                _values = np.asarray([metric.as_minimize(result.values[name])])
             case Mapping():
                 raise ValueError("# TODO: Multiobjective not yet implemented for HEBO")
             case _:

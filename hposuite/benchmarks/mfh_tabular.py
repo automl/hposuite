@@ -1,7 +1,7 @@
 from __future__ import annotations
 
+import logging
 import os
-import warnings
 from functools import partial
 from pathlib import Path
 
@@ -12,6 +12,9 @@ from hpoglue.env import Env
 from hpoglue.fidelity import RangeFidelity
 
 from hposuite.constants import DATA_DIR
+
+logger = logging.getLogger(__name__)
+logging.basicConfig(level=logging.INFO)
 
 
 def _get_mfh_space(
@@ -38,7 +41,15 @@ def _get_mfh_tabular_benchmark(
     datadir: Path,
 ) -> TabularBenchmark:
     """Creates a TabularBenchmark object for the MF-Hartmann Tabular Benchmark Suite."""
-    bench = _get_mfh_table(function_name, datadir)
+    try:
+        bench = _get_mfh_table(function_name, datadir)
+    except FileNotFoundError as e:
+        logger.error(
+            f"Could not find mfh Tabular Benchmark data for {function_name}. Skipping. "
+            f"Run `python -m hposuite.benchmarks.create_tabular --benchmark {function_name} "
+            f"-suite mfh_tabular --task {function_name}` to create the benchmark data."
+        )
+        raise e
     config_keys = [k for k in bench.columns if "x" in k]
     return TabularBenchmark(
         desc=description,
@@ -63,11 +74,6 @@ def mfh_tabular_desc(datadir: Path) -> BenchmarkDescription:
             try:
                 space = _get_mfh_space(name, datadir)
             except FileNotFoundError:
-                warnings.warn(  # noqa: B028
-                    f"Could not find mfh Tabular Benchmark data for {name}. Skipping. "
-                    f"Run `python -m hposuite.benchmarks.create_tabular --benchmark {name} "
-                    f"-suite mfh_tabular --task {name}` to create the benchmark data."
-                )
                 continue
             yield BenchmarkDescription(
                 name=f"mfh_tabular-{name}",
@@ -98,7 +104,7 @@ def mfh_tabular_benchmarks(datadir: str | Path | None = None) :
     if isinstance(datadir, str):
         datadir = Path(datadir).resolve()
     elif datadir is None:
-        datadir = DATA_DIR / "mfh_tabular"
+        datadir = DATA_DIR
 
     if "mfh_tabular" in os.listdir(datadir):
         datadir = datadir / "mfh_tabular"

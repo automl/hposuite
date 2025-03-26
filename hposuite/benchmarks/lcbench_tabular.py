@@ -286,7 +286,7 @@ def lcbench_tabular_benchmarks(datadir: Path | None = None) -> Iterator[Benchmar
     if isinstance(datadir, str):
         datadir = Path(datadir).resolve()
     elif datadir is None:
-        datadir = DATA_DIR / "lcbench_tabular"
+        datadir = DATA_DIR
     if "lcbench_tabular" in os.listdir(datadir):
         datadir = datadir / "lcbench_tabular"
     yield from lcbench_tabular(datadir=datadir)

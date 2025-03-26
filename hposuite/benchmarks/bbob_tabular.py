@@ -1,6 +1,7 @@
 from __future__ import annotations
 
-import warnings
+import logging
+import os
 from functools import partial
 from itertools import product
 from pathlib import Path
@@ -8,6 +9,11 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 from hpoglue import BenchmarkDescription, Config, Measure, TabularBenchmark
+
+from hposuite.constants import DATA_DIR
+
+logger = logging.getLogger(__name__)
+logging.basicConfig(level=logging.INFO)
 
 bbob_functions_dict = {
     #Separable
@@ -74,7 +80,16 @@ def _get_bbob_tabular_benchmark(
     datadir: str | Path | None = None,
 ) -> TabularBenchmark:
     """Creates a TabularBenchmark object for the BBOB Tabular Benchmark Suite."""
-    bench = _get_bbob_table(function_name, datadir)
+    try:
+        bench = _get_bbob_table(function_name, datadir)
+    except FileNotFoundError as e:
+        logger.error(
+            f"Could not find BBOB Tabular Benchmark data for {function_name}. Skipping. "
+            f"Run `python -m hposuite.benchmarks.create_tabular "
+            f"--benchmark bbob-{function_name} -suite bbob_tabular --task {function_name}`"
+            "to create the benchmark data."
+        )
+        raise e
     config_keys = [k for k in bench.columns if "x" in k]
     return TabularBenchmark(
         desc=description,
@@ -97,12 +112,6 @@ def bbob_tabular_desc(datadir: str | Path | None = None) -> BenchmarkDescription
         try:
             space = _get_bbob_space(function_name, datadir)
         except FileNotFoundError:
-            warnings.warn(  # noqa: B028
-                f"Could not find BBOB Tabular Benchmark data for {function_name}. Skipping. "
-                f"Run `python -m hposuite.benchmarks.create_tabular "
-                f"--benchmark bbob-{function_name} -suite bbob_tabular --task {function_name}`"
-                "to create the benchmark data."
-            )
             continue
         yield BenchmarkDescription(
             name=f"bbob_tabular-{function_name}",
@@ -128,8 +137,10 @@ def bbob_tabular_benchmarks(datadir: str | Path | None = None) :
     """A generator that yields all BBOB Tabular benchmarks."""
     if isinstance(datadir, str):
         datadir = Path(datadir).resolve()
+    elif datadir is None:
+        datadir = DATA_DIR
 
-    if datadir is None:
-        datadir = Path("data", "bbob_tabular").resolve()
+    if "bbob_tabular" in os.listdir(datadir):
+        datadir = datadir / "bbob_tabular"
 
     yield from bbob_tabular_desc(datadir=datadir)

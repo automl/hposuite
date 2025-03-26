@@ -36,6 +36,7 @@ from hpoglue import BenchmarkDescription, Measure, Result, SurrogateBenchmark
 from hpoglue.env import Env
 from hpoglue.fidelity import RangeFidelity
 
+from hposuite.constants import DATA_DIR
 from hposuite.utils import is_package_installed
 
 mfp_logger = logging.getLogger(__name__)
@@ -61,13 +62,13 @@ def _get_surrogate_benchmark(
     description: BenchmarkDescription,
     *,
     benchmark_name: str,
-    datadir: Path | str | None = None,
+    datadir: Path | None = None,
     **kwargs: Any,
 ) -> SurrogateBenchmark:
     import mfpbench
 
     if datadir is not None:
-        datadir = Path(datadir).absolute().resolve()
+        datadir = datadir.resolve()
         if benchmark_name in pd1_benchmarks:
             if "pd1" in os.listdir(datadir):
                 datadir = datadir / "pd1"
@@ -150,7 +151,7 @@ def mfh() -> Iterator[BenchmarkDescription]:
             )
 
 
-def pd1(datadir: Path | None = None) -> Iterator[BenchmarkDescription]:
+def pd1(datadir: Path) -> Iterator[BenchmarkDescription]:
     """Generates benchmark descriptions for the PD1 Benchmarks.
 
     Args:
@@ -252,7 +253,10 @@ def mfpbench_benchmarks(datadir: Path | None = None) -> Iterator[BenchmarkDescri
         Iterator[BenchmarkDescription]: An iterator over BenchmarkDescription objects
         for each benchmark.
     """
-    if datadir is None:
-        datadir=Path(__file__).parent.parent.parent.absolute() / "data"
+    if isinstance(datadir, str):
+        datadir = Path(datadir).resolve()
+    elif datadir is None:
+        datadir = DATA_DIR
+
     yield from mfh()
     yield from pd1(datadir)

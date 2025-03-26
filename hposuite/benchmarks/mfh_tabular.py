@@ -1,6 +1,7 @@
 from __future__ import annotations
 
-import warnings
+import logging
+import os
 from functools import partial
 from pathlib import Path
 
@@ -10,10 +11,15 @@ from hpoglue import BenchmarkDescription, Config, Measure, TabularBenchmark
 from hpoglue.env import Env
 from hpoglue.fidelity import RangeFidelity
 
+from hposuite.constants import DATA_DIR
+
+logger = logging.getLogger(__name__)
+logging.basicConfig(level=logging.INFO)
+
 
 def _get_mfh_space(
     function_name: str,
-    datadir: str | Path | None = None,
+    datadir: Path,
 ) -> list[Config]:
     """Returns a list of all possible configurations for the MF Hartmann's Tabular Benchmark."""
     table = _get_mfh_table(function_name, datadir)
@@ -23,7 +29,7 @@ def _get_mfh_space(
 
 def _get_mfh_table(
     function_name: str,
-    datadir: str | Path | None = None,
+    datadir: Path,
 ) -> pd.DataFrame:
     return pd.read_parquet(datadir / f"{function_name}.parquet")
 
@@ -32,10 +38,18 @@ def _get_mfh_tabular_benchmark(
     description: BenchmarkDescription,
     *,
     function_name: str,
-    datadir: str | Path | None = None,
+    datadir: Path,
 ) -> TabularBenchmark:
     """Creates a TabularBenchmark object for the MF-Hartmann Tabular Benchmark Suite."""
-    bench = _get_mfh_table(function_name, datadir)
+    try:
+        bench = _get_mfh_table(function_name, datadir)
+    except FileNotFoundError as e:
+        logger.error(
+            f"Could not find mfh Tabular Benchmark data for {function_name}. Skipping. "
+            f"Run `python -m hposuite.benchmarks.create_tabular --benchmark {function_name} "
+            f"-suite mfh_tabular --task {function_name}` to create the benchmark data."
+        )
+        raise e
     config_keys = [k for k in bench.columns if "x" in k]
     return TabularBenchmark(
         desc=description,
@@ -45,7 +59,7 @@ def _get_mfh_tabular_benchmark(
     )
 
 
-def mfh_tabular_desc(datadir: str | Path | None = None) -> BenchmarkDescription:
+def mfh_tabular_desc(datadir: Path) -> BenchmarkDescription:
     """Generates benchmark descriptions for the Synthetic MF-Hartmann Tabular Benchmark suite.
 
     This function iterates over all combinations of function IDs, dimensions, and instances
@@ -60,11 +74,6 @@ def mfh_tabular_desc(datadir: str | Path | None = None) -> BenchmarkDescription:
             try:
                 space = _get_mfh_space(name, datadir)
             except FileNotFoundError:
-                warnings.warn(  # noqa: B028
-                    f"Could not find mfh Tabular Benchmark data for {name}. Skipping. "
-                    f"Run `python -m hposuite.benchmarks.create_tabular --benchmark {name} "
-                    f"-suite mfh_tabular --task {name}` to create the benchmark data."
-                )
                 continue
             yield BenchmarkDescription(
                 name=f"mfh_tabular-{name}",
@@ -94,8 +103,10 @@ def mfh_tabular_benchmarks(datadir: str | Path | None = None) :
     """A generator that yields all mfh Tabular benchmarks."""
     if isinstance(datadir, str):
         datadir = Path(datadir).resolve()
+    elif datadir is None:
+        datadir = DATA_DIR
 
-    if datadir is None:
-        datadir = Path("data", "mfh_tabular").resolve()
+    if "mfh_tabular" in os.listdir(datadir):
+        datadir = datadir / "mfh_tabular"
 
     yield from mfh_tabular_desc(datadir=datadir)

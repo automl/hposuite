@@ -14,6 +14,7 @@ from hpoglue import BenchmarkDescription, Measure, TabularBenchmark
 from hpoglue.env import Env
 from hpoglue.fidelity import RangeFidelity
 
+from hposuite.constants import DATA_DIR
 from hposuite.utils import is_package_installed
 
 if TYPE_CHECKING:
@@ -30,7 +31,7 @@ warnings.filterwarnings("ignore", category=UserWarning)
 url: str = "https://figshare.com/ndownloader/files/21188607"
 
 
-def _download_lcbench_tabular(datadir: Path | None = None) -> None:
+def _download_lcbench_tabular(datadir: Path) -> None:
     import shutil
     import urllib.request
     import zipfile
@@ -49,7 +50,7 @@ def _download_lcbench_tabular(datadir: Path | None = None) -> None:
     print("Downloaded lcbench_tabular data to {datadir.resolve()}")     # noqa: T201
 
 
-def _process(data_dir: Path | None = None) -> None:
+def _process(data_dir: Path) -> None:
     import json
 
     filepath = data_dir / "data_2k.json"
@@ -112,9 +113,8 @@ def _process(data_dir: Path | None = None) -> None:
         logger.info(f"Processed {dataset_name} to {table_path}")
 
 
-def _setup_lcbench_tabular(datadir: Path | None = None) -> None:
-    if datadir is None:
-        datadir = Path("data", "lcbench_tabular").absolute().resolve()
+def _setup_lcbench_tabular(datadir: Path) -> None:
+    datadir = datadir / "lcbench_tabular"
     if datadir.exists():
         print(f"Data directory {datadir.resolve()} already exists")     # noqa: T201
         return
@@ -145,12 +145,12 @@ lcbench_config_keys = [
 ]
 
 
-def _get_lcbench_space(task_id: str, datadir: Path | str | None = None) -> list[Config]:
+def _get_lcbench_space(task_id: str, datadir: Path) -> list[Config]:
     table = _load_lcbench_table(task_id, datadir)
     return TabularBenchmark.get_tabular_config_space(table, lcbench_config_keys)
 
 
-def _load_lcbench_table(task_id: str, datadir: Path | str | None = None) -> pd.DataFrame:
+def _load_lcbench_table(task_id: str, datadir: Path) -> pd.DataFrame:
     return pd.read_parquet(datadir / f"{task_id}.parquet")
 
 
@@ -158,7 +158,7 @@ def _get_lcbench_tabular_bench(
     description: BenchmarkDescription,
     *,
     task_id: str,
-    datadir: Path | str | None = None,
+    datadir: Path,
 ) -> TabularBenchmark:
     table = _load_lcbench_table(task_id, datadir)
 
@@ -170,7 +170,7 @@ def _get_lcbench_tabular_bench(
     )
 
 
-def lcbench_tabular(datadir: Path | None = None) -> Iterator[BenchmarkDescription]:
+def lcbench_tabular(datadir: Path) -> Iterator[BenchmarkDescription]:
     """Generates benchmark descriptions for the LCBench tabular Benchmark.
 
     Args:
@@ -219,12 +219,6 @@ def lcbench_tabular(datadir: Path | None = None) -> Iterator[BenchmarkDescriptio
         "volkert",
     )
 
-    if isinstance(datadir, str):
-        datadir = Path(datadir).absolute().resolve()
-
-    if datadir is None:
-        datadir = Path("data", "lcbench_tabular").absolute().resolve()
-
     env = Env(
         name="py310-lcbench-tabular",
         python_version="3.10",
@@ -249,7 +243,7 @@ def lcbench_tabular(datadir: Path | None = None) -> Iterator[BenchmarkDescriptio
             )
         except FileNotFoundError:
             logger.error(
-                f"Data directory {datadir.resolve()} does not exist. "
+                f"lcbench_tabular data not found in Data directory {datadir.resolve()}. "
                 "Run `python -m hposuite.benchmarks.lcbench_tabular setup` "
                 "to download and process the benchmark data."
             )
@@ -280,7 +274,7 @@ def lcbench_tabular(datadir: Path | None = None) -> Iterator[BenchmarkDescriptio
         )
 
 
-def _setup_cmd(datadir: Path | None = None) -> tuple[str, ...]:
+def _setup_cmd(datadir: Path) -> tuple[str, ...]:
     install_cmd = f"python -m hposuite.benchmarks.lcbench_tabular setup --data_dir {datadir}"
     if datadir is not None:
         install_cmd += f" --data-dir {datadir.resolve()}"
@@ -289,13 +283,11 @@ def _setup_cmd(datadir: Path | None = None) -> tuple[str, ...]:
 
 def lcbench_tabular_benchmarks(datadir: Path | None = None) -> Iterator[BenchmarkDescription]:
     """Generator function that yields benchmark descriptions from the lcbench_tabular benchmark."""
-    if datadir is None:
-        datadir = (
-            Path(__file__).parent.parent.parent.absolute().resolve()
-            / "data"
-            / "lcbench_tabular"
-        )
-    elif "lcbench_tabular" in os.listdir(datadir):
+    if isinstance(datadir, str):
+        datadir = Path(datadir).resolve()
+    elif datadir is None:
+        datadir = DATA_DIR / "lcbench_tabular"
+    if "lcbench_tabular" in os.listdir(datadir):
         datadir = datadir / "lcbench_tabular"
     yield from lcbench_tabular(datadir=datadir)
 
@@ -312,7 +304,7 @@ if __name__ == "__main__":
     setup_parser.add_argument(
         "--datadir",
         type=str,
-        default=None,
+        default=DATA_DIR,
         help="Absolute path of the directory to store the lcbench_tabular data",
     )
 

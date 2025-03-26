@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 import warnings
 from functools import partial
 from itertools import product
@@ -8,6 +9,8 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 from hpoglue import BenchmarkDescription, Config, Measure, TabularBenchmark
+
+from hposuite.constants import DATA_DIR
 
 bbob_functions_dict = {
     #Separable
@@ -128,8 +131,10 @@ def bbob_tabular_benchmarks(datadir: str | Path | None = None) :
     """A generator that yields all BBOB Tabular benchmarks."""
     if isinstance(datadir, str):
         datadir = Path(datadir).resolve()
+    elif datadir is None:
+        datadir = DATA_DIR / "bbob_tabular"
 
-    if datadir is None:
-        datadir = Path("data", "bbob_tabular").resolve()
+    if "bbob_tabular" in os.listdir(datadir):
+        datadir = datadir / "bbob_tabular"
 
     yield from bbob_tabular_desc(datadir=datadir)

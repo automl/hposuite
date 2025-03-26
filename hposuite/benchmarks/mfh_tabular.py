@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 import warnings
 from functools import partial
 from pathlib import Path
@@ -10,10 +11,12 @@ from hpoglue import BenchmarkDescription, Config, Measure, TabularBenchmark
 from hpoglue.env import Env
 from hpoglue.fidelity import RangeFidelity
 
+from hposuite.constants import DATA_DIR
+
 
 def _get_mfh_space(
     function_name: str,
-    datadir: str | Path | None = None,
+    datadir: Path,
 ) -> list[Config]:
     """Returns a list of all possible configurations for the MF Hartmann's Tabular Benchmark."""
     table = _get_mfh_table(function_name, datadir)
@@ -23,7 +26,7 @@ def _get_mfh_space(
 
 def _get_mfh_table(
     function_name: str,
-    datadir: str | Path | None = None,
+    datadir: Path,
 ) -> pd.DataFrame:
     return pd.read_parquet(datadir / f"{function_name}.parquet")
 
@@ -32,7 +35,7 @@ def _get_mfh_tabular_benchmark(
     description: BenchmarkDescription,
     *,
     function_name: str,
-    datadir: str | Path | None = None,
+    datadir: Path,
 ) -> TabularBenchmark:
     """Creates a TabularBenchmark object for the MF-Hartmann Tabular Benchmark Suite."""
     bench = _get_mfh_table(function_name, datadir)
@@ -45,7 +48,7 @@ def _get_mfh_tabular_benchmark(
     )
 
 
-def mfh_tabular_desc(datadir: str | Path | None = None) -> BenchmarkDescription:
+def mfh_tabular_desc(datadir: Path) -> BenchmarkDescription:
     """Generates benchmark descriptions for the Synthetic MF-Hartmann Tabular Benchmark suite.
 
     This function iterates over all combinations of function IDs, dimensions, and instances
@@ -94,8 +97,10 @@ def mfh_tabular_benchmarks(datadir: str | Path | None = None) :
     """A generator that yields all mfh Tabular benchmarks."""
     if isinstance(datadir, str):
         datadir = Path(datadir).resolve()
+    elif datadir is None:
+        datadir = DATA_DIR / "mfh_tabular"
 
-    if datadir is None:
-        datadir = Path("data", "mfh_tabular").resolve()
+    if "mfh_tabular" in os.listdir(datadir):
+        datadir = datadir / "mfh_tabular"
 
     yield from mfh_tabular_desc(datadir=datadir)

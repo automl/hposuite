@@ -77,12 +77,11 @@ class SyneTuneOptimizer(Optimizer):
         match self.problem.objectives:
             case Mapping():
                 results_obj_dict = {
-                    key: result.values[key]
-                    for key in result.values
-                    if key in self.problem.objectives
+                    name: metric.as_minimize(result.values[name])
+                    for name, metric in self.problem.objectives.items()
                 }
-            case (metric_name, _):
-                results_obj_dict = {metric_name: result.values[metric_name]}
+            case (metric_name, metric):
+                results_obj_dict = {metric_name: metric.as_minimize(result.values[metric_name])}
             case _:
                 raise TypeError("Objective must be a string or a list of strings")
 

@@ -88,6 +88,7 @@ class SkoptOptimizer(Optimizer):
 
 
     def ask(self) -> Query:
+        """Get a new config from the optimizer."""
         match self.problem.fidelities:
             case None:
                 config = self.optimizer.ask()
@@ -118,9 +119,10 @@ class SkoptOptimizer(Optimizer):
 
 
     def tell(self, result: Result) -> None:
+        """Tell the optimizer about the result of a query."""
         match self.problem.objectives:
-            case (name, _):
-                _values = result.values[name]
+            case (name, metric):
+                _values = metric.as_minimize(result.values[name])
             case Mapping():
                 raise ValueError("Multiobjective not supported by Scikit_Optimize!")
             case _:

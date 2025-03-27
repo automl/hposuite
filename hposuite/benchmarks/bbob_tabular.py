@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import logging
-import os
 from functools import partial
 from itertools import product
 from pathlib import Path
@@ -136,11 +135,8 @@ def bbob_tabular_desc(datadir: str | Path | None = None) -> BenchmarkDescription
 def bbob_tabular_benchmarks(datadir: str | Path | None = None) :
     """A generator that yields all BBOB Tabular benchmarks."""
     if isinstance(datadir, str):
-        datadir = Path(datadir).resolve()
+        datadir = Path(datadir).resolve() / "bbob_tabular"
     elif datadir is None:
-        datadir = DATA_DIR
-
-    if "bbob_tabular" in os.listdir(datadir):
-        datadir = datadir / "bbob_tabular"
+        datadir = DATA_DIR / "bbob_tabular"
 
     yield from bbob_tabular_desc(datadir=datadir)

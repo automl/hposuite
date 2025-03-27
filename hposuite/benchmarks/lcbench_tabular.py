@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import logging
-import os
 import warnings
 from collections.abc import Iterator
 from functools import partial
@@ -284,11 +283,9 @@ def _setup_cmd(datadir: Path) -> tuple[str, ...]:
 def lcbench_tabular_benchmarks(datadir: Path | None = None) -> Iterator[BenchmarkDescription]:
     """Generator function that yields benchmark descriptions from the lcbench_tabular benchmark."""
     if isinstance(datadir, str):
-        datadir = Path(datadir).resolve()
+        datadir = Path(datadir).resolve() / "lcbench_tabular"
     elif datadir is None:
-        datadir = DATA_DIR
-    if "lcbench_tabular" in os.listdir(datadir):
-        datadir = datadir / "lcbench_tabular"
+        datadir = DATA_DIR / "lcbench_tabular"
     yield from lcbench_tabular(datadir=datadir)
 
 

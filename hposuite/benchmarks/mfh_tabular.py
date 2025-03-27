@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import logging
-import os
 from functools import partial
 from pathlib import Path
 
@@ -102,11 +101,8 @@ def mfh_tabular_desc(datadir: Path) -> BenchmarkDescription:
 def mfh_tabular_benchmarks(datadir: str | Path | None = None) :
     """A generator that yields all mfh Tabular benchmarks."""
     if isinstance(datadir, str):
-        datadir = Path(datadir).resolve()
+        datadir = Path(datadir).resolve() / "mfh_tabular"
     elif datadir is None:
-        datadir = DATA_DIR
-
-    if "mfh_tabular" in os.listdir(datadir):
-        datadir = datadir / "mfh_tabular"
+        datadir = DATA_DIR / "mfh_tabular"
 
     yield from mfh_tabular_desc(datadir=datadir)

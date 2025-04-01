@@ -14,7 +14,7 @@ logging.basicConfig(level=logging.INFO)
 
 modules = [
     ("hposuite.optimizers.dehb", "DEHB_Optimizer"),
-    ("hposuite.optimizers.hebo", "HEBOOptimizer"),
+    # ("hposuite.optimizers.hebo", "HEBOOptimizer"),
     ("hposuite.optimizers.nevergrad", "NevergradOptimizer"),
     ("hposuite.optimizers.optuna", "OptunaOptimizer"),
     ("hposuite.optimizers.random_search", "RandomSearch", "RandomSearchWithPriors"),

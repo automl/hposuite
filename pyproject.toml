@@ -61,7 +61,7 @@ all = [
   "dehb",
   "scikit-optimize",
   "nevergrad",
-  "hebo",
+  # "hebo",
   "pymoo",
   "mf-prior-bench[pd1]>=1.10.0",
   "ioh>=0.3.14"
@@ -73,7 +73,7 @@ optimizers = [
   "dehb",
   "scikit-optimize",
   "nevergrad",
-  "hebo"
+  # "hebo"
 ]
 
 benchmarks = [
@@ -87,7 +87,7 @@ optuna = ["optuna"]
 dehb = ["dehb"]
 skopt = ["scikit-optimize"]
 nevergrad = ["nevergrad"]
-hebo = ["hebo"]
+# hebo = ["hebo"]
 pymoo = ["pymoo"]
 mfpbench = ["mf-prior-bench[pd1]>=1.10.0"]
 bbob = ["ioh>=0.3.14"]

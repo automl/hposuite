@@ -160,11 +160,27 @@ def _configspace_to_skopt_space(  # noqa: C901
     for hp in list(config_space.values()):
         match hp:
             case CS.UniformIntegerHyperparameter() if hp.log:
-                skopt_space.append(Integer(hp.lower, hp.upper, name=hp.name, log=hp.log))
+                skopt_space.append(
+                    Integer(
+                        hp.lower,
+                        hp.upper,
+                        name=hp.name,
+                        prior="log-uniform",
+                        base=np.e,
+                    )
+                )
             case CS.UniformIntegerHyperparameter():
                 skopt_space.append(Integer(hp.lower, hp.upper, name=hp.name))
             case CS.UniformFloatHyperparameter() if hp.log:
-                skopt_space.append(Real(hp.lower, hp.upper, name=hp.name, log=hp.log))
+                skopt_space.append(
+                    Real(
+                        hp.lower,
+                        hp.upper,
+                        name=hp.name,
+                        prior="log-uniform",
+                        base=np.e,
+                    )
+                )
             case CS.UniformFloatHyperparameter():
                 skopt_space.append(Real(hp.lower, hp.upper, name=hp.name))
             case CS.CategoricalHyperparameter() if hp.weights is not None:

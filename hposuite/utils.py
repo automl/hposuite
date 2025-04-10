@@ -1,17 +1,27 @@
 from __future__ import annotations
 
+import argparse
 import importlib.metadata
-import importlib.util
 import logging
 import os
 import site
 import subprocess
 import sys
+import warnings
+from collections.abc import Mapping
+from itertools import product
 from pathlib import Path
-from typing import Any
+from typing import Any, TypeAlias
 
-from hpoglue import Problem
+from hpoglue import BenchmarkDescription, FunctionalBenchmark, Optimizer, Problem
+from hpoglue.utils import dict_to_configpriors
 from packaging import version
+
+OptWithHps: TypeAlias = tuple[type[Optimizer], Mapping[str, Any]]
+
+BenchWith_Objs_Fids: TypeAlias = tuple[BenchmarkDescription, Mapping[str, Any]]
+
+GLOBAL_SEED = 42
 
 logger = logging.getLogger(__name__)
 
@@ -152,3 +162,280 @@ def compare_installed_CS_version_vs_required(required_version: str) -> str:  # n
     if installed_version == required_version:
         return "=="
     return ">"
+
+
+def get_compatible(  # noqa: C901, PLR0912, PLR0915
+    *,
+    optimizers: (
+        str
+        | tuple[str, Mapping[str, Any]]
+        | type[Optimizer]
+        | OptWithHps # tuple[type[Optimizer], Mapping[str, Any]]
+        | list[tuple[str, Mapping[str, Any]]]
+        | list[str]
+        | list[OptWithHps] # list[tuple[type[Optimizer], Mapping[str, Any]]]
+        | list[type[Optimizer]]
+    ),
+    benchmarks: (
+        str
+        | BenchmarkDescription
+        | FunctionalBenchmark
+        | tuple[str, Mapping[str, Any]]
+        | BenchWith_Objs_Fids # tuple[BenchmarkDescription, Mapping[str, Any]]
+        | tuple[FunctionalBenchmark, Mapping[str, Any]]
+        | list[str]
+        | list[BenchmarkDescription]
+        | list[FunctionalBenchmark]
+        | list[tuple[str, Mapping[str, Any]]]
+        | list[BenchWith_Objs_Fids]   # list[tuple[BenchmarkDescription, Mapping[str, Any]]]
+        | list[tuple[FunctionalBenchmark, Mapping[str, Any]]]
+    ),
+) -> None:
+    """Get compatible optimizers and benchmark pairs from lists of optimizers and benchmarks.
+
+    Args:
+        optimizers: List of optimizers to check.
+                    "all" to check all optimizers.
+
+        benchmarks: List of benchmarks to check.
+                    "all" to check all benchmarks.
+    """
+    from hposuite.benchmarks import BENCHMARKS
+    from hposuite.optimizers import OPTIMIZERS
+    from hposuite.run import Run
+
+    assert optimizers, "At least one optimizer must be provided!"
+    if not isinstance(optimizers, list):
+        optimizers = [optimizers]
+
+    assert benchmarks, "At least one benchmark must be provided!"
+    if not isinstance(benchmarks, list):
+        benchmarks = [benchmarks]
+
+
+    _optimizers: list[OptWithHps] = []
+    for optimizer in optimizers:
+        match optimizer:
+            case "all":
+                _optimizers = [(opt, {}) for opt in OPTIMIZERS.values()]
+                break
+            case str():
+                assert optimizer in OPTIMIZERS, (
+                    f"Optimizer must be one of {OPTIMIZERS.keys()}\n"
+                    f"Found {optimizer}"
+                )
+                _optimizers.append((OPTIMIZERS[optimizer], {}))
+            case tuple():
+                opt, hps = optimizer
+                match opt:
+                    case str():
+                        assert opt in OPTIMIZERS, (
+                            f"Optimizer must be one of {OPTIMIZERS.keys()}\n"
+                            f"Found {opt}"
+                        )
+                        _optimizers.append((OPTIMIZERS[opt], hps))
+                    case type():
+                        _optimizers.append((opt, hps))
+                    case _:
+                        raise TypeError(f"Unknown Optimizer type {type(opt)}")
+            case type():
+                _optimizers.append(optimizer)
+            case _:
+                raise TypeError(f"Unknown Optimizer type {type(optimizers)}")
+
+
+    _benchmarks: list[BenchWith_Objs_Fids] = []
+    for benchmark in benchmarks:
+        match benchmark:
+            case "all":
+                _benchmarks = [
+                    (
+                        bench if not isinstance(bench, FunctionalBenchmark) else bench.desc,
+                        {}
+                    )
+                    for bench in BENCHMARKS.values()
+                ]
+                break
+            case str():
+                assert benchmark in BENCHMARKS, (
+                    f"Benchmark must be one of {BENCHMARKS.keys()}\n"
+                    f"Found {benchmark}"
+                )
+                if not isinstance(BENCHMARKS[benchmark], FunctionalBenchmark):
+                    _benchmarks.append((BENCHMARKS[benchmark], {}))
+                else:
+                    _benchmarks.append((BENCHMARKS[benchmark].desc, {}))
+            case BenchmarkDescription():
+                _benchmarks.append((benchmark, {}))
+            case FunctionalBenchmark():
+                _benchmarks.append((benchmark.desc, {}))
+            case tuple():
+                bench, bench_hps = benchmark
+                match bench:
+                    case str():
+                        assert bench in BENCHMARKS, (
+                            f"Benchmark must be one of {BENCHMARKS.keys()}\n"
+                            f"Found {bench}"
+                        )
+                        if not isinstance(BENCHMARKS[bench], FunctionalBenchmark):
+                            _benchmarks.append((BENCHMARKS[bench], bench_hps))
+                        else:
+                            _benchmarks.append((BENCHMARKS[bench].desc, bench_hps))
+                    case BenchmarkDescription():
+                        _benchmarks.append((bench, bench_hps))
+                    case FunctionalBenchmark():
+                        _benchmarks.append((bench.desc, bench_hps))
+                    case _:
+                        raise TypeError(f"Unknown Benchmark type {type(benchmark)}")
+            case _:
+                raise TypeError(f"Unknown Benchmark type {type(benchmarks)}")
+
+
+    _problems: list[Problem] = []
+    for (opt, hps), (bench, objs_fids) in product(_optimizers, _benchmarks):
+        try:
+
+            objectives: int | str | list[str]
+            fidelities: int | str | list[str] | None
+            costs: int | str | list[str] | None
+
+            objectives = objs_fids.get("objectives", 1)
+            if isinstance(objectives, list) and len(objectives) == 1:
+                objectives = objectives[0]
+
+            fidelities = objs_fids.get("fidelities", None)
+            if isinstance(fidelities, list) and len(fidelities) == 1:
+                fidelities = fidelities[0]
+
+            costs = objs_fids.get("costs", None)
+            if isinstance(costs, list) and len(costs) == 1:
+                costs = costs[0]
+
+            priors = objs_fids.get("priors")
+
+            _compatible_pairs = []
+            _incompatible_pairs = []
+
+            match fidelities, bench.fidelities:
+                case None, None:
+                    fidelities = None
+                case None, _:
+                    match opt.support.fidelities[0]:
+                        case "single":
+                            fidelities = 1
+                        case "many":
+                            fidelities = len(bench.fidelities)
+                        case None:
+                            fidelities = None
+                        case _:
+                            raise ValueError("Invalid fidelity support")
+                case str() | int() | list(), _:
+                    match opt.support.fidelities[0]:
+                        case str():
+                            pass
+                        case None:
+                            fidelities = None
+                        case _:
+                            raise ValueError("Invalid fidelity support")
+                case _:
+                    raise ValueError(
+                        f"Invalid fidelity type: {type(fidelities)}. "
+                        f"Expected None, str, int or list"
+                    )
+
+            if priors:
+                priors = dict_to_configpriors(priors)
+
+
+            _problem = Problem.problem(
+                optimizer=opt,
+                optimizer_hyperparameters=hps,
+                benchmark=bench,
+                objectives=objectives,
+                budget=10,
+                fidelities=fidelities,
+                costs=costs,
+                priors=priors,
+            )
+            _problems.append(_problem)
+        except ValueError as e:
+            warnings.warn(f"{e}\nTo ignore this, set `on_error='ignore'`", stacklevel=2)
+            continue
+
+
+    # NOTE: REDUNDANCY CHECK: _runs_per_problem is a dict now to avoid duplicate runs esp.
+    # for eg. in case a BO Opt being used in combination with a
+    # MF Opt on a benchmark with multiple fidelities -> explicitly adding different fidelities
+    # in multiple benchmark instances would create redundant problems if BO Opts are present.
+    _runs_per_problem: Mapping[str, Run] = {}
+    for _problem in _problems:
+        try:
+            _run = Run(
+                    problem=_problem,
+                    seed=1,
+                )
+            if _run.name not in _runs_per_problem:
+                _runs_per_problem[_run.name] = _run
+                _compatible_pairs.append(
+                    (
+                        _problem.optimizer.name,
+                        _problem.benchmark.name,
+                    )
+                )
+        except ValueError as e:
+            warnings.warn(f"{e}\nTo ignore this, set `on_error='ignore'`", stacklevel=2)
+            continue
+
+
+    match _compatible_pairs, len(_optimizers), len(_benchmarks):
+        case [], _, _:
+            logger.warning(
+                "No compatible pairs found. "
+            )
+        case _, 1, _:
+            opt = _optimizers[0][0].name
+            benches = [
+                bench for _, bench in _compatible_pairs
+            ]
+            print(  # noqa: T201
+                f"Compatible Benchmarks for Optimizer `{opt}`:\n"
+                f"{benches}"
+            )
+        case _, _, 1:
+            bench = _benchmarks[0][0].name
+            opts = [
+                opt for opt, _ in _compatible_pairs
+            ]
+            print(  # noqa: T201
+                f"Compatible Optimizers for Benchmark `{bench}`:\n"
+                f"{opts}"
+            )
+        case _:
+            print(  # noqa: T201
+                "Compatible Optimizer-Benchmark pairs:\n"
+                f"{_compatible_pairs}"
+            )
+
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description="Get compatible optimizers and benchmarks.")
+    subparsers = parser.add_subparsers(dest="command")
+    get_compatible_parser = subparsers.add_parser(
+        "get_compatible",
+        help="Get compatible optimizers and benchmarks.",
+    )
+    get_compatible_parser.add_argument(
+        "--optimizers", "-opts",
+        type=str,
+        nargs="+",
+        help="List of optimizers to check. Use 'all' to check all optimizers.",
+    )
+    get_compatible_parser.add_argument(
+        "--benchmarks", "-benches",
+        type=str,
+        nargs="+",
+        help="List of benchmarks to check. Use 'all' to check all benchmarks.",
+    )
+    args = parser.parse_args()
+
+    get_compatible(optimizers=args.optimizers, benchmarks=args.benchmarks)

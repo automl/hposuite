@@ -33,10 +33,6 @@
 
 # Old releases
 
-## Version 0.1.0
-
-Initial Release
-
 ## Version 0.1.1
 
 * Add option to add custom filenames for plots
@@ -45,3 +41,9 @@ Initial Release
 * Add README for synthetic tabular benchmarks (mfh_tabular and bbob_tabular)
 * Add steps to download LCBench-Tabular and PD1 benchmarks
 * Create version tag
+
+## Version 0.1.0
+
+Initial Release
+
+

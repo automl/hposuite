@@ -4,7 +4,7 @@ import logging
 from abc import abstractmethod
 from collections.abc import Mapping
 from pathlib import Path
-from typing import Any, Literal
+from typing import TYPE_CHECKING, Any, Literal
 
 import neps
 import numpy as np
@@ -12,6 +12,9 @@ from hpoglue import Config, Optimizer, Problem, Query, Result
 from hpoglue.env import Env
 from neps import AskAndTell, algorithms
 from neps.space.parsing import convert_configspace
+
+if TYPE_CHECKING:
+    from hpoglue.fidelity import Fidelity
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
@@ -27,21 +30,55 @@ class NepsOptimizer(Optimizer):
         self,
         problem: Problem,
         space: neps.SearchSpace,
-        optimizer: AskAndTell,
         seed: int,
         working_directory: str | Path,
+        searcher: str,
+        fidelities: tuple[str, Fidelity] | None = None,
         **kwargs: Any,  # noqa: ARG002
     ) -> None:
         """Initialize the optimizer."""
         self.problem = problem
         self.space = space
 
+        match fidelities:
+            case None:
+                raise ValueError("NepsHyperbandRW requires a fidelity.")
+            case (fid_name, fidelity):
+                _fid = fidelity
+                min_fidelity = fidelity.min
+                max_fidelity = fidelity.max
+                match _fid.kind:
+                    case _ if _fid.kind is int:
+                        space.fidelities = {
+                            f"{fid_name}": neps.Integer(
+                                lower=min_fidelity, upper=max_fidelity, is_fidelity=True
+                            )
+                        }
+                    case _ if _fid.kind is float:
+                        space.fidelities = {
+                            f"{fid_name}": neps.Float(
+                                lower=min_fidelity, upper=max_fidelity, is_fidelity=True
+                            )
+                        }
+                    case _:
+                        raise TypeError(
+                            f"Invalid fidelity type: {type(_fid.kind).__name__}. "
+                            "Expected int or float."
+                        )
+            case _:
+                raise TypeError("Fidelity must be a tuple or None.")
+
+
         if not isinstance(working_directory, Path):
             working_directory = Path(working_directory)
         self.seed = seed
         self.working_dir = working_directory
 
-        self.optimizer = optimizer
+        self.optimizer = AskAndTell(
+            algorithms.PredefinedOptimizers[searcher](
+                space = space
+            )
+        )
         self.trial_counter = 0
 
 
@@ -77,6 +114,9 @@ class NepsOptimizer(Optimizer):
         """Tell the optimizer about the result of a trial."""
 
 
+
+
+
 class NepsBO(NepsOptimizer):
     """Bayesian Optimization in Neps."""
 
@@ -106,20 +146,16 @@ class NepsBO(NepsOptimizer):
     ) -> None:
         """Initialize the optimizer."""
         space = convert_configspace(problem.config_space)
-
-        opt = algorithms.PredefinedOptimizers["bayesian_optimization"](
-            space = space
-        )
-        optimizer = AskAndTell(opt)
         import torch
         torch.manual_seed(seed)
 
         super().__init__(
             problem=problem,
             space=space,
-            optimizer=optimizer,
             seed=seed,
             working_directory=working_directory,
+            searcher="bayesian_optimization",
+            fidelities=None,
         )
 
     def tell(self, result: Result) -> None:
@@ -170,22 +206,17 @@ class NepsRW(NepsOptimizer):
         **kwargs: Any,  # noqa: ARG002
     ) -> None:
         """Initialize the optimizer."""
-        self.searcher = searcher
         space = convert_configspace(problem.config_space)
-
-        opt = algorithms.PredefinedOptimizers[self.searcher](
-            space = space
-        )
-        optimizer = AskAndTell(opt)
         import torch
         torch.manual_seed(seed)
 
         super().__init__(
             problem=problem,
             space=space,
-            optimizer=optimizer,
             seed=seed,
             working_directory=working_directory,
+            searcher=searcher,
+            fidelities=None,
         )
 
         self.objectives = self.problem.get_objectives()
@@ -257,52 +288,26 @@ class NepsHyperbandRW(NepsOptimizer):
         space = convert_configspace(problem.config_space)
 
         _fid = None
-        min_fidelity: int | float
-        max_fidelity: int | float
         match problem.fidelities:
             case None:
                 raise ValueError("NepsHyperbandRW requires a fidelity.")
             case Mapping():
                 raise NotImplementedError("Many-fidelity not yet implemented for NepsHyperbandRW.")
             case (fid_name, fidelity):
-                _fid = fidelity
-                min_fidelity = fidelity.min
-                max_fidelity = fidelity.max
-                match _fid.kind:
-                    case _ if _fid.kind is int:
-                        space.fidelities = {
-                            f"{fid_name}": neps.Integer(
-                                lower=min_fidelity, upper=max_fidelity, is_fidelity=True
-                            )
-                        }
-                    case _ if _fid.kind is float:
-                        space.fidelities = {
-                            f"{fid_name}": neps.Float(
-                                lower=min_fidelity, upper=max_fidelity, is_fidelity=True
-                            )
-                        }
-                    case _:
-                        raise TypeError(
-                            f"Invalid fidelity type: {type(_fid.kind).__name__}. "
-                            "Expected int or float."
-                        )
+                _fid = (fid_name, fidelity)
             case _:
                 raise TypeError("Fidelity must be a tuple or a Mapping.")
 
-
-        opt = algorithms.PredefinedOptimizers["hyperband"](
-            space = space
-        )
-        optimizer = AskAndTell(opt)
         import torch
         torch.manual_seed(seed)
 
         super().__init__(
             problem=problem,
             space=space,
-            optimizer=optimizer,
             seed=seed,
             working_directory=working_directory,
+            searcher="hyperband",
+            fidelities=_fid,
         )
 
         self.objectives = self.problem.get_objectives()
@@ -372,52 +377,25 @@ class NepsASHA(NepsOptimizer):
         space = convert_configspace(problem.config_space)
 
         _fid = None
-        min_fidelity: int | float
-        max_fidelity: int | float
         match problem.fidelities:
             case None:
                 raise ValueError("NepsASHA requires a fidelity.")
             case Mapping():
                 raise NotImplementedError("Many-fidelity not yet implemented for NepsASHA.")
             case (fid_name, fidelity):
-                _fid = fidelity
-                min_fidelity = fidelity.min
-                max_fidelity = fidelity.max
-                match _fid.kind:
-                    case _ if _fid.kind is int:
-                        space.fidelities = {
-                            f"{fid_name}": neps.Integer(
-                                lower=min_fidelity, upper=max_fidelity, is_fidelity=True
-                            )
-                        }
-                    case _ if _fid.kind is float:
-                        space.fidelities = {
-                            f"{fid_name}": neps.Float(
-                                lower=min_fidelity, upper=max_fidelity, is_fidelity=True
-                            )
-                        }
-                    case _:
-                        raise TypeError(
-                            f"Invalid fidelity type: {type(_fid.kind).__name__}. "
-                            "Expected int or float."
-                        )
+                _fid = (fid_name, fidelity)
             case _:
                 raise TypeError("Fidelity must be a tuple or a Mapping.")
-
-
-        opt = algorithms.PredefinedOptimizers["asha"](
-            space = space
-        )
-        optimizer = AskAndTell(opt)
         import torch
         torch.manual_seed(seed)
 
         super().__init__(
             problem=problem,
             space=space,
-            optimizer=optimizer,
             seed=seed,
             working_directory=working_directory,
+            searcher="asha",
+            fidelities=_fid,
         )
 
         self.objectives = self.problem.get_objectives()
@@ -472,52 +450,25 @@ class NepsHyperband(NepsOptimizer):
         space = convert_configspace(problem.config_space)
 
         _fid = None
-        min_fidelity: int | float
-        max_fidelity: int | float
         match problem.fidelities:
             case None:
                 raise ValueError("NepsHyperband requires a fidelity.")
             case Mapping():
-                raise NotImplementedError("Many-fidelity not yet implemented for NepsASHA.")
+                raise NotImplementedError("Many-fidelity not yet implemented for NepsHyperband.")
             case (fid_name, fidelity):
-                _fid = fidelity
-                min_fidelity = fidelity.min
-                max_fidelity = fidelity.max
-                match _fid.kind:
-                    case _ if _fid.kind is int:
-                        space.fidelities = {
-                            f"{fid_name}": neps.Integer(
-                                lower=min_fidelity, upper=max_fidelity, is_fidelity=True
-                            )
-                        }
-                    case _ if _fid.kind is float:
-                        space.fidelities = {
-                            f"{fid_name}": neps.Float(
-                                lower=min_fidelity, upper=max_fidelity, is_fidelity=True
-                            )
-                        }
-                    case _:
-                        raise TypeError(
-                            f"Invalid fidelity type: {type(_fid.kind).__name__}. "
-                            "Expected int or float."
-                        )
+                _fid = (fid_name, fidelity)
             case _:
                 raise TypeError("Fidelity must be a tuple or a Mapping.")
-
-
-        opt = algorithms.PredefinedOptimizers["hyperband"](
-            space = space
-        )
-        optimizer = AskAndTell(opt)
         import torch
         torch.manual_seed(seed)
 
         super().__init__(
             problem=problem,
             space=space,
-            optimizer=optimizer,
             seed=seed,
             working_directory=working_directory,
+            searcher="hyperband",
+            fidelities=_fid,
         )
 
         self.objectives = self.problem.get_objectives()
@@ -530,6 +481,79 @@ class NepsHyperband(NepsOptimizer):
                 cost = obj.as_minimize(result.values[name])
             case Mapping():
                 raise ValueError("NepsHyperband only supports single-objective problems.")
+            case _:
+                raise TypeError(
+                    "Objectives must be a tuple or a Mapping. \n"
+                    f"Got {type(self.problem.objectives)}."
+                )
+        self.optimizer.tell(
+            trial=result.query.optimizer_info,
+            result=cost
+        )
+
+
+class NepsSuccessiveHalving(NepsOptimizer):
+    """Neps Successive Halving."""
+
+    name = "NepsSuccessiveHalving"
+
+    support = Problem.Support(
+        fidelities=("single",),
+        objectives=("single"),
+        cost_awareness=(None,),
+        tabular=False,
+    )
+
+    env = Env(
+        name="Neps-0.12.2",
+        python_version="3.10",
+        requirements=("neural-pipeline-search==0.12.2",)
+    )
+
+    mem_req_mb = 1024
+
+    def __init__(
+        self,
+        problem: Problem,
+        seed: int,
+        working_directory: str | Path,
+        **kwargs: Any,  # noqa: ARG002
+    ) -> None:
+        """Initialize the optimizer."""
+        space = convert_configspace(problem.config_space)
+
+        _fid = None
+        match problem.fidelities:
+            case None:
+                raise ValueError("NepsSuccessiveHalving requires a fidelity.")
+            case Mapping():
+                raise NotImplementedError(
+                    "Many-fidelity not yet implemented for NepsSuccessiveHalving."
+                )
+            case (fid_name, fidelity):
+                _fid = (fid_name, fidelity)
+            case _:
+                raise TypeError("Fidelity must be a tuple or a Mapping.")
+        import torch
+        torch.manual_seed(seed)
+
+        super().__init__(
+            problem=problem,
+            space=space,
+            seed=seed,
+            working_directory=working_directory,
+            searcher="successive_halving",
+            fidelities=_fid,
+        )
+
+
+    def tell(self, result: Result) -> None:
+        """Tell the optimizer about the result of a trial."""
+        match self.problem.objectives:
+            case (name, obj):
+                cost = obj.as_minimize(result.values[name])
+            case Mapping():
+                raise ValueError("NepsSuccessiveHalving only supports single-objective problems.")
             case _:
                 raise TypeError(
                     "Objectives must be a tuple or a Mapping. \n"

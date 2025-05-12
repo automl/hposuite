@@ -28,6 +28,7 @@ modules = [
         "NepsASHA",
         "NepsHyperband",
         "NepsSuccessiveHalving",
+        "NepsPriorband",
     ),
 ]
 

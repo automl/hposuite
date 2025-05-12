@@ -34,7 +34,7 @@ class NepsOptimizer(Optimizer):
         working_directory: str | Path,
         searcher: str,
         fidelities: tuple[str, Fidelity] | None = None,
-        **kwargs: Any,  # noqa: ARG002
+        **kwargs: Any,
     ) -> None:
         """Initialize the optimizer."""
         self.problem = problem
@@ -42,7 +42,7 @@ class NepsOptimizer(Optimizer):
 
         match fidelities:
             case None:
-                raise ValueError("NepsHyperbandRW requires a fidelity.")
+                pass
             case (fid_name, fidelity):
                 _fid = fidelity
                 min_fidelity = fidelity.min
@@ -76,7 +76,8 @@ class NepsOptimizer(Optimizer):
 
         self.optimizer = AskAndTell(
             algorithms.PredefinedOptimizers[searcher](
-                space = space
+                space = space,
+                **kwargs,
             )
         )
         self.trial_counter = 0
@@ -145,9 +146,15 @@ class NepsBO(NepsOptimizer):
         **kwargs: Any,  # noqa: ARG002
     ) -> None:
         """Initialize the optimizer."""
+        match problem.fidelities:
+            case None:
+                pass
+            case Mapping() | tuple():
+                raise ValueError("NepsBO does not support fidelities.")
+            case _:
+                raise TypeError("Fidelity must be a tuple or a Mapping.")
         space = convert_configspace(problem.config_space)
-        import torch
-        torch.manual_seed(seed)
+        set_seed(seed)
 
         super().__init__(
             problem=problem,
@@ -174,6 +181,18 @@ class NepsBO(NepsOptimizer):
             trial=result.query.optimizer_info,
             result=cost
         )
+
+
+def set_seed(seed: int) -> None:
+    """Set the seed for the optimizer."""
+    import random
+
+    import numpy as np
+    import torch
+
+    torch.manual_seed(seed)
+    random.seed(seed)
+    np.random.seed(seed)  # noqa: NPY002
 
 
 class NepsRW(NepsOptimizer):
@@ -206,9 +225,16 @@ class NepsRW(NepsOptimizer):
         **kwargs: Any,  # noqa: ARG002
     ) -> None:
         """Initialize the optimizer."""
+        match problem.fidelities:
+            case None:
+                pass
+            case Mapping() | tuple():
+                raise ValueError("NepsRW does not support fidelities.")
+            case _:
+                raise TypeError("Fidelity must be a tuple or a Mapping.")
+
         space = convert_configspace(problem.config_space)
-        import torch
-        torch.manual_seed(seed)
+        set_seed(seed)
 
         super().__init__(
             problem=problem,
@@ -298,8 +324,7 @@ class NepsHyperbandRW(NepsOptimizer):
             case _:
                 raise TypeError("Fidelity must be a tuple or a Mapping.")
 
-        import torch
-        torch.manual_seed(seed)
+        set_seed(seed)
 
         super().__init__(
             problem=problem,
@@ -386,8 +411,8 @@ class NepsASHA(NepsOptimizer):
                 _fid = (fid_name, fidelity)
             case _:
                 raise TypeError("Fidelity must be a tuple or a Mapping.")
-        import torch
-        torch.manual_seed(seed)
+
+        set_seed(seed)
 
         super().__init__(
             problem=problem,
@@ -459,8 +484,8 @@ class NepsHyperband(NepsOptimizer):
                 _fid = (fid_name, fidelity)
             case _:
                 raise TypeError("Fidelity must be a tuple or a Mapping.")
-        import torch
-        torch.manual_seed(seed)
+
+        set_seed(seed)
 
         super().__init__(
             problem=problem,
@@ -534,8 +559,8 @@ class NepsSuccessiveHalving(NepsOptimizer):
                 _fid = (fid_name, fidelity)
             case _:
                 raise TypeError("Fidelity must be a tuple or a Mapping.")
-        import torch
-        torch.manual_seed(seed)
+
+        set_seed(seed)
 
         super().__init__(
             problem=problem,
@@ -546,6 +571,79 @@ class NepsSuccessiveHalving(NepsOptimizer):
             fidelities=_fid,
         )
 
+
+    def tell(self, result: Result) -> None:
+        """Tell the optimizer about the result of a trial."""
+        match self.problem.objectives:
+            case (name, obj):
+                cost = obj.as_minimize(result.values[name])
+            case Mapping():
+                raise ValueError("NepsSuccessiveHalving only supports single-objective problems.")
+            case _:
+                raise TypeError(
+                    "Objectives must be a tuple or a Mapping. \n"
+                    f"Got {type(self.problem.objectives)}."
+                )
+        self.optimizer.tell(
+            trial=result.query.optimizer_info,
+            result=cost
+        )
+
+
+class NepsPriorband(NepsOptimizer):
+    """NepsPriorband."""
+
+    name = "NepsPriorband"
+
+    support = Problem.Support(
+        fidelities=("single",),
+        objectives=("single"),
+        cost_awareness=(None,),
+        tabular=False,
+    )
+
+    env = Env(
+        name="Neps-0.12.2",
+        python_version="3.10",
+        requirements=("neural-pipeline-search==0.12.2",)
+    )
+
+    mem_req_mb = 1024
+
+    def __init__(
+        self,
+        problem: Problem,
+        seed: int,
+        working_directory: str | Path,
+        **kwargs: Any,  # noqa: ARG002
+    ) -> None:
+        """Initialize the optimizer."""
+        space = convert_configspace(problem.config_space)
+
+        _fid = None
+        match problem.fidelities:
+            case None:
+                raise ValueError("NepsPriorband requires a fidelity.")
+            case Mapping():
+                raise NotImplementedError(
+                    "Many-fidelity not yet implemented for NepsPriorband."
+                )
+            case (fid_name, fidelity):
+                _fid = (fid_name, fidelity)
+            case _:
+                raise TypeError("Fidelity must be a tuple or a Mapping.")
+
+        set_seed(seed)
+
+        super().__init__(
+            problem=problem,
+            space=space,
+            seed=seed,
+            working_directory=working_directory,
+            searcher="priorband",
+            fidelities=_fid,
+            base="hyperband",
+        )
 
     def tell(self, result: Result) -> None:
         """Tell the optimizer about the result of a trial."""

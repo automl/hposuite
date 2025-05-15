@@ -5,7 +5,7 @@
 [![GitHub](https://img.shields.io/badge/GitHub-hpoglue-rgb(50,50,200)?logo=github&logoColor=white)](https://github.com/automl/hpoglue)
 
 # hposuite
-A lightweight framework for benchmarking HPO algorithms
+A lightweight framework for benchmarking HPO algorithms, providing wrappers for HPO benchmarks and optimizers. Provides a simple API for large-scale HPO experimentation.
 
 ## Minimal Example to run hposuite
 
@@ -25,7 +25,7 @@ study.optimize()
 ```
 
 > [!TIP]
-> * See below for example of [Running multiple Optimizers on multiple Benchmarks](#Simple-example-to-run-multiple-Optimizers-on-multiple-benchmarks)
+> * See below for an example of [Running multiple Optimizers on multiple Benchmarks](#Simple-example-to-run-multiple-Optimizers-on-multiple-benchmarks)
 > * Check this example [notebook](https://github.com/automl/hposuite/blob/main/examples/hposuite_demo.ipynb) for more demo examples
 > * This [notebook](https://github.com/automl/hposuite/blob/main/examples/opt_bench_usage_examples.ipynb) contains usage examples for Optimizer and Benchmark combinations
 > * This [notebook](https://github.com/automl/hposuite/blob/main/examples/study_usage_examples.ipynb) demonstrates some of the features of hposuite's Study

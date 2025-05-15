@@ -90,8 +90,8 @@ def plot_results(  # noqa: C901, PLR0912, PLR0913, PLR0915
     optimizers = list(report.keys())
     plt.figure(figsize=figsize)
     optim_res_dict = {}
-    continuations = False
     for instance in optimizers:
+        continuations = False
         logger.info(f"Plotting {instance}")
         optim_res_dict[instance] = {}
         seed_cost_dict = {}
@@ -156,22 +156,22 @@ def plot_results(  # noqa: C901, PLR0912, PLR0913, PLR0915
             where="post",
             label=instance,
             marker=next(markers),
-            markersize=10,
+            markersize=2,
             markerfacecolor="#ffffff",
-            markeredgecolor=col_next,
-            markeredgewidth=2,
+            markeredgecolor=None,
+            markeredgewidth=1,
             color=col_next,
-            linewidth=3,
+            linewidth=1,
         )
         plt.fill_between(
             means.index,
             means - error,
             means + error,
-            alpha=0.2,
+            alpha=0.1,
             step="post",
             color=col_next,
-            edgecolor=col_next,
-            linewidth=2,
+            edgecolor=None,
+            linewidth=1,
         )
 
         #For plotting continuations
@@ -194,22 +194,22 @@ def plot_results(  # noqa: C901, PLR0912, PLR0913, PLR0915
                 where="post",
                 label=f"{instance}_w_continuations",
                 marker=next(markers),
-                markersize=10,
+                markersize=2,
                 markerfacecolor="#ffffff",
-                markeredgecolor=col_next,
-                markeredgewidth=2,
+                markeredgecolor=None,
+                markeredgewidth=1,
                 color=col_next,
-                linewidth=3,
+                linewidth=1,
             )
             plt.fill_between(
                 means_cont.index,
                 means_cont - std_cont,
                 means_cont + std_cont,
-                alpha=0.2,
+                alpha=0.1,
                 step="post",
                 color=col_next,
-                edgecolor=col_next,
-                linewidth=2,
+                edgecolor=None,
+                linewidth=1,
             )
     plt.xlabel(f"{budget_type}")
     plt.ylabel(f"{objective}")

@@ -20,20 +20,34 @@ logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 
 
+def set_seed(seed: int) -> None:
+    """Set the seed for the optimizer."""
+    import random
+
+    import numpy as np
+    import torch
+
+    torch.manual_seed(seed)
+    random.seed(seed)
+    np.random.seed(seed)  # noqa: NPY002
+
+
 class NepsOptimizer(Optimizer):
     """Base class for Neps Optimizers."""
     name = "NepsOptimizer"
 
-    mem_req_mb = 1024
 
     def __init__(
         self,
+        *,
         problem: Problem,
         space: neps.SearchSpace,
+        optimizer: str,
         seed: int,
         working_directory: str | Path,
-        searcher: str,
         fidelities: tuple[str, Fidelity] | None = None,
+        random_weighted_opt: bool = False,
+        scalarization_weights: Literal["equal", "random"] | Mapping[str, float] = "random",
         **kwargs: Any,
     ) -> None:
         """Initialize the optimizer."""
@@ -75,12 +89,36 @@ class NepsOptimizer(Optimizer):
         self.working_dir = working_directory
 
         self.optimizer = AskAndTell(
-            algorithms.PredefinedOptimizers[searcher](
+            algorithms.PredefinedOptimizers[optimizer](
                 space = space,
                 **kwargs,
             )
         )
         self.trial_counter = 0
+
+        self.objectives = self.problem.get_objectives()
+        self.random_weighted_opt = random_weighted_opt
+        self.scalarization_weights = None
+
+        if self.random_weighted_opt:
+            assert len(self.objectives) > 1, (
+                "Random weighted optimization is only supported for multi-objective problems."
+            )
+            match scalarization_weights:
+                case Mapping():
+                    self.scalarization_weights = scalarization_weights
+                case "equal":
+                    self.scalarization_weights = (
+                        dict.fromkeys(self.objectives, 1.0 / len(self.objectives))
+                    )
+                case "random":
+                    weights = np.random.uniform(size=len(self.objectives))  # noqa: NPY002
+                    self.scalarization_weights = dict(zip(self.objectives, weights, strict=True))
+                case _:
+                    raise ValueError(
+                        f"Invalid scalarization_weights: {scalarization_weights}. "
+                        "Expected 'equal', 'random', or a Mapping."
+                    )
 
 
     def ask(self) -> Query:
@@ -93,9 +131,8 @@ class NepsOptimizer(Optimizer):
             case None:
                 pass
             case Mapping():
-                raise NotImplementedError("Many-fidelity not yet implemented for NepsOptimizer.")
-            case (fid_name, fidelity):
-                # query with max fidelity for MF optimizers
+                raise NotImplementedError("Many-fidelity not yet implemented for NePS.")
+            case (fid_name, _):
                 _fid_value = _config.pop(fid_name)
                 fidelity = (fid_name, _fid_value)
             case _:
@@ -103,6 +140,7 @@ class NepsOptimizer(Optimizer):
                     "Fidelity must be a tuple or a Mapping. \n"
                     f"Got {type(self.problem.fidelities)}."
                 )
+
         self.trial_counter += 1
         return Query(
             config = Config(config_id=self.trial_counter, values=_config),
@@ -110,12 +148,43 @@ class NepsOptimizer(Optimizer):
             optimizer_info=trial
         )
 
-    @abstractmethod
+
     def tell(self, result: Result) -> None:
         """Tell the optimizer about the result of a trial."""
+        match self.problem.objectives:
+            case (name, metric):
+                _values = metric.as_minimize(result.values[name])
+            case Mapping():
+                _values = {
+                    key: obj.as_minimize(result.values[key])
+                    for key, obj in self.problem.objectives.items()
+                }
+                if self.random_weighted_opt:
+                    _values = sum(
+                        self.scalarization_weights[obj] * _values[obj] for obj in self.objectives
+                    )
+                else:
+                    _values = list(_values.values())
+            case _:
+                raise TypeError(
+                    "Objective must be a tuple or a Mapping! "
+                    f"Got {type(self.problem.objectives)}."
+                )
 
+        match self.problem.costs:
+            case None:
+                pass
+            case tuple():
+                raise NotImplementedError("# TODO: Cost-aware not yet implemented for NePS!")
+            case Mapping():
+                raise NotImplementedError("# TODO: Cost-aware not yet implemented for NePS!")
+            case _:
+                raise TypeError("Cost must be None or a mapping!")
 
-
+        self.optimizer.tell(
+            trial=result.query.optimizer_info,
+            result=_values,
+        )
 
 
 class NepsBO(NepsOptimizer):
@@ -131,9 +200,9 @@ class NepsBO(NepsOptimizer):
     )
 
     env = Env(
-        name="Neps-0.12.2",
+        name="Neps-0.13.0",
         python_version="3.10",
-        requirements=("neural-pipeline-search==0.12.2",)
+        requirements=("neural-pipeline-search>=0.13.0",)
     )
 
     mem_req_mb = 1024
@@ -143,7 +212,7 @@ class NepsBO(NepsOptimizer):
         problem: Problem,
         seed: int,
         working_directory: str | Path,
-        **kwargs: Any,  # noqa: ARG002
+        initial_design_size: int | Literal["ndim"] = "ndim",
     ) -> None:
         """Initialize the optimizer."""
         match problem.fidelities:
@@ -153,6 +222,18 @@ class NepsBO(NepsOptimizer):
                 raise ValueError("NepsBO does not support fidelities.")
             case _:
                 raise TypeError("Fidelity must be a tuple or a Mapping.")
+
+        match problem.objectives:
+            case tuple():
+                pass
+            case Mapping():
+                raise ValueError("NepsBO only supports single-objective problems.")
+            case _:
+                raise TypeError(
+                    "Objectives must be a tuple or a Mapping. \n"
+                    f"Got {type(problem.objectives)}."
+                )
+
         space = convert_configspace(problem.config_space)
         set_seed(seed)
 
@@ -161,38 +242,9 @@ class NepsBO(NepsOptimizer):
             space=space,
             seed=seed,
             working_directory=working_directory,
-            searcher="bayesian_optimization",
-            fidelities=None,
+            optimizer="bayesian_optimization",
+            initial_design_size=initial_design_size,
         )
-
-    def tell(self, result: Result) -> None:
-        """Tell the optimizer about the result of a trial."""
-        match self.problem.objectives:
-            case (name, obj):
-                cost = obj.as_minimize(result.values[name])
-            case Mapping():
-                raise ValueError("NepsBO only supports single-objective problems.")
-            case _:
-                raise TypeError(
-                    "Objectives must be a tuple or a Mapping. \n"
-                    f"Got {type(self.problem.objectives)}."
-                )
-        self.optimizer.tell(
-            trial=result.query.optimizer_info,
-            result=cost
-        )
-
-
-def set_seed(seed: int) -> None:
-    """Set the seed for the optimizer."""
-    import random
-
-    import numpy as np
-    import torch
-
-    torch.manual_seed(seed)
-    random.seed(seed)
-    np.random.seed(seed)  # noqa: NPY002
 
 
 class NepsRW(NepsOptimizer):
@@ -208,9 +260,9 @@ class NepsRW(NepsOptimizer):
     )
 
     env = Env(
-        name="Neps-0.12.2",
+        name="Neps-0.13.0",
         python_version="3.10",
-        requirements=("neural-pipeline-search==0.12.2",)
+        requirements=("neural-pipeline-search>=0.13.0",)
     )
 
     mem_req_mb = 1024
@@ -221,10 +273,12 @@ class NepsRW(NepsOptimizer):
         seed: int,
         working_directory: str | Path,
         scalarization_weights: Literal["equal", "random"] | Mapping[str, float] = "random",
-        searcher: str = "bayesian_optimization",
-        **kwargs: Any,  # noqa: ARG002
+        initial_design_size: int | Literal["ndim"] = "ndim",
     ) -> None:
         """Initialize the optimizer."""
+        space = convert_configspace(problem.config_space)
+
+
         match problem.fidelities:
             case None:
                 pass
@@ -233,287 +287,28 @@ class NepsRW(NepsOptimizer):
             case _:
                 raise TypeError("Fidelity must be a tuple or a Mapping.")
 
-        space = convert_configspace(problem.config_space)
-        set_seed(seed)
-
-        super().__init__(
-            problem=problem,
-            space=space,
-            seed=seed,
-            working_directory=working_directory,
-            searcher=searcher,
-            fidelities=None,
-        )
-
-        self.objectives = self.problem.get_objectives()
-
-        self._rng = np.random.default_rng(seed=self.seed)
-        match scalarization_weights:
+        match problem.objectives:
+            case tuple():
+                raise ValueError("NepsRW only supports multi-objective problems.")
             case Mapping():
-                self.scalarization_weights = scalarization_weights
-            case "equal":
-                self.scalarization_weights = {
-                    obj: 1.0/len(self.objectives) for obj in self.objectives
-                }
-            case "random":
-                weights = self._rng.uniform(size=len(self.objectives))
-                self.scalarization_weights = {
-                    obj: weight/sum(weights) for obj, weight in zip(self.objectives, weights)  # noqa: B905
-                }
-            case _:
-                raise ValueError(
-                    f"Invalid scalarization_weights: {scalarization_weights}. "
-                    "Expected 'equal', 'random', or a Mapping."
-                )
-
-
-    def tell(self, result: Result) -> None:
-        """Tell the optimizer about the result of a trial."""
-        costs = {
-            key: obj.as_minimize(result.values[key])
-            for key, obj in self.problem.objectives.items()
-        }
-        scalarized_objective = sum(
-            self.scalarization_weights[obj] * costs[obj] for obj in self.objectives
-        )
-        self.optimizer.tell(
-            trial=result.query.optimizer_info,
-            result=scalarized_objective
-        )
-
-
-class NepsHyperbandRW(NepsOptimizer):
-    """Random Weighted Scalarization of objectives using Hyperband for budget allocation in Neps."""
-
-    name = "NepsHyperbandRW"
-
-    support = Problem.Support(
-        fidelities=("single",),
-        objectives=("many"),
-        cost_awareness=(None,),
-        tabular=False,
-    )
-
-    env = Env(
-        name="Neps-0.12.2",
-        python_version="3.10",
-        requirements=("neural-pipeline-search==0.12.2",)
-    )
-
-    mem_req_mb = 1024
-
-    def __init__(
-        self,
-        problem: Problem,
-        seed: int,
-        working_directory: str | Path,
-        scalarization_weights: Literal["equal", "random"] | Mapping[str, float] = "random",
-        **kwargs: Any,  # noqa: ARG002
-    ) -> None:
-        """Initialize the optimizer."""
-        space = convert_configspace(problem.config_space)
-
-        _fid = None
-        match problem.fidelities:
-            case None:
-                raise ValueError("NepsHyperbandRW requires a fidelity.")
-            case Mapping():
-                raise NotImplementedError("Many-fidelity not yet implemented for NepsHyperbandRW.")
-            case (fid_name, fidelity):
-                _fid = (fid_name, fidelity)
-            case _:
-                raise TypeError("Fidelity must be a tuple or a Mapping.")
-
-        set_seed(seed)
-
-        super().__init__(
-            problem=problem,
-            space=space,
-            seed=seed,
-            working_directory=working_directory,
-            searcher="hyperband",
-            fidelities=_fid,
-        )
-
-        self.objectives = self.problem.get_objectives()
-        self._rng = np.random.default_rng(seed=self.seed)
-        match scalarization_weights:
-            case Mapping():
-                self.scalarization_weights = scalarization_weights
-            case "equal":
-                self.scalarization_weights = {
-                    obj: 1.0/len(self.objectives) for obj in self.objectives
-                }
-            case "random":
-                weights = self._rng.uniform(size=len(self.objectives))
-                self.scalarization_weights = {
-                    obj: weight/sum(weights) for obj, weight in zip(self.objectives, weights)  # noqa: B905
-                }
-            case _:
-                raise ValueError(
-                    f"Invalid scalarization_weights: {scalarization_weights}. "
-                    "Expected 'equal', 'random', or a Mapping."
-                )
-
-
-    def tell(self, result: Result) -> None:
-        """Tell the optimizer about the result of a trial."""
-        costs = {
-            key: obj.as_minimize(result.values[key])
-            for key, obj in self.problem.objectives.items()
-        }
-        scalarized_objective = sum(
-            self.scalarization_weights[obj] * costs[obj] for obj in self.objectives
-        )
-        self.optimizer.tell(
-            trial=result.query.optimizer_info,
-            result=scalarized_objective
-        )
-
-
-class NepsASHA(NepsOptimizer):
-    """NepsASHA."""
-
-    name = "NepsASHA"
-
-    support = Problem.Support(
-        fidelities=("single",),
-        objectives=("single"),
-        cost_awareness=(None,),
-        tabular=False,
-    )
-
-    env = Env(
-        name="Neps-0.12.2",
-        python_version="3.10",
-        requirements=("neural-pipeline-search==0.12.2",)
-    )
-
-    mem_req_mb = 1024
-
-    def __init__(
-        self,
-        problem: Problem,
-        seed: int,
-        working_directory: str | Path,
-        **kwargs: Any,  # noqa: ARG002
-    ) -> None:
-        """Initialize the optimizer."""
-        space = convert_configspace(problem.config_space)
-
-        _fid = None
-        match problem.fidelities:
-            case None:
-                raise ValueError("NepsASHA requires a fidelity.")
-            case Mapping():
-                raise NotImplementedError("Many-fidelity not yet implemented for NepsASHA.")
-            case (fid_name, fidelity):
-                _fid = (fid_name, fidelity)
-            case _:
-                raise TypeError("Fidelity must be a tuple or a Mapping.")
-
-        set_seed(seed)
-
-        super().__init__(
-            problem=problem,
-            space=space,
-            seed=seed,
-            working_directory=working_directory,
-            searcher="asha",
-            fidelities=_fid,
-        )
-
-        self.objectives = self.problem.get_objectives()
-
-
-    def tell(self, result: Result) -> None:
-        """Tell the optimizer about the result of a trial."""
-        match self.problem.objectives:
-            case (name, obj):
-                cost = obj.as_minimize(result.values[name])
-            case Mapping():
-                raise ValueError("NepsASHA only supports single-objective problems.")
+                pass
             case _:
                 raise TypeError(
                     "Objectives must be a tuple or a Mapping. \n"
-                    f"Got {type(self.problem.objectives)}."
+                    f"Got {type(problem.objectives)}."
                 )
-        self.optimizer.tell(
-            trial=result.query.optimizer_info,
-            result=cost
-        )
-
-
-class NepsHyperband(NepsOptimizer):
-    """NepsHyperband."""
-
-    name = "NepsHyperband"
-
-    support = Problem.Support(
-        fidelities=("single",),
-        objectives=("single"),
-        cost_awareness=(None,),
-        tabular=False,
-    )
-
-    env = Env(
-        name="Neps-0.12.2",
-        python_version="3.10",
-        requirements=("neural-pipeline-search==0.12.2",)
-    )
-
-    mem_req_mb = 1024
-
-    def __init__(
-        self,
-        problem: Problem,
-        seed: int,
-        working_directory: str | Path,
-        **kwargs: Any,  # noqa: ARG002
-    ) -> None:
-        """Initialize the optimizer."""
-        space = convert_configspace(problem.config_space)
-
-        _fid = None
-        match problem.fidelities:
-            case None:
-                raise ValueError("NepsHyperband requires a fidelity.")
-            case Mapping():
-                raise NotImplementedError("Many-fidelity not yet implemented for NepsHyperband.")
-            case (fid_name, fidelity):
-                _fid = (fid_name, fidelity)
-            case _:
-                raise TypeError("Fidelity must be a tuple or a Mapping.")
 
         set_seed(seed)
 
         super().__init__(
             problem=problem,
             space=space,
+            optimizer="bayesian_optimization",
             seed=seed,
             working_directory=working_directory,
-            searcher="hyperband",
-            fidelities=_fid,
-        )
-
-        self.objectives = self.problem.get_objectives()
-
-
-    def tell(self, result: Result) -> None:
-        """Tell the optimizer about the result of a trial."""
-        match self.problem.objectives:
-            case (name, obj):
-                cost = obj.as_minimize(result.values[name])
-            case Mapping():
-                raise ValueError("NepsHyperband only supports single-objective problems.")
-            case _:
-                raise TypeError(
-                    "Objectives must be a tuple or a Mapping. \n"
-                    f"Got {type(self.problem.objectives)}."
-                )
-        self.optimizer.tell(
-            trial=result.query.optimizer_info,
-            result=cost
+            random_weighted_opt=True,
+            scalarization_weights=scalarization_weights,
+            initial_design_size=initial_design_size,
         )
 
 
@@ -530,9 +325,9 @@ class NepsSuccessiveHalving(NepsOptimizer):
     )
 
     env = Env(
-        name="Neps-0.12.2",
+        name="Neps-0.13.0",
         python_version="3.10",
-        requirements=("neural-pipeline-search==0.12.2",)
+        requirements=("neural-pipeline-search>=0.13.0",)
     )
 
     mem_req_mb = 1024
@@ -542,7 +337,8 @@ class NepsSuccessiveHalving(NepsOptimizer):
         problem: Problem,
         seed: int,
         working_directory: str | Path,
-        **kwargs: Any,  # noqa: ARG002
+        eta: int = 3,
+        sampler: Literal["uniform", "prior"] = "uniform",
     ) -> None:
         """Initialize the optimizer."""
         space = convert_configspace(problem.config_space)
@@ -560,6 +356,17 @@ class NepsSuccessiveHalving(NepsOptimizer):
             case _:
                 raise TypeError("Fidelity must be a tuple or a Mapping.")
 
+        match problem.objectives:
+            case tuple():
+                pass
+            case Mapping():
+                raise ValueError("NepsSuccessiveHalving only supports single-objective problems.")
+            case _:
+                raise TypeError(
+                    "Objectives must be a tuple or a Mapping. \n"
+                    f"Got {type(problem.objectives)}."
+                )
+
         set_seed(seed)
 
         super().__init__(
@@ -567,26 +374,214 @@ class NepsSuccessiveHalving(NepsOptimizer):
             space=space,
             seed=seed,
             working_directory=working_directory,
-            searcher="successive_halving",
+            optimizer="successive_halving",
             fidelities=_fid,
+            eta=eta,
+            sampler=sampler,
         )
 
 
-    def tell(self, result: Result) -> None:
-        """Tell the optimizer about the result of a trial."""
-        match self.problem.objectives:
-            case (name, obj):
-                cost = obj.as_minimize(result.values[name])
+class NepsHyperband(NepsOptimizer):
+    """NepsHyperband."""
+
+    name = "NepsHyperband"
+
+    support = Problem.Support(
+        fidelities=("single",),
+        objectives=("single"),
+        cost_awareness=(None,),
+        tabular=False,
+    )
+
+    env = Env(
+        name="Neps-0.13.0",
+        python_version="3.10",
+        requirements=("neural-pipeline-search>=0.13.0",)
+    )
+
+    mem_req_mb = 1024
+
+    def __init__(
+        self,
+        problem: Problem,
+        seed: int,
+        working_directory: str | Path,
+        eta: int = 3,
+        sampler: Literal["uniform", "prior"] = "uniform",
+    ) -> None:
+        """Initialize the optimizer."""
+        space = convert_configspace(problem.config_space)
+
+        _fid = None
+        match problem.fidelities:
+            case None:
+                raise ValueError("NepsHyperband requires a fidelity.")
             case Mapping():
-                raise ValueError("NepsSuccessiveHalving only supports single-objective problems.")
+                raise NotImplementedError("Many-fidelity not yet implemented for NepsHyperband.")
+            case (fid_name, fidelity):
+                _fid = (fid_name, fidelity)
+            case _:
+                raise TypeError("Fidelity must be a tuple or a Mapping.")
+
+        match problem.objectives:
+            case tuple():
+                pass
+            case Mapping():
+                raise ValueError("NepsHyperband only supports single-objective problems.")
             case _:
                 raise TypeError(
                     "Objectives must be a tuple or a Mapping. \n"
-                    f"Got {type(self.problem.objectives)}."
+                    f"Got {type(problem.objectives)}."
                 )
-        self.optimizer.tell(
-            trial=result.query.optimizer_info,
-            result=cost
+
+        set_seed(seed)
+
+        super().__init__(
+            problem=problem,
+            space=space,
+            seed=seed,
+            working_directory=working_directory,
+            optimizer="hyperband",
+            fidelities=_fid,
+            eta=eta,
+            sampler=sampler,
+        )
+
+class NepsHyperbandRW(NepsOptimizer):
+    """Random Weighted Scalarization of objectives using Hyperband for budget allocation in Neps."""
+
+    name = "NepsHyperbandRW"
+
+    support = Problem.Support(
+        fidelities=("single",),
+        objectives=("many"),
+        cost_awareness=(None,),
+        tabular=False,
+    )
+
+    env = Env(
+        name="Neps-0.13.0",
+        python_version="3.10",
+        requirements=("neural-pipeline-search>=0.13.0",)
+    )
+
+    mem_req_mb = 1024
+
+    def __init__(
+        self,
+        problem: Problem,
+        seed: int,
+        working_directory: str | Path,
+        scalarization_weights: Literal["equal", "random"] | Mapping[str, float] = "random",
+        eta: int = 3,
+        sampler: Literal["uniform", "prior"] = "uniform",
+    ) -> None:
+        """Initialize the optimizer."""
+        space = convert_configspace(problem.config_space)
+
+        _fid = None
+        match problem.fidelities:
+            case None:
+                raise ValueError("NepsHyperbandRW requires a fidelity.")
+            case Mapping():
+                raise NotImplementedError("Many-fidelity not yet implemented for NepsHyperbandRW.")
+            case (fid_name, fidelity):
+                _fid = (fid_name, fidelity)
+            case _:
+                raise TypeError("Fidelity must be a tuple or a Mapping.")
+
+        match problem.objectives:
+            case tuple():
+                raise ValueError("NepsHyperbandRW only supports multi-objective problems.")
+            case Mapping():
+                pass
+            case _:
+                raise TypeError(
+                    "Objectives must be a tuple or a Mapping. \n"
+                    f"Got {type(problem.objectives)}."
+                )
+
+        set_seed(seed)
+
+        super().__init__(
+            problem=problem,
+            space=space,
+            optimizer="hyperband",
+            seed=seed,
+            working_directory=working_directory,
+            fidelities=_fid,
+            random_weighted_opt=True,
+            scalarization_weights=scalarization_weights,
+            eta=eta,
+            sampler=sampler,
+        )
+
+
+
+class NepsASHA(NepsOptimizer):
+    """NepsASHA."""
+
+    name = "NepsASHA"
+
+    support = Problem.Support(
+        fidelities=("single",),
+        objectives=("single"),
+        cost_awareness=(None,),
+        tabular=False,
+    )
+
+    env = Env(
+        name="Neps-0.13.0",
+        python_version="3.10",
+        requirements=("neural-pipeline-search>=0.13.0",)
+    )
+
+    mem_req_mb = 1024
+
+    def __init__(
+        self,
+        problem: Problem,
+        seed: int,
+        working_directory: str | Path,
+        eta: int = 3,
+        sampler: Literal["uniform", "prior"] = "uniform",
+    ) -> None:
+        """Initialize the optimizer."""
+        space = convert_configspace(problem.config_space)
+
+        _fid = None
+        match problem.fidelities:
+            case None:
+                raise ValueError("NepsASHA requires a fidelity.")
+            case Mapping():
+                raise NotImplementedError("Many-fidelity not yet implemented for NepsASHA.")
+            case (fid_name, fidelity):
+                _fid = (fid_name, fidelity)
+            case _:
+                raise TypeError("Fidelity must be a tuple or a Mapping.")
+
+        match problem.objectives:
+            case tuple():
+                pass
+            case Mapping():
+                raise ValueError("NepsASHA only supports single-objective problems.")
+            case _:
+                raise TypeError(
+                    "Objectives must be a tuple or a Mapping. \n"
+                    f"Got {type(problem.objectives)}."
+                )
+
+        set_seed(seed)
+
+        super().__init__(
+            problem=problem,
+            space=space,
+            seed=seed,
+            working_directory=working_directory,
+            eta=eta,
+            optimizer="asha",
+            fidelities=_fid,
+            sampler=sampler,
         )
 
 
@@ -600,22 +595,26 @@ class NepsPriorband(NepsOptimizer):
         objectives=("single"),
         cost_awareness=(None,),
         tabular=False,
+        priors=True,
     )
 
     env = Env(
-        name="Neps-0.12.2",
+        name="Neps-0.13.0",
         python_version="3.10",
-        requirements=("neural-pipeline-search==0.12.2",)
+        requirements=("neural-pipeline-search>=0.13.0",)
     )
 
     mem_req_mb = 1024
 
     def __init__(
         self,
+        *,
         problem: Problem,
         seed: int,
         working_directory: str | Path,
-        **kwargs: Any,  # noqa: ARG002
+        eta: int = 3,
+        sample_prior_first: bool | Literal["highest_fidelity"] = False,
+        base: Literal["successive_halving", "hyperband", "asha", "async_hb"] = "hyperband",
     ) -> None:
         """Initialize the optimizer."""
         space = convert_configspace(problem.config_space)
@@ -633,6 +632,17 @@ class NepsPriorband(NepsOptimizer):
             case _:
                 raise TypeError("Fidelity must be a tuple or a Mapping.")
 
+        match problem.objectives:
+            case tuple():
+                pass
+            case Mapping():
+                raise ValueError("NepsPriorband only supports single-objective problems.")
+            case _:
+                raise TypeError(
+                    "Objectives must be a tuple or a Mapping. \n"
+                    f"Got {type(problem.objectives)}."
+                )
+
         set_seed(seed)
 
         super().__init__(
@@ -640,24 +650,9 @@ class NepsPriorband(NepsOptimizer):
             space=space,
             seed=seed,
             working_directory=working_directory,
-            searcher="priorband",
+            optimizer="priorband",
             fidelities=_fid,
-            base="hyperband",
-        )
-
-    def tell(self, result: Result) -> None:
-        """Tell the optimizer about the result of a trial."""
-        match self.problem.objectives:
-            case (name, obj):
-                cost = obj.as_minimize(result.values[name])
-            case Mapping():
-                raise ValueError("NepsSuccessiveHalving only supports single-objective problems.")
-            case _:
-                raise TypeError(
-                    "Objectives must be a tuple or a Mapping. \n"
-                    f"Got {type(self.problem.objectives)}."
-                )
-        self.optimizer.tell(
-            trial=result.query.optimizer_info,
-            result=cost
+            eta=eta,
+            base=base,
+            sample_prior_first=sample_prior_first,
         )

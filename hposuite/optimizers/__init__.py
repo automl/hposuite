@@ -31,6 +31,7 @@ modules = [
         "NepsAsyncHB",
         "NepsPriorband",
         "NepsPiBO",
+        "NepsIFBO",
     ),
 ]
 

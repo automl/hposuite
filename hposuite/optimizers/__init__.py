@@ -24,11 +24,13 @@ modules = [
         "hposuite.optimizers.neps_optimizers",
         "NepsBO",
         "NepsRW",
+        "NepsSuccessiveHalving",
+        "NepsHyperband",
         "NepsHyperbandRW",
         "NepsASHA",
-        "NepsHyperband",
-        "NepsSuccessiveHalving",
+        "NepsAsyncHB",
         "NepsPriorband",
+        "NepsPiBO",
     ),
 ]
 

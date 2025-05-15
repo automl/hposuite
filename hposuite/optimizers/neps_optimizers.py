@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import logging
-from abc import abstractmethod
 from collections.abc import Mapping
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Literal
@@ -90,7 +89,7 @@ class NepsOptimizer(Optimizer):
 
         self.optimizer = AskAndTell(
             algorithms.PredefinedOptimizers[optimizer](
-                space = space,
+                space,
                 **kwargs,
             )
         )
@@ -209,10 +208,12 @@ class NepsBO(NepsOptimizer):
 
     def __init__(
         self,
+        *,
         problem: Problem,
         seed: int,
         working_directory: str | Path,
         initial_design_size: int | Literal["ndim"] = "ndim",
+        use_priors: bool = False,
     ) -> None:
         """Initialize the optimizer."""
         match problem.fidelities:
@@ -244,6 +245,7 @@ class NepsBO(NepsOptimizer):
             working_directory=working_directory,
             optimizer="bayesian_optimization",
             initial_design_size=initial_design_size,
+            use_priors=use_priors,
         )
 
 
@@ -269,11 +271,13 @@ class NepsRW(NepsOptimizer):
 
     def __init__(
         self,
+        *,
         problem: Problem,
         seed: int,
         working_directory: str | Path,
         scalarization_weights: Literal["equal", "random"] | Mapping[str, float] = "random",
         initial_design_size: int | Literal["ndim"] = "ndim",
+        use_priors: bool = False,
     ) -> None:
         """Initialize the optimizer."""
         space = convert_configspace(problem.config_space)
@@ -309,6 +313,7 @@ class NepsRW(NepsOptimizer):
             random_weighted_opt=True,
             scalarization_weights=scalarization_weights,
             initial_design_size=initial_design_size,
+            use_priors=use_priors,
         )
 
 
@@ -403,6 +408,7 @@ class NepsHyperband(NepsOptimizer):
 
     def __init__(
         self,
+        *,
         problem: Problem,
         seed: int,
         working_directory: str | Path,
@@ -469,6 +475,7 @@ class NepsHyperbandRW(NepsOptimizer):
 
     def __init__(
         self,
+        *,
         problem: Problem,
         seed: int,
         working_directory: str | Path,
@@ -540,6 +547,7 @@ class NepsASHA(NepsOptimizer):
 
     def __init__(
         self,
+        *,
         problem: Problem,
         seed: int,
         working_directory: str | Path,
@@ -582,6 +590,72 @@ class NepsASHA(NepsOptimizer):
             optimizer="asha",
             fidelities=_fid,
             sampler=sampler,
+        )
+
+
+class NepsAsyncHB(NepsOptimizer):
+    """Neps Async Hyperband."""
+
+    name = "NepsAsyncHB"
+
+    support = Problem.Support(
+        fidelities=("single",),
+        objectives=("single"),
+        cost_awareness=(None,),
+        tabular=False,
+    )
+
+    env = Env(
+        name="Neps-0.13.0",
+        python_version="3.10",
+        requirements=("neural-pipeline-search>=0.13.0",)
+    )
+
+    mem_req_mb = 1024
+
+    def __init__(
+        self,
+        *,
+        problem: Problem,
+        seed: int,
+        working_directory: str | Path,
+        eta: int = 3,
+    ) -> None:
+        """Initialize the optimizer."""
+        space = convert_configspace(problem.config_space)
+
+        _fid = None
+        match problem.fidelities:
+            case None:
+                raise ValueError("NepsAsyncHB requires a fidelity.")
+            case Mapping():
+                raise NotImplementedError("Many-fidelity not yet implemented for NepsAsyncHB.")
+            case (fid_name, fidelity):
+                _fid = (fid_name, fidelity)
+            case _:
+                raise TypeError("Fidelity must be a tuple or a Mapping.")
+
+        match problem.objectives:
+            case tuple():
+                pass
+            case Mapping():
+                raise ValueError("NepsAsyncHB only supports single-objective problems.")
+            case _:
+                raise TypeError(
+                    "Objectives must be a tuple or a Mapping. \n"
+                    f"Got {type(problem.objectives)}."
+                )
+
+        set_seed(seed)
+
+        super().__init__(
+            problem=problem,
+            space=space,
+            seed=seed,
+            working_directory=working_directory,
+            optimizer="async_hb",
+            fidelities=_fid,
+            eta=eta,
         )
 
 
@@ -654,5 +728,69 @@ class NepsPriorband(NepsOptimizer):
             fidelities=_fid,
             eta=eta,
             base=base,
+            sample_prior_first=sample_prior_first,
+        )
+
+
+class NepsPiBO(NepsOptimizer):
+    """Neps PiBO - Bayesian Optimization with User Beliefs."""
+
+    name = "NepsPiBO"
+
+    support = Problem.Support(
+        fidelities=(None,),
+        objectives=("single",),
+        cost_awareness=(None,),
+        tabular=False,
+    )
+
+    env = Env(
+        name="Neps-0.13.0",
+        python_version="3.10",
+        requirements=("neural-pipeline-search>=0.13.0",)
+    )
+
+    mem_req_mb = 1024
+
+    def __init__(
+        self,
+        *,
+        problem: Problem,
+        seed: int,
+        working_directory: str | Path,
+        initial_design_size: int | Literal["ndim"] = "ndim",
+        sample_prior_first: bool = False,
+    ) -> None:
+        """Initialize the optimizer."""
+        space = convert_configspace(problem.config_space)
+
+        match problem.fidelities:
+            case None:
+                pass
+            case Mapping() | tuple():
+                raise ValueError("NepsPiBO does not support fidelities.")
+            case _:
+                raise TypeError("Fidelity must be a tuple or a Mapping.")
+
+        match problem.objectives:
+            case tuple():
+                pass
+            case Mapping():
+                raise ValueError("NepsPiBO only supports single-objective problems.")
+            case _:
+                raise TypeError(
+                    "Objectives must be a tuple or a Mapping. \n"
+                    f"Got {type(problem.objectives)}."
+                )
+
+        set_seed(seed)
+
+        super().__init__(
+            problem=problem,
+            space=space,
+            seed=seed,
+            working_directory=working_directory,
+            optimizer="pibo",
+            initial_design_size=initial_design_size,
             sample_prior_first=sample_prior_first,
         )

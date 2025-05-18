@@ -96,14 +96,16 @@ def plot_results(  # noqa: C901, PLR0912, PLR0913, PLR0915
         optim_res_dict[instance] = {}
         seed_cost_dict = {}
         seed_cont_dict = {}
+        is_fid_opt = False
         for seed in report[instance]:
             results = report[instance][seed]["results"]
             cost_list: pd.Series = results[SINGLE_OBJ_COL].values.astype(np.float64)
 
             budget_type = "TrialBudget" if fidelity is None else "FidelityBudget"
+            is_fid_opt = FIDELITY_COL in results.columns
             match budget_type:
                 case "FidelityBudget":
-                    if FIDELITY_COL in results.columns:
+                    if is_fid_opt:
                         budget_list = results[FIDELITY_COL].values.astype(np.float64)
                         budget_list = np.cumsum(budget_list)
                         budget_type = "FidelityBudget"
@@ -146,8 +148,9 @@ def plot_results(  # noqa: C901, PLR0912, PLR0913, PLR0915
         means = means.cummin() if to_minimize else means.cummax()
         means = means.drop_duplicates()
         error = error.loc[means.index]
-        means[budget] = means.iloc[-1]
-        error[budget] = error.iloc[-1]
+        if not is_fid_opt:
+            means[budget] = means.iloc[-1]
+            error[budget] = error.iloc[-1]
         col_next = next(colors_mean)
 
         plt.step(
@@ -211,7 +214,9 @@ def plot_results(  # noqa: C901, PLR0912, PLR0913, PLR0915
                 edgecolor=None,
                 linewidth=1,
             )
-    plt.xlabel(f"{budget_type}")
+
+    xlabel = "Cumulative Fidelity" if budget_type == "FidelityBudget" else "Full Evaluations"
+    plt.xlabel(xlabel)
     plt.ylabel(f"{objective}")
     plot_suffix = (
         f"{benchmarks_name}, {objective=}, \n{fidelity=}, {cost=}, "
@@ -233,8 +238,7 @@ def plot_results(  # noqa: C901, PLR0912, PLR0913, PLR0915
     if plot_file_name:
         save_path = save_dir / f"{plot_file_name}.png"
         if save_path.exists():
-            logger.warning(f"{save_path} already exists. Using default plot name.")
-            save_path = save_dir / f"{optimizers}.{plot_suffix}.png"
+            logger.warning(f"{save_path} already exists. Overwriting.")
     plt.savefig(save_path)
     logger.info(f"Saved plot to {save_path.absolute()}")
 
@@ -521,19 +525,19 @@ if __name__ == "__main__":
         default="plots"
     )
     parser.add_argument(
-        "--figsize", "-fs",
+        "--figsize", "-fig",
         type=int,
         nargs="+",
         default=(20, 10),
         help="Size of the figure to plot",
     )
     parser.add_argument(
-        "--logscale", "-ls",
+        "--logscale", "-log",
         action="store_true",
         help="Use log scale for the x-axis",
     )
     parser.add_argument(
-        "--error_bars", "-eb",
+        "--error_bars", "-err",
         type=str,
         choices=["std", "sem"],
         default="std",
@@ -542,7 +546,7 @@ if __name__ == "__main__":
         "sem: Standard error of the mean"
     )
     parser.add_argument(
-        "--budget_type", "-bt",
+        "--budget_type", "-b",
         type=str,
         choices=["TrialBudget", "FidelityBudget", None],
         default=None,
@@ -552,7 +556,7 @@ if __name__ == "__main__":
         "MF opts are still plotted using FidelityBudget."
     )
     parser.add_argument(
-        "--plot_file_name", "-pname",
+        "--plot_file_name", "-name",
         type=str,
         help="Name of the plot file to save",
         default=None

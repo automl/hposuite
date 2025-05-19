@@ -216,7 +216,6 @@ class NepsBO(NepsOptimizer):
         seed: int,
         working_directory: str | Path,
         initial_design_size: int | Literal["ndim"] = "ndim",
-        use_priors: bool = False,
     ) -> None:
         """Initialize the optimizer."""
         match problem.fidelities:
@@ -248,7 +247,6 @@ class NepsBO(NepsOptimizer):
             working_directory=working_directory,
             optimizer="bayesian_optimization",
             initial_design_size=initial_design_size,
-            use_priors=use_priors,
         )
 
 
@@ -280,7 +278,6 @@ class NepsRW(NepsOptimizer):
         working_directory: str | Path,
         scalarization_weights: Literal["equal", "random"] | Mapping[str, float] = "random",
         initial_design_size: int | Literal["ndim"] = "ndim",
-        use_priors: bool = False,
     ) -> None:
         """Initialize the optimizer."""
         space = configspace_to_pipeline_space(problem.config_space)
@@ -316,7 +313,6 @@ class NepsRW(NepsOptimizer):
             random_weighted_opt=True,
             scalarization_weights=scalarization_weights,
             initial_design_size=initial_design_size,
-            use_priors=use_priors,
         )
 
 

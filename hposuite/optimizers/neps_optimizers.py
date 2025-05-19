@@ -818,6 +818,93 @@ class NepsPiBO(NepsOptimizer):
         )
 
 
+class NepsMFBO(NepsOptimizer):
+    """Neps MFBO."""
+
+    name = "NepsMFBO"
+
+    support = Problem.Support(
+        fidelities=("single",),
+        objectives=("single",),
+        cost_awareness=(None,),
+        tabular=False,
+        priors=True,
+    )
+
+    env = Env(
+        name="Neps-0.13.0",
+        python_version="3.10",
+        requirements=("neural-pipeline-search>=0.13.0",)
+    )
+
+    mem_req_mb = 1024
+
+    def __init__(
+        self,
+        *,
+        problem: Problem,
+        seed: int,
+        working_directory: str | Path,
+        initial_design_size: int | Literal["ndim"] = 5,
+        sampler: Literal["uniform", "prior", "priorband"] = "uniform",
+        sample_prior_first: bool = False,
+        eta: int = 3,
+    ) -> None:
+        """Initialize the optimizer."""
+        assert len(problem.priors[1]) == 1, (
+            "NepsMFBO only supports single-objective priors. "
+        )
+        config_space = set_priors_as_defaults(
+            config_space=problem.config_space,
+            priors=next(iter(problem.priors[1].values())),
+            distribution="normal",
+        )
+        space = configspace_to_pipeline_space(
+            config_space,
+            use_priors=True,
+        )
+
+        _fid = None
+        match problem.fidelities:
+            case None:
+                raise ValueError("NepsMFBO requires a fidelity.")
+            case Mapping():
+                raise NotImplementedError(
+                    "Many-fidelity not yet implemented for NepsMFBO."
+                )
+            case (fid_name, fidelity):
+                _fid = (fid_name, fidelity)
+            case _:
+                raise TypeError("Fidelity must be a tuple or a Mapping.")
+
+        match problem.objectives:
+            case tuple():
+                pass
+            case Mapping():
+                raise ValueError("NepsMFBO only supports single-objective problems.")
+            case _:
+                raise TypeError(
+                    "Objectives must be a tuple or a Mapping. \n"
+                    f"Got {type(problem.objectives)}."
+                )
+
+        set_seed(seed)
+
+        super().__init__(
+            problem=problem,
+            space=space,
+            seed=seed,
+            working_directory=working_directory,
+            optimizer="mfbo",
+            fidelities=_fid,
+            eta=eta,
+            initial_design_size=initial_design_size,
+            sampler=sampler,
+            use_priors=True,
+            sample_prior_first=sample_prior_first,
+        )
+
+
 def configspace_to_pipeline_space(  # noqa: C901
     config_space: ConfigurationSpace,
     *,

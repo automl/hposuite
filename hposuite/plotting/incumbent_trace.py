@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import argparse
 import logging
+import warnings
 from collections.abc import Mapping
 from itertools import cycle
 from pathlib import Path
@@ -46,22 +47,40 @@ BENCHMARK_FIDELITY_COL = "benchmark.fidelity.1.value"
 BENCHMARK_FIDELITY_MIN_COL = "benchmark.fidelity.1.min"
 BENCHMARK_FIDELITY_MAX_COL = "benchmark.fidelity.1.max"
 CONTINUATIONS_COL = "result.continuations_cost.1"
+CONTINUATIONS_BUDGET_USED_COL = "result.continuations_budget_used_total"
+
+
+def calc_eqv_full_evals(
+    results: pd.Series,
+    budget_total: float,
+) -> pd.Series:
+    """Calculate equivalent full evaluations for fractional costs."""
+    evals = np.arange(1, budget_total + 1)
+    _df = results.reset_index()
+    _df.columns = ["index", "performance"]
+    bins = pd.cut(_df["index"], bins=[-np.inf, *evals], right=False, labels=evals)
+    _df["group"] = bins
+    group_min = _df.groupby("group")["performance"].min()
+    result = group_min.reindex(evals)
+    return pd.Series(result.values, index=evals)
 
 
 def plot_results(  # noqa: C901, PLR0912, PLR0913, PLR0915
     *,
     report: dict[str, Any],
     objective: str,
-    fidelity: str | None,
     cost: str | None,
     to_minimize: bool,
     save_dir: Path,
     benchmarks_name: str,
+    fidelity: str | None = None,
+    budget_type: Literal["TrialBudget", "FidelityBudget", None] = None,
     regret_bound: float | None = None,  # noqa: ARG001
     figsize: tuple[int, int] = (20, 10),
     logscale: bool = False,
     error_bars: Literal["std", "sem"] = "std",
     plot_file_name: str | None = None,
+    plot_continuations_only: bool = False,
 ) -> None:
     """Plot the results for the optimizers on the given benchmark."""
     marker_list = [
@@ -87,6 +106,8 @@ def plot_results(  # noqa: C901, PLR0912, PLR0913, PLR0915
     markers = cycle(marker_list)
     colors = plt.rcParams["axes.prop_cycle"].by_key()["color"]  # type: ignore
     colors_mean = cycle(colors)
+    # Sort the instances dict
+    report = dict(sorted(report.items()))
     optimizers = list(report.keys())
     plt.figure(figsize=figsize)
     optim_res_dict = {}
@@ -101,81 +122,112 @@ def plot_results(  # noqa: C901, PLR0912, PLR0913, PLR0915
             results = report[instance][seed]["results"]
             cost_list: pd.Series = results[SINGLE_OBJ_COL].values.astype(np.float64)
 
-            budget_type = "TrialBudget" if fidelity is None else "FidelityBudget"
-            is_fid_opt = FIDELITY_COL in results.columns
-            match budget_type:
-                case "FidelityBudget":
-                    if is_fid_opt:
-                        budget_list = results[FIDELITY_COL].values.astype(np.float64)
-                        budget_list = np.cumsum(budget_list)
-                        budget_type = "FidelityBudget"
-                    else:
-                        budget_list = np.cumsum(
-                            results[BENCHMARK_FIDELITY_MAX_COL].values.astype(np.float64)
-                        )
-                case "TrialBudget":
-                    budget_list = results[BUDGET_USED_COL].values.astype(np.float64)
-                case _:
-                    raise NotImplementedError(f"Budget type {budget_type} not implemented")
-            budget = budget_list[-1]
-
             if (
                 CONTINUATIONS_COL in results.columns
                 and
                 not pd.isna(results[CONTINUATIONS_COL].iloc[0])
             ):
                 continuations = True
-                continuations_list = results[CONTINUATIONS_COL].values.astype(np.float64)
-                continuations_list = np.cumsum(continuations_list)
+
+            is_fid_opt = FIDELITY_COL in results.columns
+            if budget_type is None:
+                budget_type = "FidelityBudget" if fidelity is not None else "TrialBudget"
+            match budget_type:
+                case "FidelityBudget":
+                    if is_fid_opt:
+                        budget_list = results[FIDELITY_COL].values.astype(np.float64)
+                        budget_list = np.cumsum(budget_list)
+                        if continuations:
+                            continuations_list = (
+                                results[CONTINUATIONS_COL]
+                                .values.astype(np.float64)
+                            )
+                            continuations_list = np.cumsum(continuations_list)
+                    else:
+                        budget_list = np.cumsum(
+                            results[BENCHMARK_FIDELITY_MAX_COL].values.astype(np.float64)
+                        )
+                    budget = budget_list[-1]
+                case "TrialBudget":
+                    budget = results[BUDGET_TOTAL_COL].iloc[0]
+                    budget_list = results[BUDGET_USED_COL].values.astype(np.float64)
+                    if continuations:
+                        continuations_list = (
+                            results[CONTINUATIONS_BUDGET_USED_COL]
+                            .values.astype(np.float64)
+                        )
+
+                case _:
+                    raise NotImplementedError(f"Budget type {budget_type} not implemented")
 
             seed_cost_dict[seed] = pd.Series(cost_list, index=budget_list)
+            if is_fid_opt and budget_type == "TrialBudget":
+                seed_cost_dict[seed] = calc_eqv_full_evals(
+                    seed_cost_dict[seed],
+                    budget
+                )
             if continuations:
                 seed_cont_dict[seed] = pd.Series(cost_list, index=continuations_list)
+                import math
+                if budget_type == "TrialBudget":
+                    seed_cont_dict[seed] = calc_eqv_full_evals(
+                        seed_cont_dict[seed],
+                        math.ceil(continuations_list[-1]),
+                    )
+                if results[BUDGET_USED_COL].iloc[-1] > results[BUDGET_TOTAL_COL].iloc[0]:
+                    warnings.warn(
+                        "This Optimizer was run until Continuations budget was exhausted. "
+                        "Plot of the Optimizer's incumbent without continuations would exceed"
+                        f" the total budget {results[BUDGET_TOTAL_COL]} in the x axis",
+                        stacklevel=2,
+                    )
 
-        seed_cost_df = pd.DataFrame(seed_cost_dict)
-        seed_cost_df = seed_cost_df.ffill(axis=0)
-        seed_cost_df = seed_cost_df.dropna(axis=0)
-        means = pd.Series(seed_cost_df.mean(axis=1), name=f"means_{instance}")
-        match error_bars:
-            case "std":
-                error = pd.Series(seed_cost_df.std(axis=1), name=f"std_{instance}")
-            case "sem":
-                error = pd.Series(seed_cost_df.sem(axis=1), name=f"sem_{instance}")
-            case _:
-                raise ValueError(f"Unsupported error bars type {error_bars}")
-        optim_res_dict[instance]["means"] = means
-        optim_res_dict[instance]["error"] = error
-        means = means.cummin() if to_minimize else means.cummax()
-        means = means.drop_duplicates()
-        error = error.loc[means.index]
-        if not is_fid_opt:
+        if not plot_continuations_only:
+
+            seed_cost_df = pd.DataFrame(seed_cost_dict)
+            seed_cost_df = seed_cost_df.ffill(axis=0)
+            seed_cost_df = seed_cost_df.dropna(axis=0)
+            means = pd.Series(seed_cost_df.mean(axis=1), name=f"means_{instance}")
+            match error_bars:
+                case "std":
+                    error = pd.Series(seed_cost_df.std(axis=1), name=f"std_{instance}")
+                case "sem":
+                    error = pd.Series(seed_cost_df.sem(axis=1), name=f"sem_{instance}")
+                case _:
+                    raise ValueError(f"Unsupported error bars type {error_bars}")
+            optim_res_dict[instance]["means"] = means
+            optim_res_dict[instance]["error"] = error
+            means = means.cummin() if to_minimize else means.cummax()
+            means = means.drop_duplicates()
+            error = error.loc[means.index]
+            # if budget_type == "TrialBudget":
             means[budget] = means.iloc[-1]
             error[budget] = error.iloc[-1]
-        col_next = next(colors_mean)
+            col_next = next(colors_mean)
 
-        plt.step(
-            means.index,
-            means,
-            where="post",
-            label=instance,
-            marker=next(markers),
-            markersize=2,
-            markerfacecolor="#ffffff",
-            markeredgecolor=None,
-            markeredgewidth=1,
-            color=col_next,
-            linewidth=1,
-        )
-        plt.fill_between(
-            means.index,
-            means - error,
-            means + error,
-            alpha=0.1,
-            step="post",
-            color=col_next,
-            edgecolor=None,
-            linewidth=1,
-        )
+            plt.step(
+                means.index,
+                means,
+                where="post",
+                label=instance,
+                marker=next(markers),
+                markersize=2,
+                markerfacecolor="#ffffff",
+                markeredgecolor=None,
+                markeredgewidth=1,
+                color=col_next,
+                linewidth=1,
+            )
+            plt.fill_between(
+                means.index,
+                means - error,
+                means + error,
+                alpha=0.1,
+                step="post",
+                color=col_next,
+                edgecolor=None,
+                linewidth=1,
+            )
 
         #For plotting continuations
         if continuations:
@@ -183,12 +235,14 @@ def plot_results(  # noqa: C901, PLR0912, PLR0913, PLR0915
             seed_cont_df = seed_cont_df.ffill(axis=0)
             seed_cont_df = seed_cont_df.dropna(axis=0)
             means_cont = pd.Series(seed_cont_df.mean(axis=1), name=f"means_{instance}")
-            std_cont = pd.Series(seed_cont_df.std(axis=1), name=f"std_{instance}")
+            error_cont = pd.Series(seed_cont_df.std(axis=1), name=f"std_{instance}")
             optim_res_dict[instance]["cont_means"] = means_cont
-            optim_res_dict[instance]["cont_std"] = std_cont
+            optim_res_dict[instance]["cont_std"] = error_cont
             means_cont = means_cont.cummin() if to_minimize else means_cont.cummax()
             means_cont = means_cont.drop_duplicates()
-            std_cont = std_cont.loc[means_cont.index]
+            error_cont = error_cont.loc[means_cont.index]
+            means_cont[continuations_list[-1]] = means_cont.iloc[-1]
+            error_cont[continuations_list[-1]] = error_cont.iloc[-1]
             col_next = next(colors_mean)
 
             plt.step(
@@ -206,8 +260,8 @@ def plot_results(  # noqa: C901, PLR0912, PLR0913, PLR0915
             )
             plt.fill_between(
                 means_cont.index,
-                means_cont - std_cont,
-                means_cont + std_cont,
+                means_cont - error_cont,
+                means_cont + error_cont,
                 alpha=0.1,
                 step="post",
                 color=col_next,
@@ -254,6 +308,7 @@ def agg_data(  # noqa: C901, PLR0912, PLR0915
     logscale: bool = False,
     budget_type: Literal["TrialBudget", "FidelityBudget", None] = None,
     plot_file_name: str | None = None,
+    plot_continuations_only: bool = False,
 ) -> None:
     """Aggregate the data from the run directory for plotting."""
     objective: str | None = None
@@ -318,7 +373,7 @@ def agg_data(  # noqa: C901, PLR0912, PLR0915
             # Add default benchmark fidelity to a blackbox Optimizer to compare it
             # alongside MF optimizers if the latter exist in the study
             bench_num_fids = _df[BENCHMARK_COUNT_FIDS].iloc[0]
-            if fidelities is None and budget_type != "TrialBudget" and bench_num_fids >= 1:
+            if fidelities is None and bench_num_fids >= 1:
                 fid = next(
                     bench[1]["fidelities"]
                     for bench in all_benches
@@ -378,6 +433,7 @@ def agg_data(  # noqa: C901, PLR0912, PLR0915
                 report=df_agg,
                 objective=objective,
                 fidelity=fidelity,
+                budget_type=budget_type,
                 cost=cost,
                 to_minimize=minimize,
                 save_dir=save_dir,
@@ -386,6 +442,7 @@ def agg_data(  # noqa: C901, PLR0912, PLR0915
                 logscale=logscale,
                 error_bars=error_bars,
                 plot_file_name=plot_file_name,
+                plot_continuations_only=plot_continuations_only,
             )
             df_agg.clear()
 
@@ -561,6 +618,11 @@ if __name__ == "__main__":
         help="Name of the plot file to save",
         default=None
     )
+    parser.add_argument(
+        "--plot_continuations_only", "-cont",
+        action="store_true",
+        help="Only plot continuations budget"
+    )
     args = parser.parse_args()
 
     study_dir = args.output_dir / args.study_dir
@@ -576,5 +638,6 @@ if __name__ == "__main__":
         optimizer_spec=args.optimizer_spec,
         error_bars=args.error_bars,
         budget_type=args.budget_type,
-        plot_file_name=args.plot_file_name
+        plot_file_name=args.plot_file_name,
+        plot_continuations_only=args.plot_continuations_only,
     )

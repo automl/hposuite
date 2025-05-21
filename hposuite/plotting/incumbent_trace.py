@@ -104,13 +104,12 @@ def plot_results(  # noqa: C901, PLR0912, PLR0913, PLR0915
         "_",
     ]
     markers = cycle(marker_list)
-    colors = plt.rcParams["axes.prop_cycle"].by_key()["color"]  # type: ignore
-    colors_mean = cycle(colors)
     # Sort the instances dict
     report = dict(sorted(report.items()))
     optimizers = list(report.keys())
     plt.figure(figsize=figsize)
     optim_res_dict = {}
+    max_budget = 0
     for instance in optimizers:
         continuations = False
         logger.info(f"Plotting {instance}")
@@ -188,6 +187,8 @@ def plot_results(  # noqa: C901, PLR0912, PLR0913, PLR0915
             seed_cost_df = seed_cost_df.ffill(axis=0)
             seed_cost_df = seed_cost_df.dropna(axis=0)
             means = pd.Series(seed_cost_df.mean(axis=1), name=f"means_{instance}")
+            budget = means.index[-1]
+            max_budget = max(max_budget, budget)
             match error_bars:
                 case "std":
                     error = pd.Series(seed_cost_df.std(axis=1), name=f"std_{instance}")
@@ -200,10 +201,8 @@ def plot_results(  # noqa: C901, PLR0912, PLR0913, PLR0915
             means = means.cummin() if to_minimize else means.cummax()
             means = means.drop_duplicates()
             error = error.loc[means.index]
-            # if budget_type == "TrialBudget":
             means[budget] = means.iloc[-1]
             error[budget] = error.iloc[-1]
-            col_next = next(colors_mean)
 
             plt.step(
                 means.index,
@@ -211,11 +210,10 @@ def plot_results(  # noqa: C901, PLR0912, PLR0913, PLR0915
                 where="post",
                 label=instance,
                 marker=next(markers),
-                markersize=2,
+                markersize=5,
                 markerfacecolor="#ffffff",
                 markeredgecolor=None,
                 markeredgewidth=1,
-                color=col_next,
                 linewidth=1,
             )
             plt.fill_between(
@@ -224,7 +222,6 @@ def plot_results(  # noqa: C901, PLR0912, PLR0913, PLR0915
                 means + error,
                 alpha=0.1,
                 step="post",
-                color=col_next,
                 edgecolor=None,
                 linewidth=1,
             )
@@ -235,27 +232,25 @@ def plot_results(  # noqa: C901, PLR0912, PLR0913, PLR0915
             seed_cont_df = seed_cont_df.ffill(axis=0)
             seed_cont_df = seed_cont_df.dropna(axis=0)
             means_cont = pd.Series(seed_cont_df.mean(axis=1), name=f"means_{instance}")
+            cont_budget = means_cont.index[-1]
             error_cont = pd.Series(seed_cont_df.std(axis=1), name=f"std_{instance}")
             optim_res_dict[instance]["cont_means"] = means_cont
             optim_res_dict[instance]["cont_std"] = error_cont
             means_cont = means_cont.cummin() if to_minimize else means_cont.cummax()
             means_cont = means_cont.drop_duplicates()
             error_cont = error_cont.loc[means_cont.index]
-            means_cont[continuations_list[-1]] = means_cont.iloc[-1]
-            error_cont[continuations_list[-1]] = error_cont.iloc[-1]
-            col_next = next(colors_mean)
-
+            means_cont[cont_budget] = means_cont.iloc[-1]
+            error_cont[cont_budget] = error_cont.iloc[-1]
             plt.step(
                 means_cont.index,
                 means_cont,
                 where="post",
                 label=f"{instance}_w_continuations",
                 marker=next(markers),
-                markersize=2,
+                markersize=5,
                 markerfacecolor="#ffffff",
                 markeredgecolor=None,
                 markeredgewidth=1,
-                color=col_next,
                 linewidth=1,
             )
             plt.fill_between(
@@ -264,7 +259,6 @@ def plot_results(  # noqa: C901, PLR0912, PLR0913, PLR0915
                 means_cont + error_cont,
                 alpha=0.1,
                 step="post",
-                color=col_next,
                 edgecolor=None,
                 linewidth=1,
             )
@@ -274,7 +268,7 @@ def plot_results(  # noqa: C901, PLR0912, PLR0913, PLR0915
     plt.ylabel(f"{objective}")
     plot_suffix = (
         f"{benchmarks_name}, {objective=}, \n{fidelity=}, {cost=}, "
-        f"{budget_type}={budget}, {to_minimize=}, {error_bars=}"
+        f"{budget_type}={max_budget}, {to_minimize=}, {error_bars=}"
     )
     plt.title(f"Plot for optimizers on {plot_suffix}")
     if logscale:
@@ -288,7 +282,7 @@ def plot_results(  # noqa: C901, PLR0912, PLR0913, PLR0915
 
     plot_suffix = plot_suffix.replace("\n", "")
 
-    save_path = save_dir / f"{optimizers}.{plot_suffix}.png"
+    save_path = save_dir / f"{plot_suffix}.png"
     if plot_file_name:
         save_path = save_dir / f"{plot_file_name}.png"
         if save_path.exists():
@@ -597,7 +591,7 @@ if __name__ == "__main__":
         "--error_bars", "-err",
         type=str,
         choices=["std", "sem"],
-        default="std",
+        default="sem",
         help="Type of error bars to plot - "
         "std: Standard deviation, "
         "sem: Standard error of the mean"

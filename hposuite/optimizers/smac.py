@@ -18,6 +18,14 @@ from smac import (
     MultiFidelityFacade,
     Scenario,
 )
+from smac.acquisition.function import (
+    EI,
+    EIPS,
+    LCB,
+    PI,
+    TS,
+    PriorAcquisitionFunction,
+)
 from smac.runhistory import StatusType, TrialValue
 
 from hposuite.utils import set_priors_as_defaults
@@ -27,6 +35,16 @@ if TYPE_CHECKING:
     from hpoglue.fidelity import Fidelity
     from smac.facade import AbstractFacade
     from smac.runhistory import TrialInfo
+
+
+acq_funcs = {
+    "EI": EI,
+    "EIPS": EIPS,
+    "LCB": LCB,
+    "PI": PI,
+    "TS": TS,
+}
+
 
 bo_facades = {
     "AlgConf": AlgorithmConfigurationFacade,
@@ -156,12 +174,19 @@ class SMAC_BO(SMAC_Optimizer):
         problem: Problem,
         seed: int,
         working_directory: Path,
-        xi: float = 0.0,
         facade: Literal[
             "HPO",
             "BlackBox",
             "AlgConf",
         ] = "BlackBox",
+        acq_func: Literal[
+            "EI",
+            "EIPS",
+            "LCB",
+            "PI",
+            "TS",
+        ] = "EI",
+        acq_func_kwargs: dict[str, Any] | None = None,
     ):
         """Create a SMAC BO Optimizer instance for a given problem.
 
@@ -172,17 +197,26 @@ class SMAC_BO(SMAC_Optimizer):
 
             working_directory: Working directory to store SMAC run.
 
-            xi: Expected Improvement.
-            Controls the balance between exploration and exploitation of the acquisition function.
-            Defaults to 0.0.
-
             facade: The SMAC facade to use.
                 - "HPO": HyperparameterOptimizationFacade
                 - "BlackBox": BlackBoxFacade
                 - "AlgConf": AlgorithmConfigurationFacade
             Defaults to "BlackBox".
+
+            acq_func: The acquisition function to use.
+                - "EI": Expected Improvement
+                - "EIPS": Expected Improvement per Second
+                - "LCB": Lower Confidence Bound
+                - "PI": Probability of Improvement
+                - "TS": Thompson Sampling
+
+            acq_func_kwargs: Additional arguments for the acquisition function.
+                Defaults to None.
+                See SMAC documentation for details.
         """
         assert facade in bo_facades, f"Unknown facade for SMAC_BO: {facade}"
+        assert acq_func in acq_funcs, f"Unknown acquisition function for SMAC_BO: {acq_func}"
+
         config_space = problem.config_space
         match config_space:
             case ConfigurationSpace():
@@ -228,7 +262,13 @@ class SMAC_BO(SMAC_Optimizer):
             min_budget=None,
             max_budget=None,
         )
+
         facade: AbstractFacade = bo_facades[facade]
+
+        acquisition_func = acq_funcs[acq_func](
+            **acq_func_kwargs
+        )
+
         super().__init__(
             problem=problem,
             seed=seed,
@@ -239,7 +279,7 @@ class SMAC_BO(SMAC_Optimizer):
                 logging_level=False,
                 target_function=_dummy_target_function,
                 intensifier=facade.get_intensifier(scenario),
-                acquisition_function=facade.get_acquisition_function(scenario, xi=xi),
+                acquisition_function=acquisition_func,
                 overwrite=True,
             ),
         )
@@ -469,6 +509,14 @@ class SMAC_PiBO(SMAC_Optimizer):
             "BlackBox",
             "AlgConf",
         ] = "HPO",
+        acq_func: Literal[
+            "EI",
+            "EIPS",
+            "LCB",
+            "PI",
+            "TS",
+        ] = "EI",
+        acq_func_kwargs: dict[str, Any] | None = None,
     ):
         """Create a SMAC BO Optimizer instance for a given problem.
 
@@ -479,10 +527,6 @@ class SMAC_PiBO(SMAC_Optimizer):
 
             working_directory: Working directory to store SMAC run.
 
-            xi: Expected Improvement.
-            Controls the balance between exploration and exploitation of the acquisition function.
-            Defaults to 0.0.
-
             decay_beta: Parameter to control the decay of the prior strength
             in the acquisition function.
 
@@ -491,8 +535,20 @@ class SMAC_PiBO(SMAC_Optimizer):
                 - "BlackBox": BlackBoxFacade
                 - "AlgConf": AlgorithmConfigurationFacade
             Defaults to "HPO".
+
+            acq_func: The acquisition function to use.
+                - "EI": Expected Improvement
+                - "EIPS": Expected Improvement per Second
+                - "LCB": Lower Confidence Bound
+                - "PI": Probability of Improvement
+                - "TS": Thompson Sampling
+            acq_func_kwargs: Additional arguments for the acquisition function.
+                Defaults to None.
+                See SMAC documentation for details.
         """
         assert facade in bo_facades, f"Unknown facade for SMAC_PiBO: {facade}"
+        assert acq_func in acq_funcs, f"Unknown acquisition function for SMAC_PiBO: {acq_func}"
+
         config_space = problem.config_space
         match config_space:
             case ConfigurationSpace():
@@ -557,8 +613,13 @@ class SMAC_PiBO(SMAC_Optimizer):
             min_budget=None,
             max_budget=None,
         )
+
         facade: AbstractFacade = bo_facades[facade]
-        from smac.acquisition.function import PriorAcquisitionFunction
+
+        acquisition_func = acq_funcs[acq_func](
+            **acq_func_kwargs
+        )
+
         super().__init__(
             problem=problem,
             seed=seed,
@@ -570,7 +631,7 @@ class SMAC_PiBO(SMAC_Optimizer):
                 target_function=_dummy_target_function,
                 intensifier=facade.get_intensifier(scenario),
                 acquisition_function=PriorAcquisitionFunction(
-                    acquisition_function=facade.get_acquisition_function(scenario),
+                    acquisition_function=acquisition_func,
                     decay_beta=scenario.n_trials / decay_beta,
                 ),
                 overwrite=True,

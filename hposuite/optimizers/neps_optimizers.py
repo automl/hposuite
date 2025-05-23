@@ -155,7 +155,13 @@ class NepsOptimizer(Optimizer):
         """Tell the optimizer about the result of a trial."""
         match self.problem.objectives:
             case (name, metric):
-                _values = metric.as_minimize(result.values[name])
+                _values = result.values[name]
+                # Normalize objective value for NepsIFBO
+                if self.name == "NepsIFBO":
+                    bounds_min = metric.bounds[0]
+                    bounds_max = metric.bounds[1]
+                    _values = (_values - bounds_min) / (bounds_max - bounds_min)
+                _values = metric.as_minimize(_values)
             case Mapping():
                 _values = {
                     key: obj.as_minimize(result.values[key])
@@ -815,6 +821,79 @@ class NepsPiBO(NepsOptimizer):
             optimizer="pibo",
             initial_design_size=initial_design_size,
             sample_prior_first=sample_prior_first,
+        )
+
+
+class NepsIFBO(NepsOptimizer):
+    """In-context Freeze Thaw Bayesian Optimization in Neps."""
+    name = "NepsIFBO"
+
+    support = Problem.Support(
+        fidelities=("single",),
+        objectives=("single",),
+        cost_awareness=(None,),
+        tabular=False,
+    )
+
+    env = Env(
+        name="Neps-0.13.0",
+        python_version="3.10",
+        requirements=("neural-pipeline-search>=0.13.0",)
+    )
+
+    mem_req_mb = 1024
+
+    def __init__(
+        self,
+        *,
+        problem: Problem,
+        seed: int,
+        working_directory: str | Path,
+        initial_design_size: int | Literal["ndim"] = "ndim",
+        use_priors: bool = False,
+        step_size: int | float = 1,
+        surrogate_path: str | Path | None = None,
+        surrogate_version: str = "0.0.1",
+    ) -> None:
+        """Initialize the optimizer."""
+        space = configspace_to_pipeline_space(problem.config_space)
+
+        _fid = None
+        match problem.fidelities:
+            case None:
+                raise ValueError("NepsIFBO requires a fidelity.")
+            case Mapping():
+                raise NotImplementedError("Many-fidelity not yet implemented for NepsIFBO.")
+            case (fid_name, fidelity):
+                _fid = (fid_name, fidelity)
+            case _:
+                raise TypeError("Fidelity must be a tuple or a Mapping.")
+
+        match problem.objectives:
+            case tuple():
+                pass
+            case Mapping():
+                raise ValueError("NepsIFBO only supports single-objective problems.")
+            case _:
+                raise TypeError(
+                    "Objectives must be a tuple or a Mapping. \n"
+                    f"Got {type(problem.objectives)}."
+                )
+
+        set_seed(seed)
+
+        super().__init__(
+            problem=problem,
+            space=space,
+            seed=seed,
+            working_directory=working_directory,
+            optimizer="ifbo",
+            fidelities=_fid,
+            initial_design_size=initial_design_size,
+            use_priors=use_priors,
+            step_size=step_size,
+            surrogate_path=surrogate_path,
+            surrogate_version=surrogate_version,
         )
 
 

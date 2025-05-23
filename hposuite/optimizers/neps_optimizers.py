@@ -155,7 +155,13 @@ class NepsOptimizer(Optimizer):
         """Tell the optimizer about the result of a trial."""
         match self.problem.objectives:
             case (name, metric):
-                _values = metric.as_minimize(result.values[name])
+                _values = result.values[name]
+                # Normalize objective value for NepsIFBO
+                if self.name == "NepsIFBO":
+                    bounds_min = metric.bounds[0]
+                    bounds_max = metric.bounds[1]
+                    _values = (_values - bounds_min) / (bounds_max - bounds_min)
+                _values = metric.as_minimize(_values)
             case Mapping():
                 _values = {
                     key: obj.as_minimize(result.values[key])
@@ -850,7 +856,7 @@ class NepsIFBO(NepsOptimizer):
         surrogate_version: str = "0.0.1",
     ) -> None:
         """Initialize the optimizer."""
-        space = convert_configspace(problem.config_space)
+        space = configspace_to_pipeline_space(problem.config_space)
 
         _fid = None
         match problem.fidelities:

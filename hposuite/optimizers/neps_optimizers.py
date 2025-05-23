@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import logging
+import warnings
 from collections.abc import Mapping
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Literal
@@ -10,9 +11,11 @@ import numpy as np
 from hpoglue import Config, Optimizer, Problem, Query, Result
 from hpoglue.env import Env
 from neps import AskAndTell, algorithms
-from neps.space.parsing import convert_configspace
+
+from hposuite.utils import set_priors_as_defaults
 
 if TYPE_CHECKING:
+    from ConfigSpace import ConfigurationSpace
     from hpoglue.fidelity import Fidelity
 
 logger = logging.getLogger(__name__)
@@ -213,7 +216,6 @@ class NepsBO(NepsOptimizer):
         seed: int,
         working_directory: str | Path,
         initial_design_size: int | Literal["ndim"] = "ndim",
-        use_priors: bool = False,
     ) -> None:
         """Initialize the optimizer."""
         match problem.fidelities:
@@ -235,7 +237,7 @@ class NepsBO(NepsOptimizer):
                     f"Got {type(problem.objectives)}."
                 )
 
-        space = convert_configspace(problem.config_space)
+        space = configspace_to_pipeline_space(problem.config_space)
         set_seed(seed)
 
         super().__init__(
@@ -245,7 +247,6 @@ class NepsBO(NepsOptimizer):
             working_directory=working_directory,
             optimizer="bayesian_optimization",
             initial_design_size=initial_design_size,
-            use_priors=use_priors,
         )
 
 
@@ -277,10 +278,9 @@ class NepsRW(NepsOptimizer):
         working_directory: str | Path,
         scalarization_weights: Literal["equal", "random"] | Mapping[str, float] = "random",
         initial_design_size: int | Literal["ndim"] = "ndim",
-        use_priors: bool = False,
     ) -> None:
         """Initialize the optimizer."""
-        space = convert_configspace(problem.config_space)
+        space = configspace_to_pipeline_space(problem.config_space)
 
 
         match problem.fidelities:
@@ -313,7 +313,6 @@ class NepsRW(NepsOptimizer):
             random_weighted_opt=True,
             scalarization_weights=scalarization_weights,
             initial_design_size=initial_design_size,
-            use_priors=use_priors,
         )
 
 
@@ -346,7 +345,7 @@ class NepsSuccessiveHalving(NepsOptimizer):
         sampler: Literal["uniform", "prior"] = "uniform",
     ) -> None:
         """Initialize the optimizer."""
-        space = convert_configspace(problem.config_space)
+        space = configspace_to_pipeline_space(problem.config_space)
 
         _fid = None
         match problem.fidelities:
@@ -416,7 +415,7 @@ class NepsHyperband(NepsOptimizer):
         sampler: Literal["uniform", "prior"] = "uniform",
     ) -> None:
         """Initialize the optimizer."""
-        space = convert_configspace(problem.config_space)
+        space = configspace_to_pipeline_space(problem.config_space)
 
         _fid = None
         match problem.fidelities:
@@ -484,7 +483,7 @@ class NepsHyperbandRW(NepsOptimizer):
         sampler: Literal["uniform", "prior"] = "uniform",
     ) -> None:
         """Initialize the optimizer."""
-        space = convert_configspace(problem.config_space)
+        space = configspace_to_pipeline_space(problem.config_space)
 
         _fid = None
         match problem.fidelities:
@@ -555,7 +554,7 @@ class NepsASHA(NepsOptimizer):
         sampler: Literal["uniform", "prior"] = "uniform",
     ) -> None:
         """Initialize the optimizer."""
-        space = convert_configspace(problem.config_space)
+        space = configspace_to_pipeline_space(problem.config_space)
 
         _fid = None
         match problem.fidelities:
@@ -622,7 +621,7 @@ class NepsAsyncHB(NepsOptimizer):
         eta: int = 3,
     ) -> None:
         """Initialize the optimizer."""
-        space = convert_configspace(problem.config_space)
+        space = configspace_to_pipeline_space(problem.config_space)
 
         _fid = None
         match problem.fidelities:
@@ -691,7 +690,18 @@ class NepsPriorband(NepsOptimizer):
         base: Literal["successive_halving", "hyperband", "asha", "async_hb"] = "hyperband",
     ) -> None:
         """Initialize the optimizer."""
-        space = convert_configspace(problem.config_space)
+        assert len(problem.priors[1]) == 1, (
+            "NepsPriorband only supports single-objective priors. "
+        )
+        config_space = set_priors_as_defaults(
+            config_space=problem.config_space,
+            priors=next(iter(problem.priors[1].values())),
+            distribution="normal",
+        )
+        space = configspace_to_pipeline_space(
+            config_space,
+            use_priors=True,
+        )
 
         _fid = None
         match problem.fidelities:
@@ -742,6 +752,7 @@ class NepsPiBO(NepsOptimizer):
         objectives=("single",),
         cost_awareness=(None,),
         tabular=False,
+        priors=True,
     )
 
     env = Env(
@@ -762,7 +773,18 @@ class NepsPiBO(NepsOptimizer):
         sample_prior_first: bool = False,
     ) -> None:
         """Initialize the optimizer."""
-        space = convert_configspace(problem.config_space)
+        assert len(problem.priors[1]) == 1, (
+            "NepsPiBO only supports single-objective priors. "
+        )
+        config_space = set_priors_as_defaults(
+            config_space=problem.config_space,
+            priors=next(iter(problem.priors[1].values())),
+            distribution="normal",
+        )
+        space = configspace_to_pipeline_space(
+            config_space,
+            use_priors=True,
+        )
 
         match problem.fidelities:
             case None:
@@ -867,3 +889,116 @@ class NepsIFBO(NepsOptimizer):
             surrogate_path=surrogate_path,
             surrogate_version=surrogate_version,
         )
+
+
+def configspace_to_pipeline_space(  # noqa: C901
+    config_space: ConfigurationSpace,
+    *,
+    use_priors: bool = False,
+    std: float = 0.25,
+) -> neps.SearchSpace:
+    """Convert a ConfigurationSpace to a Neps SearchSpace.
+
+    Args:
+        config_space: The ConfigurationSpace to convert.
+        use_priors: Whether to use priors for the hyperparameters.
+            NePS only supports Normally distributed priors, therefore
+            if the hyperparameter is not Normally distributed and `use_priors` is True,
+            the default value of the hyperparameter is used as the mean to create a
+            Normally distributed prior.
+            If `use_priors` is False and the hyperparameter is Normally distributed,
+            `use_priors` is ignored and it is converted to a NePS hyperparameter with
+            its mean as the prior.
+        std: The standard deviation of the prior. Only used if `use_priors` is True and/or
+            the hyperparameter is Normally distributed.
+            Translated to the confidence of the prior in NePS as 1 - std.
+    """
+    from ConfigSpace.hyperparameters import (
+        BetaFloatHyperparameter,
+        BetaIntegerHyperparameter,
+        CategoricalHyperparameter,
+        Constant,
+        NormalFloatHyperparameter,
+        NormalIntegerHyperparameter,
+        OrdinalHyperparameter,
+        UniformFloatHyperparameter,
+        UniformIntegerHyperparameter,
+    )
+    from neps.space.parameters import Parameter
+    space: dict[str, Parameter | Constant] = {}
+    std_to_confidences: dict[float, str] = {
+        0.25: "high",
+        0.5: "medium",
+        0.75: "low",
+    }
+    if any(config_space.conditions) or any(config_space.forbidden_clauses):
+        raise NotImplementedError(
+            "The ConfigurationSpace has conditions or forbidden clauses, "
+            "which are not supported by neps."
+        )
+    for hp in list(config_space.values()):
+        match hp:
+            case NormalFloatHyperparameter():
+                if not use_priors:
+                    warnings.warn(
+                        "use priors=False but hyperparameter is a NormalFloatHyperparameter, "
+                        "which defaults to a Prior in NePS. Ignoring use_priors.",
+                        stacklevel=2,
+                    )
+                space[hp.name] = neps.Float(
+                    lower=hp.lower,
+                    upper=hp.upper,
+                    log=hp.log,
+                    prior=hp.mu,
+                    prior_confidence=std_to_confidences[hp.sigma],
+                )
+            case UniformFloatHyperparameter() | BetaFloatHyperparameter():
+                space[hp.name] = neps.Float(
+                    lower=hp.lower,
+                    upper=hp.upper,
+                    log=hp.log,
+                    prior=hp.default_value if use_priors else None,
+                    prior_confidence=std_to_confidences[std]
+                )
+            case NormalIntegerHyperparameter():
+                if not use_priors:
+                    warnings.warn(
+                        "use priors=False but hyperparameter is a NormalIntegerHyperparameter, "
+                        "which defaults to a Prior in NePS. Ignoring use_priors.",
+                        stacklevel=2,
+                    )
+                space[hp.name] = neps.Integer(
+                    lower=hp.lower,
+                    upper=hp.upper,
+                    log=hp.log,
+                    prior=hp.mu,
+                    prior_confidence=std_to_confidences[hp.sigma],
+                )
+            case UniformIntegerHyperparameter() | BetaIntegerHyperparameter():
+                space[hp.name] = neps.Integer(
+                    lower=hp.lower,
+                    upper=hp.upper,
+                    log=hp.log,
+                    prior=hp.default_value if use_priors else None,
+                    prior_confidence=std_to_confidences[std],
+                )
+            case CategoricalHyperparameter():
+                assert hp.weights is None, (
+                    "Weights on categoricals are not yet supported!"
+                )
+                space[hp.name] = neps.Categorical(
+                    choices=hp.choices,
+                    prior=hp.default_value if use_priors else None,
+                    prior_confidence=std_to_confidences[std]
+                )
+            case OrdinalHyperparameter():
+                space[hp.name] = neps.Categorical(
+                    choices=hp.sequence,
+                    prior=hp.default_value if use_priors else None,
+                    prior_confidence=std_to_confidences[std]
+                )
+            case Constant():
+                space[hp.name] = neps.Constant(
+                    value=hp.value,
+                )
+    return neps.SearchSpace(space)

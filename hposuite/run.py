@@ -580,6 +580,8 @@ class Run:
                     "query.id": _r.query.query_id,
                     "result.budget_cost": _r.budget_cost,
                     "result.budget_used_total": _r.budget_used_total,
+                    "result.continuations_budget_cost": _r.continuations_budget_cost,
+                    "result.continuations_budget_used_total": _r.continuations_budget_used_total,
                 }
                 match _r.query.fidelity:
                     case None:

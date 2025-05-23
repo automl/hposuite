@@ -11,9 +11,10 @@ import warnings
 from collections.abc import Mapping
 from itertools import product
 from pathlib import Path
-from typing import Any, TypeAlias
+from typing import Any, Literal, TypeAlias
 
-from hpoglue import BenchmarkDescription, FunctionalBenchmark, Optimizer, Problem
+from ConfigSpace import ConfigurationSpace
+from hpoglue import BenchmarkDescription, Config, FunctionalBenchmark, Optimizer, Problem
 from hpoglue.utils import dict_to_configpriors
 from packaging import version
 
@@ -439,3 +440,140 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     get_compatible(optimizers=args.optimizers, benchmarks=args.benchmarks)
+
+
+def set_priors_as_defaults(  # noqa: C901, PLR0912
+    config_space: ConfigurationSpace,
+    priors: Config,
+    seed: int = 0,
+    distribution: Literal["uniform", "normal", "beta"] = "uniform",
+    sigma: float = 0.25,
+    alpha: float = 2.0,
+    beta: float = 2.0,
+) -> ConfigurationSpace:
+    """Set priors as defaults in the configuration space."""
+    from ConfigSpace.hyperparameters import (
+        BetaFloatHyperparameter,
+        BetaIntegerHyperparameter,
+        CategoricalHyperparameter,
+        Constant,
+        FloatHyperparameter,
+        IntegerHyperparameter,
+        NormalFloatHyperparameter,
+        NormalIntegerHyperparameter,
+        OrdinalHyperparameter,
+        UniformFloatHyperparameter,
+        UniformIntegerHyperparameter,
+    )
+    priors = priors.values
+    assert len(priors) == len(list(config_space.values())), (
+        f"Number of hyperparameters in prior ({len(priors)}) "
+        f"must match number of hyperparameters in config space ({len(config_space.values())})."
+    )
+    cs = ConfigurationSpace(seed=seed)
+    for hp in list(config_space.values()):
+        assert hp.name in priors
+        match hp:
+            case FloatHyperparameter():
+                match distribution:
+                    case "uniform":
+                        cs.add(
+                            UniformFloatHyperparameter(
+                                name=hp.name,
+                                lower=hp.lower,
+                                upper=hp.upper,
+                                default_value=priors[hp.name],
+                                log=hp.log
+                            )
+                        )
+                    case "normal":
+                        cs.add(
+                            NormalFloatHyperparameter(
+                                name=hp.name,
+                                mu=priors[hp.name],
+                                sigma=sigma,
+                                lower=hp.lower,
+                                upper=hp.upper,
+                                default_value=priors[hp.name],
+                                log=hp.log
+                            )
+                        )
+                    case "beta":
+                        cs.add(
+                            BetaFloatHyperparameter(
+                                name=hp.name,
+                                alpha=alpha,
+                                beta=beta,
+                                lower=hp.lower,
+                                upper=hp.upper,
+                                default_value=priors[hp.name],
+                                log=hp.log
+                            )
+                        )
+                    case _:
+                        raise ValueError(
+                            f"Unknown distribution type {distribution} for {hp.name}."
+                        )
+            case IntegerHyperparameter():
+                match distribution:
+                    case "uniform":
+                        cs.add(
+                            UniformIntegerHyperparameter(
+                                name=hp.name,
+                                lower=hp.lower,
+                                upper=hp.upper,
+                                default_value=priors[hp.name],
+                                log=hp.log
+                            )
+                        )
+                    case "normal":
+                        cs.add(
+                            NormalIntegerHyperparameter(
+                                name=hp.name,
+                                mu=priors[hp.name],
+                                sigma=sigma,
+                                lower=hp.lower,
+                                upper=hp.upper,
+                                default_value=priors[hp.name],
+                                log=hp.log
+                            )
+                        )
+                    case "beta":
+                        cs.add(
+                            BetaIntegerHyperparameter(
+                                name=hp.name,
+                                alpha=alpha,
+                                beta=beta,
+                                lower=hp.lower,
+                                upper=hp.upper,
+                                default_value=priors[hp.name],
+                                log=hp.log
+                            )
+                        )
+                    case _:
+                        raise ValueError(
+                            f"Unknown distribution type {distribution} for {hp.name}."
+                        )
+            case CategoricalHyperparameter():
+                cs.add(
+                    CategoricalHyperparameter(
+                        name=hp.name,
+                        choices=hp.choices,
+                        default_value=priors[hp.name]
+                    )
+                )
+            case OrdinalHyperparameter():
+                cs.add(
+                    OrdinalHyperparameter(
+                        name=hp.name,
+                        sequence=hp.sequence,
+                        default_value=priors[hp.name]
+                    )
+                )
+            case Constant():
+                cs.add(hp)
+            case _:
+                raise ValueError(
+                    f"Unknown hyperparameter type {type(hp).__name__} in config space."
+                )
+    return cs

@@ -152,6 +152,7 @@ For a more detailed overview, check [here](https://github.com/automl/hposuite/bl
 |-----------------------------------------------------------------------|----------|---------------------|----------------------|---------------|
 | RandomSearch                                                          | ✓        |                     | ✓                    |               |
 | RandomSearch with priors                                              | ✓        |                     | ✓                    | ✓             |
+| [NePS][https://github.com/automl/neps]                                | ✓        | ✓                   | ✓                    | ✓             |
 | [SMAC](https://github.com/automl/SMAC3)                               | ✓        | ✓                   | ✓                    |               |
 | [DEHB](https://github.com/automl/DEHB)                                |          | ✓                   |                      |               |
 | [HEBO](https://github.com/huawei-noah/HEBO)                           | ✓        |                     |                      |               |

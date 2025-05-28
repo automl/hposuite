@@ -28,6 +28,7 @@ class Ex_Multifidelity_Opt(Optimizer):
         objectives=("single", "many"),
         cost_awareness=(None,),
         tabular=False,
+        continuations=True,
     )
     mem_req_mb = 1024
 

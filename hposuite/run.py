@@ -232,13 +232,14 @@ class Run:
                 case False, False:
                     pass
                 case True, False:
-                    if "single" not in self.optimizer.support.fidelities:
+                    if (
+                        "single" not in self.optimizer.support.fidelities
+                        or not self.optimizer.support.continuations
+                    ):
                         logger.warning(
                             f"Continuations are not supported for the optimizer: {self.optimizer}."
-                            " Ignoring continuations=True."
+                            " Ignoring continuations=True. in Study.optimize()"
                         )
-                    else:
-                        self.problem.continuations = True
                 case False, True:
                     self.problem.continuations = False
                 case _:

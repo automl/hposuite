@@ -332,6 +332,7 @@ class NepsSuccessiveHalving(NepsOptimizer):
         objectives=("single"),
         cost_awareness=(None,),
         tabular=False,
+        continuations=True,
     )
 
     env = Env(
@@ -401,6 +402,7 @@ class NepsHyperband(NepsOptimizer):
         objectives=("single"),
         cost_awareness=(None,),
         tabular=False,
+        continuations=True,
     )
 
     env = Env(
@@ -468,6 +470,7 @@ class NepsHyperbandRW(NepsOptimizer):
         objectives=("many"),
         cost_awareness=(None,),
         tabular=False,
+        continuations=True,
     )
 
     env = Env(
@@ -540,6 +543,7 @@ class NepsASHA(NepsOptimizer):
         objectives=("single"),
         cost_awareness=(None,),
         tabular=False,
+        continuations=True,
     )
 
     env = Env(
@@ -608,6 +612,7 @@ class NepsAsyncHB(NepsOptimizer):
         objectives=("single"),
         cost_awareness=(None,),
         tabular=False,
+        continuations=True,
     )
 
     env = Env(
@@ -833,6 +838,7 @@ class NepsIFBO(NepsOptimizer):
         objectives=("single",),
         cost_awareness=(None,),
         tabular=False,
+        continuations=True,
     )
 
     env = Env(

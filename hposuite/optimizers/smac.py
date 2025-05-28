@@ -294,6 +294,7 @@ class SMAC_Hyperband(SMAC_Optimizer):
         objectives=("single", "many"),
         cost_awareness=(None,),
         tabular=False,
+        continuations=True,
     )
     mem_req_mb = 1024
 
@@ -392,6 +393,7 @@ class SMAC_BOHB(SMAC_Optimizer):
         objectives=("single", "many"),
         cost_awareness=(None,),
         tabular=False,
+        continuations=True,
     )
     mem_req_mb = 1024
 

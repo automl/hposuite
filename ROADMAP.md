@@ -1,11 +1,6 @@
-# Current version: `0.1.1`
+# Current version: `0.1.2`
 
 # Upcoming versions
-
-## Version 0.1.2
-
-* Utility function for checking compatible Optimizer-Benchmark pairs without running
-* Have the option for `all` in `hposuite.create_study()` to run an Optimizer on all available benchmarks and vice-versa
 
 ## Version 0.1.3
 
@@ -24,14 +19,18 @@
 
 * Add some basic tests
 
-## Version 0.1.6
-
-* Add Neps Optimizers after Neps Ask-Tell is released
-
 ---
 ---
 
 # Old releases
+
+## Version 0.1.2
+
+* Utility function for checking compatible Optimizer-Benchmark pairs without running
+* Have the option for `all` in `hposuite.create_study()` to run an Optimizer on all available benchmarks and vice-versa
+* Add optimizers from NePS
+* Bugfixes and style changes in `incumbent_trace.py`
+* Adapt to changes in `hpoglue._run` pertaining to continuations
 
 ## Version 0.1.1
 

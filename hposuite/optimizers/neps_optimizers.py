@@ -903,6 +903,144 @@ class NepsIFBO(NepsOptimizer):
         )
 
 
+class NepsMOASHA(NepsOptimizer):
+    """NepsMOASHA."""
+
+    name = "NepsMOASHA"
+
+    support = Problem.Support(
+        fidelities=("single",),
+        objectives=("many"),
+        cost_awareness=(None,),
+        tabular=False,
+        continuations=True,
+    )
+
+    env = Env(
+        name="Neps-0.13.0",
+        python_version="3.10",
+        requirements=("neural-pipeline-search==0.13.0",)
+    )
+
+    mem_req_mb = 1024
+
+    def __init__(
+        self,
+        problem: Problem,
+        seed: int,
+        working_directory: str | Path,
+        mo_selector: Literal["nsga2", "epsnet"] = "epsnet",
+        sampler: Literal["uniform", "prior"] = "uniform",
+        eta: int = 3,
+    ) -> None:
+        """Initialize the optimizer."""
+        space = configspace_to_pipeline_space(problem.config_space)
+
+        _fid = None
+        match problem.fidelities:
+            case None:
+                raise ValueError("NepsMOASHA requires a fidelity.")
+            case Mapping():
+                raise NotImplementedError("Many-fidelity not yet implemented for NepsMOASHA.")
+            case (fid_name, fidelity):
+                _fid = (fid_name, fidelity)
+            case _:
+                raise TypeError("Fidelity must be a tuple or a Mapping.")
+
+        match problem.objectives:
+            case tuple():
+                raise ValueError("NepsMOASHA only supports multi-objective problems.")
+            case Mapping():
+                pass
+            case _:
+                raise TypeError(
+                    "Objectives must be a tuple or a Mapping. \n"
+                    f"Got {type(problem.objectives)}."
+                )
+        set_seed(seed)
+
+        super().__init__(
+            problem=problem,
+            space=space,
+            optimizer="moasha",
+            seed=seed,
+            working_directory=working_directory,
+            fidelities=_fid,
+            mo_selector=mo_selector,
+            sampler=sampler,
+            eta=eta,
+        )
+
+
+class NepsMOHyperband(NepsOptimizer):
+    """NepsMOHyperband."""
+
+    name = "NepsMOHyperband"
+
+    support = Problem.Support(
+        fidelities=("single",),
+        objectives=("many"),
+        cost_awareness=(None,),
+        tabular=False,
+        continuations=True,
+    )
+
+    env = Env(
+        name="Neps-0.13.0",
+        python_version="3.10",
+        requirements=("neural-pipeline-search==0.13.0",)
+    )
+
+    mem_req_mb = 1024
+
+    def __init__(
+        self,
+        problem: Problem,
+        seed: int,
+        working_directory: str | Path,
+        mo_selector: Literal["nsga2", "epsnet"] = "epsnet",
+        sampler: Literal["uniform", "prior"] = "uniform",
+        eta: int = 3,
+    ) -> None:
+        """Initialize the optimizer."""
+        space = configspace_to_pipeline_space(problem.config_space)
+
+        _fid = None
+        match problem.fidelities:
+            case None:
+                raise ValueError("NepsMOHyperband requires a fidelity.")
+            case Mapping():
+                raise NotImplementedError("Many-fidelity not yet implemented for NepsMOHyperband.")
+            case (fid_name, fidelity):
+                _fid = (fid_name, fidelity)
+            case _:
+                raise TypeError("Fidelity must be a tuple or a Mapping.")
+
+        match problem.objectives:
+            case tuple():
+                raise ValueError("NepsMOHyperband only supports multi-objective problems.")
+            case Mapping():
+                pass
+            case _:
+                raise TypeError(
+                    "Objectives must be a tuple or a Mapping. \n"
+                    f"Got {type(problem.objectives)}."
+                )
+        set_seed(seed)
+
+        super().__init__(
+            problem=problem,
+            space=space,
+            optimizer="mo_hyperband",
+            seed=seed,
+            working_directory=working_directory,
+            fidelities=_fid,
+            mo_selector=mo_selector,
+            sampler=sampler,
+            eta=eta,
+        )
+
+
 def configspace_to_pipeline_space(  # noqa: C901
     config_space: ConfigurationSpace,
     *,

@@ -32,6 +32,8 @@ modules = [
         "NepsPriorband",
         "NepsPiBO",
         "NepsIFBO",
+        "NepsMOASHA",
+        "NepsMOHyperband",
     ),
 ]
 

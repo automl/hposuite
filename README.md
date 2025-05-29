@@ -180,3 +180,17 @@ For a more detailed overview, check [here](https://github.com/automl/hposuite/bl
 | [IOH](https://iohprofiler.github.io/) ([BBOB](https://numbbo.github.io/coco/testsuites/bbob))                | Synthetic  |    |    |
 | BBOB Tabular                                 | Tabular    |    |    |
 
+
+## Citation
+
+If you use `hposuite` for your research, please cite it as below:
+
+```bibtex
+@software{Basu_hposuite_2024,
+  author = {Basu, Soham and Mallik, Neeratyoy and Bergman, Eddie and Hutter, Frank},
+  title = {hposuite},
+  year = {2025},
+  url = {https://github.com/automl/hposuite},
+  version = {0.1.2}
+}
+```

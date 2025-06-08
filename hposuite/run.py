@@ -168,6 +168,7 @@ class Run:
         self,
         *,
         continuations: bool = True,
+        use_continuations_as_budget: bool = False,
         on_error: Literal["raise", "continue"] = "raise",
         overwrite: Run.State | str | Sequence[Run.State | str] | bool = False,
         progress_bar: bool = False,
@@ -186,14 +187,15 @@ class Run:
             overwrite: What to overwrite.
 
                 * If a single value, overwrites problem in that state,
-                * If a list of states, overwrites any problem in one of those
-                 states.
+                * If a list of states, overwrites any problem in one of those states.
                 * If `True`, overwrite problems in all states.
                 * If `False`, don't overwrite any problems.
 
             progress_bar: Whether to show a progress bar.
 
             continuations: Whether to use continuations for the run.
+
+            use_continuations_as_budget: Whether to use continuations as the budget for the run.
 
             auto_env_handling: Whether to automatically use the created environment for this run.
         """
@@ -223,6 +225,7 @@ class Run:
                 f"{self.df_path}. Set `overwrite=[{state}]` to rerun problems in this state"
             )
         """
+        logger.info(f"Collecting {self.name} in state {state}")
         self.set_state(Run.State.PENDING)
         _hist: list[Result] = []
         try:
@@ -252,6 +255,7 @@ class Run:
                 run_name=self.name,
                 on_error="raise",
                 progress_bar=progress_bar,
+                use_continuations_as_budget=use_continuations_as_budget,
             )
         except Exception as e:
             self.set_state(Run.State.CRASHED, err_tb=(e, traceback.format_exc()))

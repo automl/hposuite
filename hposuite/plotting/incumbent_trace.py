@@ -111,6 +111,12 @@ def plot_results(  # noqa: C901, PLR0912, PLR0913, PLR0915
     plt.figure(figsize=figsize)
     optim_res_dict = {}
     max_budget = 0
+    total_study_budget = 0
+    # Note (soham): max_budget and total_study_budget are different when MF optimizers are used.
+    # max_budget is the maximum budget used by any optimizer, while total_study_budget is the
+    # total budget allocated for the study. max_budget would be greater than total_study_budget
+    # when MF optimizers are used with continuations.
+
     for instance in optimizers:
         continuations = False
         logger.info(f"Plotting {instance}")
@@ -120,6 +126,7 @@ def plot_results(  # noqa: C901, PLR0912, PLR0913, PLR0915
         is_fid_opt = False
         for seed in report[instance]:
             results = report[instance][seed]["results"]
+            total_study_budget = results[BUDGET_TOTAL_COL].iloc[0]
             cost_list: pd.Series = results[SINGLE_OBJ_COL].values.astype(np.float64)
 
             if (
@@ -149,7 +156,7 @@ def plot_results(  # noqa: C901, PLR0912, PLR0913, PLR0915
                         )
                     budget = budget_list[-1]
                 case "TrialBudget":
-                    budget = results[BUDGET_TOTAL_COL].iloc[0]
+                    budget = total_study_budget
                     budget_list = results[BUDGET_USED_COL].values.astype(np.float64)
                     if continuations:
                         continuations_list = (
@@ -159,6 +166,8 @@ def plot_results(  # noqa: C901, PLR0912, PLR0913, PLR0915
 
                 case _:
                     raise NotImplementedError(f"Budget type {budget_type} not implemented")
+
+            max_budget = max(max_budget, budget)
 
             seed_cost_dict[seed] = pd.Series(cost_list, index=budget_list)
             if is_fid_opt and budget_type == "TrialBudget":
@@ -175,21 +184,27 @@ def plot_results(  # noqa: C901, PLR0912, PLR0913, PLR0915
                         math.ceil(continuations_list[-1]),
                     )
                 if results[BUDGET_USED_COL].iloc[-1] > results[BUDGET_TOTAL_COL].iloc[0]:
-                    warnings.warn(
+                    logger.warning(
                         "This Optimizer was run until Continuations budget was exhausted. "
                         "Plot of the Optimizer's incumbent without continuations would exceed"
-                        f" the total budget {results[BUDGET_TOTAL_COL]} in the x axis",
+                        f" the total budget {total_study_budget} in the x axis for "
+                        "FidelityBudget. For TrialBudget, the plot is clipped to the "
+                        "total budget.",
                         stacklevel=2,
                     )
 
-        if not plot_continuations_only:
+        plot_wo_continuations = True
 
+        if plot_continuations_only and continuations:
+            plot_wo_continuations = False
+            logger.info(f"Plotting continuations for {instance}")
+
+        if plot_wo_continuations:
             seed_cost_df = pd.DataFrame(seed_cost_dict)
             seed_cost_df = seed_cost_df.ffill(axis=0)
             seed_cost_df = seed_cost_df.dropna(axis=0)
             means = pd.Series(seed_cost_df.mean(axis=1), name=f"means_{instance}")
             budget = means.index[-1]
-            max_budget = max(max_budget, budget)
             match error_bars:
                 case "std":
                     error = pd.Series(seed_cost_df.std(axis=1), name=f"std_{instance}")
@@ -381,7 +396,7 @@ def agg_data(  # noqa: C901, PLR0912, PLR0915
                     if bench[0] == benchmark_name
                 )
                 if fid == _df[BENCHMARK_FIDELITY_NAME].iloc[0]:
-                # Study config is saved in such a way that if Blackbox Optimizers
+                # Note (soham): Study config is saved in such a way that if Blackbox Optimizers
                 # are used along with MF optimizers on MF benchmarks, the "fidelities"
                 # key in the benchmark instance in the study config is set to the fidelity
                 # being used by the MF optimizers. In that case, there is no benchmark

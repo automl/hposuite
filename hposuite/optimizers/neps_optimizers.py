@@ -1052,6 +1052,7 @@ class NepsMFBO(NepsOptimizer):
         cost_awareness=(None,),
         tabular=False,
         priors=True,
+        continuations=True,
     )
 
     env = Env(
@@ -1072,6 +1073,8 @@ class NepsMFBO(NepsOptimizer):
         sampler: Literal["uniform", "prior", "priorband"] = "uniform",
         sample_prior_first: bool = False,
         eta: int = 3,
+        base: Literal["successive_halving", "hyperband", "asha", "async_hb"] = "asha",
+        early_stopping_rate: int | None = None,
     ) -> None:
         """Initialize the optimizer."""
         assert len(problem.priors[1]) == 1, (
@@ -1125,6 +1128,8 @@ class NepsMFBO(NepsOptimizer):
             sampler=sampler,
             use_priors=True,
             sample_prior_first=sample_prior_first,
+            base=base,
+            early_stopping_rate=early_stopping_rate,
         )
 
 

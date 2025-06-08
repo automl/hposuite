@@ -12,7 +12,7 @@ def _study_from_yaml_config(yaml_config: Path) -> Study:
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument(
-        "--study_name", "-sn",
+        "--study_name", "-name",
         type=str,
         help="Study name",
     )
@@ -53,7 +53,7 @@ if __name__ == "__main__":
         "Only used if seeds is not provided",
     )
     parser.add_argument(
-        "--budget", "-bgt",
+        "--budget", "-bud",
         type=int,
         default=50,
         help="Budget to use",
@@ -64,9 +64,9 @@ if __name__ == "__main__":
         help="Overwrite existing results",
     )
     parser.add_argument(
-        "--continuations", "-c",
-        action="store_false",
-        help="Use continuations",
+        "--no_continuations", "-no_cont",
+        action="store_true",
+        help="Do not use continuations",
     )
     parser.add_argument(
         "--exec_type", "-x",
@@ -91,9 +91,14 @@ if __name__ == "__main__":
         help="Action to take on error",
     )
     parser.add_argument(
-        "--auto_env_handling", "-ae",
+        "--auto_env_handling", "-auto_env",
         action="store_true",
         help="Automatically create and use isolated run environments",
+    )
+    parser.add_argument(
+        "--use_continuations_as_budget", "-cont_budget",
+        action="store_true",
+        help="Use continuations cost as the budget"
     )
     args = parser.parse_args()
 
@@ -112,9 +117,10 @@ if __name__ == "__main__":
             on_error=args.on_error,
         )
     study.optimize(
-        continuations=args.continuations,
+        continuations=not args.no_continuations,
         overwrite=args.overwrite,
         exec_type=args.exec_type,
         auto_env_handling=args.auto_env_handling,
+        use_continuations_as_budget=args.use_continuations_as_budget,
     )
 

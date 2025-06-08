@@ -74,6 +74,7 @@ def plot_results(  # noqa: C901, PLR0912, PLR0913, PLR0915
     save_dir: Path,
     benchmarks_name: str,
     fidelity: str | None = None,
+    priors: str | None = None,
     budget_type: Literal["TrialBudget", "FidelityBudget", None] = None,
     regret_bound: float | None = None,  # noqa: ARG001
     figsize: tuple[int, int] = (20, 10),
@@ -268,7 +269,7 @@ def plot_results(  # noqa: C901, PLR0912, PLR0913, PLR0915
     plt.ylabel(f"{objective}")
     plot_suffix = (
         f"{benchmarks_name}, {objective=}, \n{fidelity=}, {cost=}, "
-        f"{budget_type}={max_budget}, {to_minimize=}, {error_bars=}"
+        f"{budget_type}={max_budget}, {to_minimize=}, {error_bars=}, {priors=}"
     )
     plt.title(f"Plot for optimizers on {plot_suffix}")
     if logscale:
@@ -280,7 +281,7 @@ def plot_results(  # noqa: C901, PLR0912, PLR0913, PLR0915
 
     optimizers = ",".join(optimizers)
 
-    plot_suffix = plot_suffix.replace("\n", "")
+    plot_suffix = plot_suffix.replace("\n", "").replace(", ", ".").replace("'", "")
 
     save_path = save_dir / f"{plot_suffix}.png"
     if plot_file_name:
@@ -363,6 +364,12 @@ def agg_data(  # noqa: C901, PLR0912, PLR0915
             fidelities = run_config["problem"]["fidelities"]
             if fidelities and not isinstance(fidelities, str) and len(fidelities) > 1:
                 raise NotImplementedError("Plotting not yet implemented for many-fidelity runs.")
+            priors = run_config["problem"]["priors"]
+            assert len(priors[1]) == 1, (
+                "Multi-objective or multiple priors are not supported in hposuite yet. "
+                "Please use one single-objective prior."
+            )
+            priors = priors[0]
 
             # Add default benchmark fidelity to a blackbox Optimizer to compare it
             # alongside MF optimizers if the latter exist in the study
@@ -396,7 +403,7 @@ def agg_data(  # noqa: C901, PLR0912, PLR0915
                 )
             seed = int(run_config["seed"])
             all_plots_dict = benchmarks_dict.setdefault(benchmark, {})
-            conf_tuple = (objectives, fidelities, costs)
+            conf_tuple = (objectives, fidelities, costs, priors)
             if conf_tuple not in all_plots_dict:
                 all_plots_dict[conf_tuple] = [_df]
             else:
@@ -409,6 +416,7 @@ def agg_data(  # noqa: C901, PLR0912, PLR0915
             objective = conf_tuple[0]
             fidelity = conf_tuple[1]
             cost = conf_tuple[2]
+            priors = conf_tuple[3]
             for _df in _all_dfs:
                 if _df.empty:
                     continue
@@ -429,6 +437,7 @@ def agg_data(  # noqa: C901, PLR0912, PLR0915
                 fidelity=fidelity,
                 budget_type=budget_type,
                 cost=cost,
+                priors=priors,
                 to_minimize=minimize,
                 save_dir=save_dir,
                 benchmarks_name=benchmark.split("benchmark=")[-1].split(".")[0],

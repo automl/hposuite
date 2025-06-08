@@ -743,6 +743,7 @@ class Study:
         add_num_seeds: int | None = None,
         overwrite: bool = False,
         continuations: bool = True,
+        use_continuations_as_budget: bool = False,
         auto_env_handling: bool = False,
     ) -> None:
         """Execute multiple atomic runs using a list of Optimizers and a list of Benchmarks.
@@ -765,6 +766,10 @@ class Study:
 
             continuations: Whether to calculate continuations cost.
                 Note: Only works for Multi-fidelity Optimizers.
+
+            use_continuations_as_budget: Whether to use continuations cost as a
+            total budget for the optimization.
+            This is only applicable for Multi-fidelity Optimizers.
 
             on_error: The method to handle errors.
                     * "warn": Log a warning and continue.
@@ -829,7 +834,8 @@ class Study:
                         run.run(
                             continuations=continuations,
                             overwrite=overwrite,
-                            progress_bar=False
+                            progress_bar=False,
+                            use_continuations_as_budget=use_continuations_as_budget,
                         )
                 case "parallel":
                     raise NotImplementedError("Parallel execution not implemented yet!")
@@ -844,6 +850,7 @@ class Study:
                 continuations=continuations,
                 overwrite=overwrite,
                 progress_bar=False,
+                use_continuations_as_budget=use_continuations_as_budget,
             )
         logger.info(f"Completed study with {len(self.experiments)} runs")
 

@@ -67,19 +67,23 @@ def _get_surrogate_benchmark(
 ) -> SurrogateBenchmark:
     import mfpbench
 
-    if datadir is not None:
-        datadir = datadir.resolve()
-        if benchmark_name in pd1_benchmarks:
-            if "pd1" in os.listdir(datadir):
-                datadir = datadir / "pd1"
-            else:
-                raise ValueError(
-                    f"Could not find pd1-{benchmark_name} Benchmark data in {datadir}. "
-                    "Download the benchmark data using the command: \n"
-                    f'python -m mfpbench download --benchmark "pd1" --data-dir {datadir}'
-                )
-        kwargs["datadir"] = datadir
-    bench = mfpbench.get(benchmark_name, **kwargs)
+    from hposuite.utils import HiddenPrints
+
+    with HiddenPrints():
+
+        if datadir is not None:
+            datadir = datadir.resolve()
+            if benchmark_name in pd1_benchmarks:
+                if "pd1" in os.listdir(datadir):
+                    datadir = datadir / "pd1"
+                else:
+                    raise ValueError(
+                        f"Could not find pd1-{benchmark_name} Benchmark data in {datadir}. "
+                        "Download the benchmark data using the command: \n"
+                        f'python -m mfpbench download --benchmark "pd1" --data-dir {datadir}'
+                    )
+            kwargs["datadir"] = datadir
+        bench = mfpbench.get(benchmark_name, **kwargs)
     query_function = partial(_mfpbench_surrogate_query_function, benchmark=bench)
     return SurrogateBenchmark(
         desc=description,
@@ -103,6 +107,110 @@ def _mfpbench_surrogate_query_function(query: Query, benchmark: mfpbench.Benchma
         ).as_dict(),
         fidelity=query.fidelity,
     )
+
+_lcbench_task_ids = (
+    "3945",
+    "7593",
+    "34539",
+    "126025",
+    "126026",
+    "126029",
+    "146212",
+    "167104",
+    "167149",
+    "167152",
+    "167161",
+    "167168",
+    "167181",
+    "167184",
+    "167185",
+    "167190",
+    "167200",
+    "167201",
+    "168329",
+    "168330",
+    "168331",
+    "168335",
+    "168868",
+    "168908",
+    "168910",
+    "189354",
+    "189862",
+    "189865",
+    "189866",
+    "189873",
+    "189905",
+    "189906",
+    "189908",
+    "189909",
+)
+
+
+def lcbench_surrogate(datadir: Path | None = None) -> Iterator[BenchmarkDescription]:
+    """Generates benchmark descriptions for the LCBench surrogate Benchmark.
+
+    Args:
+        datadir (Path | None): The directory where the data is stored.
+        If None, the default directory is used.
+
+    Yields:
+        Iterator[BenchmarkDescription]: An iterator over BenchmarkDescription objects
+        for each task in the LCBench surrogate Benchmark.
+    """
+    if datadir is not None and "yahpo" in os.listdir(datadir):
+        datadir = datadir / "yahpo"
+    import mfpbench
+
+    from hposuite.utils import HiddenPrints
+
+    env = Env(
+        name="py310-mfpbench-1.10-yahpo",
+        requirements=(
+            "mf-prior-bench==1.10.0",
+            "xgboost>=1.7"
+        ),
+        post_install=_download_data_cmd("yahpo", datadir=datadir),
+    )
+    for req in env.requirements:
+        if not is_package_installed(req):
+            mfp_logger.error(
+                f"Please install the required package for yahpo-lcbench: {req}",
+                stacklevel=2
+            )
+            return
+    with HiddenPrints():        # NOTE: To stop yahpo-lcbench from printing garbage
+        for task_id in _lcbench_task_ids:
+            yield BenchmarkDescription(
+                name=f"yahpo-lcbench-{task_id}",
+                config_space=mfpbench.get(
+                    "lcbench",
+                    task_id=task_id,
+                    datadir=datadir,
+                ).space,
+                load=partial(
+                    _get_surrogate_benchmark,
+                    benchmark_name="lcbench",
+                    datadir=datadir,
+                    task_id=task_id
+                ),
+                metrics={
+                    "val_accuracy": Measure.metric((0.0, 100.0), minimize=False),
+                    "val_cross_entropy": Measure.metric((0, np.inf), minimize=True),
+                    "val_balanced_accuracy": Measure.metric((0, 1), minimize=False),
+                },
+                test_metrics={
+                    "test_balanced_accuracy": Measure.test_metric((0, 1), minimize=False),
+                    "test_cross_entropy": Measure.test_metric(bounds=(0, np.inf), minimize=True),
+                },
+                costs={
+                    "time": Measure.cost((0, np.inf), minimize=True),
+                },
+                fidelities={
+                    "epoch": RangeFidelity.from_tuple((1, 52, 1), supports_continuation=True),
+                },
+                env=env,
+                mem_req_mb=4096,
+            )
 
 
 def mfh() -> Iterator[BenchmarkDescription]:
@@ -260,3 +368,4 @@ def mfpbench_benchmarks(datadir: Path | None = None) -> Iterator[BenchmarkDescri
 
     yield from mfh()
     yield from pd1(datadir)
+    yield from lcbench_surrogate(datadir)

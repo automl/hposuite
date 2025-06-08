@@ -19,3 +19,4 @@ typings
 test_config.yaml
 example-outputs/
 dist
+.model/

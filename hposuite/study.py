@@ -725,7 +725,7 @@ class Study:
             with (exp_dir / f"dump_{key}.txt").open("w") as f:
                 for run in runs:
                     f.write(
-                        f"python -m hpoglue"
+                        f"python -m hposuite"
                         f" --optimizers {run.optimizer.name}"
                         f" --benchmarks {run.benchmark.name}"
                         f" --seeds {run.seed}"

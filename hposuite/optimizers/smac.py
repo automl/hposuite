@@ -4,14 +4,31 @@ from __future__ import annotations
 
 from collections.abc import Hashable, Mapping
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, NoReturn
+from typing import TYPE_CHECKING, Any, Literal, NoReturn
 
 from ConfigSpace import ConfigurationSpace
 from hpoglue import Config, Optimizer, Problem, Query
 from hpoglue.budget import CostBudget, TrialBudget
 from hpoglue.env import Env
-from smac import BlackBoxFacade, HyperbandFacade, MultiFidelityFacade, Scenario
+from smac import (
+    AlgorithmConfigurationFacade,
+    BlackBoxFacade,
+    HyperbandFacade,
+    HyperparameterOptimizationFacade,
+    MultiFidelityFacade,
+    Scenario,
+)
+from smac.acquisition.function import (
+    EI,
+    EIPS,
+    LCB,
+    PI,
+    TS,
+    PriorAcquisitionFunction,
+)
 from smac.runhistory import StatusType, TrialValue
+
+from hposuite.utils import set_priors_as_defaults
 
 if TYPE_CHECKING:
     from hpoglue import Result
@@ -19,6 +36,21 @@ if TYPE_CHECKING:
     from smac.facade import AbstractFacade
     from smac.runhistory import TrialInfo
 
+
+acq_funcs = {
+    "EI": EI,
+    "EIPS": EIPS,
+    "LCB": LCB,
+    "PI": PI,
+    "TS": TS,
+}
+
+
+bo_facades = {
+    "AlgConf": AlgorithmConfigurationFacade,
+    "BlackBox": BlackBoxFacade,
+    "HPO": HyperparameterOptimizationFacade,
+}
 
 def _dummy_target_function(*args: Any, budget: int | float, seed: int) -> NoReturn:  # noqa: ARG001
     raise RuntimeError("This should never be called!")
@@ -142,7 +174,19 @@ class SMAC_BO(SMAC_Optimizer):
         problem: Problem,
         seed: int,
         working_directory: Path,
-        xi: float = 0.0,
+        facade: Literal[
+            "HPO",
+            "BlackBox",
+            "AlgConf",
+        ] = "BlackBox",
+        acq_func: Literal[
+            "EI",
+            "EIPS",
+            "LCB",
+            "PI",
+            "TS",
+        ] = "EI",
+        acq_func_kwargs: dict[str, Any] | None = None,
     ):
         """Create a SMAC BO Optimizer instance for a given problem.
 
@@ -153,10 +197,26 @@ class SMAC_BO(SMAC_Optimizer):
 
             working_directory: Working directory to store SMAC run.
 
-            xi: Expected Improvement.
-            Controls the balance between exploration and exploitation of the acquisition function.
-            Defaults to 0.0.
+            facade: The SMAC facade to use.
+                - "HPO": HyperparameterOptimizationFacade
+                - "BlackBox": BlackBoxFacade
+                - "AlgConf": AlgorithmConfigurationFacade
+            Defaults to "BlackBox".
+
+            acq_func: The acquisition function to use.
+                - "EI": Expected Improvement
+                - "EIPS": Expected Improvement per Second
+                - "LCB": Lower Confidence Bound
+                - "PI": Probability of Improvement
+                - "TS": Thompson Sampling
+
+            acq_func_kwargs: Additional arguments for the acquisition function.
+                Defaults to None.
+                See SMAC documentation for details.
         """
+        assert facade in bo_facades, f"Unknown facade for SMAC_BO: {facade}"
+        assert acq_func in acq_funcs, f"Unknown acquisition function for SMAC_BO: {acq_func}"
+
         config_space = problem.config_space
         match config_space:
             case ConfigurationSpace():
@@ -202,17 +262,24 @@ class SMAC_BO(SMAC_Optimizer):
             min_budget=None,
             max_budget=None,
         )
+
+        facade: AbstractFacade = bo_facades[facade]
+
+        acquisition_func = acq_funcs[acq_func](
+            **acq_func_kwargs
+        )
+
         super().__init__(
             problem=problem,
             seed=seed,
             working_directory=working_directory,
             fidelity=None,
-            optimizer=BlackBoxFacade(
+            optimizer=facade(
                 scenario=scenario,
                 logging_level=False,
                 target_function=_dummy_target_function,
-                intensifier=BlackBoxFacade.get_intensifier(scenario),
-                acquisition_function=BlackBoxFacade.get_acquisition_function(scenario, xi=xi),
+                intensifier=facade.get_intensifier(scenario),
+                acquisition_function=acquisition_func,
                 overwrite=True,
             ),
         )
@@ -227,6 +294,7 @@ class SMAC_Hyperband(SMAC_Optimizer):
         objectives=("single", "many"),
         cost_awareness=(None,),
         tabular=False,
+        continuations=True,
     )
     mem_req_mb = 1024
 
@@ -325,6 +393,7 @@ class SMAC_BOHB(SMAC_Optimizer):
         objectives=("single", "many"),
         cost_awareness=(None,),
         tabular=False,
+        continuations=True,
     )
     mem_req_mb = 1024
 
@@ -410,6 +479,163 @@ class SMAC_BOHB(SMAC_Optimizer):
                 logging_level=False,
                 target_function=_dummy_target_function,
                 intensifier=MultiFidelityFacade.get_intensifier(scenario, eta=eta),
+                overwrite=True,
+            ),
+        )
+
+
+class SMAC_PiBO(SMAC_Optimizer):
+    """πBO Optimizer in SMAC."""
+
+    name = "SMAC_PiBO"
+
+    support = Problem.Support(
+        fidelities=(None,),
+        objectives=("single"),
+        cost_awareness=(None,),
+        tabular=False,
+        priors=True,
+    )
+
+    mem_req_mb = 1024
+
+    def __init__(  # noqa: C901, PLR0912
+        self,
+        *,
+        problem: Problem,
+        seed: int,
+        working_directory: Path,
+        decay_beta: float = 10.0,
+        facade: Literal[
+            "HPO",
+            "BlackBox",
+            "AlgConf",
+        ] = "HPO",
+        acq_func: Literal[
+            "EI",
+            "EIPS",
+            "LCB",
+            "PI",
+            "TS",
+        ] = "EI",
+        acq_func_kwargs: dict[str, Any] | None = None,
+    ):
+        """Create a SMAC BO Optimizer instance for a given problem.
+
+        Args:
+            problem: The problem to optimize.
+
+            seed: Random seed for the optimizer.
+
+            working_directory: Working directory to store SMAC run.
+
+            decay_beta: Parameter to control the decay of the prior strength
+            in the acquisition function.
+
+            facade: The SMAC facade to use.
+                - "HPO": HyperparameterOptimizationFacade
+                - "BlackBox": BlackBoxFacade
+                - "AlgConf": AlgorithmConfigurationFacade
+            Defaults to "HPO".
+
+            acq_func: The acquisition function to use.
+                - "EI": Expected Improvement
+                - "EIPS": Expected Improvement per Second
+                - "LCB": Lower Confidence Bound
+                - "PI": Probability of Improvement
+                - "TS": Thompson Sampling
+            acq_func_kwargs: Additional arguments for the acquisition function.
+                Defaults to None.
+                See SMAC documentation for details.
+        """
+        assert facade in bo_facades, f"Unknown facade for SMAC_PiBO: {facade}"
+        assert acq_func in acq_funcs, f"Unknown acquisition function for SMAC_PiBO: {acq_func}"
+
+        config_space = problem.config_space
+        match config_space:
+            case ConfigurationSpace():
+                pass
+            case list():
+                raise ValueError("SMAC does not support tabular benchmarks!")
+            case _:
+                raise TypeError("Config space must be a list or a ConfigurationSpace!")
+
+        match problem.fidelities:
+            case None:
+                pass
+            case tuple() | Mapping():
+                raise ValueError("SMAC BO does not support multi-fidelity benchmarks!")
+            case _:
+                raise TypeError("Fidelity must be a string or a list of strings!")
+
+        match problem.objectives:
+            case Mapping():
+                metric_names = list(problem.objectives.keys())
+            case (metric_name, _):
+                metric_names = metric_name
+            case _:
+                raise TypeError("Objective must be a tuple of (name, metric) or a mapping")
+
+        working_directory.mkdir(parents=True, exist_ok=True)
+
+        match problem.budget:
+            case TrialBudget():
+                budget = problem.budget.total
+            case CostBudget():
+                raise ValueError("SMAC BO does not support cost-aware benchmarks!")
+            case _:
+                raise TypeError("Budget must be a TrialBudget or a CostBudget!")
+
+        match problem.priors:
+            case None:
+                raise ValueError("SMAC PiBO requires priors!")
+            case tuple():
+                assert len(problem.priors[1]) == 1, (
+                    "SMAC PiBO doesn't support multi-objective priors! "
+                )
+                prior = next(iter(problem.priors[1].values()))
+            case _:
+                raise TypeError(
+                    "Priors must be a tuple of (name, dict(objective, Config). "
+                    f"Got {type(problem.priors)}"
+                )
+
+        config_space = set_priors_as_defaults(
+            config_space=config_space,
+            priors=prior,
+        )
+
+        scenario = Scenario(
+            configspace=config_space,
+            deterministic=True,
+            objectives=metric_names,
+            n_trials=budget,
+            seed=seed,
+            output_directory=working_directory / "smac-output",
+            min_budget=None,
+            max_budget=None,
+        )
+
+        facade: AbstractFacade = bo_facades[facade]
+
+        acquisition_func = acq_funcs[acq_func](
+            **acq_func_kwargs
+        )
+
+        super().__init__(
+            problem=problem,
+            seed=seed,
+            working_directory=working_directory,
+            fidelity=None,
+            optimizer=facade(
+                scenario=scenario,
+                logging_level=False,
+                target_function=_dummy_target_function,
+                intensifier=facade.get_intensifier(scenario),
+                acquisition_function=PriorAcquisitionFunction(
+                    acquisition_function=acquisition_func,
+                    decay_beta=scenario.n_trials / decay_beta,
+                ),
                 overwrite=True,
             ),
         )

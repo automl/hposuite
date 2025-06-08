@@ -19,7 +19,7 @@ modules = [
     ("hposuite.optimizers.optuna", "OptunaOptimizer"),
     ("hposuite.optimizers.random_search", "RandomSearch", "RandomSearchWithPriors"),
     ("hposuite.optimizers.scikit_optimize", "SkoptOptimizer"),
-    ("hposuite.optimizers.smac", "SMAC_BO", "SMAC_Hyperband", "SMAC_BOHB"),
+    ("hposuite.optimizers.smac", "SMAC_BO", "SMAC_Hyperband", "SMAC_BOHB", "SMAC_PiBO"),
     (
         "hposuite.optimizers.neps_optimizers",
         "NepsBO",
@@ -31,6 +31,9 @@ modules = [
         "NepsAsyncHB",
         "NepsPriorband",
         "NepsPiBO",
+        "NepsIFBO",
+        "NepsMOASHA",
+        "NepsMOHyperband",
         "NepsMFBO",
     ),
 ]

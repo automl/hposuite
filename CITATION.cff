@@ -14,6 +14,6 @@ authors:
     given-names: Frank
     affiliation: "University of Freiburg, Germany"
 title: "hposuite"
-version: 0.1.2
+version: 0.1.3
 date-released: 2025-05-28
 url: "https://github.com/automl/hposuite"

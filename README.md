@@ -191,6 +191,6 @@ If you use `hposuite` for your research, please cite it as below:
   title = {hposuite},
   year = {2025},
   url = {https://github.com/automl/hposuite},
-  version = {0.1.2}
+  version = {0.1.3}
 }
 ```

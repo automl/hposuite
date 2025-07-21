@@ -1,12 +1,12 @@
-# Current version: `0.1.2`
+# Current version: `0.1.3`
 
 # Upcoming versions
 
-## Version 0.1.3
+## Version 0.1.4
 
 * Convert to Categorical Spaces for Optimizers that don't support Tabular Benchmarks
 
-## Version 0.1.4
+## Version 0.1.5
 
 * Add the following benchmarks:
     * HPO-B
@@ -15,14 +15,27 @@
 * Add documentation for the above benchmarks
 
 
-## Version 0.1.5
+## Version 0.1.6
 
 * Add some basic tests
 
 ---
 ---
 
+
+## Version 0.1.x
+
+* Asynchronous Runs using MF-HPO simulatior
+
+
 # Old releases
+
+## Version 0.1.3
+* Use continuations as Run budget
+* Consider priors when plotting incumbent trace
+* Add CITATION
+* README corrections
+* Minor bugfixes
 
 ## Version 0.1.2
 

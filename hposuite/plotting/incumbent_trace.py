@@ -380,11 +380,12 @@ def agg_data(  # noqa: C901, PLR0912, PLR0915
             if fidelities and not isinstance(fidelities, str) and len(fidelities) > 1:
                 raise NotImplementedError("Plotting not yet implemented for many-fidelity runs.")
             priors = run_config["problem"]["priors"]
-            assert len(priors[1]) == 1, (
-                "Multi-objective or multiple priors are not supported in hposuite yet. "
-                "Please use one single-objective prior."
-            )
-            priors = priors[0]
+            if priors is not None:
+                assert len(priors[1]) == 1, (
+                    "Multi-objective or multiple priors are not supported in hposuite yet. "
+                    "Please use one single-objective prior."
+                )
+                priors = priors[0]
 
             # Add default benchmark fidelity to a blackbox Optimizer to compare it
             # alongside MF optimizers if the latter exist in the study

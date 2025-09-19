@@ -30,6 +30,7 @@ modules = [
         "NepsASHA",
         "NepsAsyncHB",
         "NepsPriorband",
+        "NepsPriorbandBO",
         "NepsPiBO",
         "NepsIFBO",
         "NepsMOASHA",

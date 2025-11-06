@@ -10,7 +10,7 @@ class OptBenchNotInstalledError(ImportError):
         not_installed_str = not_installed_str.group(1) if not_installed_str else "Unknown"
         match not_installed_str:
             case "Unknown":
-                super()._init_(msg)
+                super().__init__(msg)
             case _:
                 super().__init__(
                     f"{not_installed_str} is not installed in module {module}. "

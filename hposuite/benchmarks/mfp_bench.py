@@ -213,6 +213,70 @@ def lcbench_surrogate(datadir: Path | None = None) -> Iterator[BenchmarkDescript
             )
 
 
+def jahs(datadir: Path | None = None) -> Iterator[BenchmarkDescription]:
+    """Generates benchmark descriptions for the JAHSBench Benchmark.
+
+    Args:
+        datadir (Path | None): The directory where the data is stored.
+        If None, the default directory is used.
+
+    Yields:
+        Iterator[BenchmarkDescription]: An iterator over BenchmarkDescription objects
+        for each task in JAHSBench.
+    """
+    if datadir is not None and "jahs" in os.listdir(datadir):
+        datadir = datadir / "jahs"
+    import mfpbench
+    task_ids = ("CIFAR10", "ColorectalHistology", "FashionMNIST")
+    env = Env(
+        name="py310-mfpbench-1.10-jahs",
+        python_version="3.10",
+        requirements=(
+            "mf-prior-bench==1.10.0",
+            "jahs-bench==1.2.0",
+            # "pandas<1.4",
+            # "ConfigSpace<=0.6.1",
+        ),
+        post_install=_download_data_cmd("jahs", datadir=datadir),
+    )
+    # for req in env.requirements:
+    #     if not is_package_installed(req):
+    #         mfp_logger.error(f"Please install the required package for jahs: {req}", stacklevel=2)
+    #         return
+    for task_id in task_ids:
+        name = f"jahs-{task_id}"
+        yield BenchmarkDescription(
+            name=name,
+            config_space=mfpbench.get(
+                "jahs",
+                task_id=task_id,
+                datadir=datadir,
+            ).space,
+            load=partial(
+                _get_surrogate_benchmark,
+                benchmark_name="jahs",
+                task_id=task_id,
+                datadir=datadir,
+            ),
+            metrics={
+                "valid_acc": Measure.metric((0.0, 100.0), minimize=False),
+            },
+            test_metrics={
+                "test_acc": Measure.test_metric((0.0, 100.0), minimize=False),
+            },
+            fidelities={
+                "epoch": RangeFidelity.from_tuple((1, 200, 1), supports_continuation=True),
+            },
+            costs={
+                "runtime": Measure.cost((0, np.inf), minimize=True),
+            },
+            has_conditionals=False,
+            is_tabular=False,
+            env=env,
+            mem_req_mb=12288,
+        )
+
+
 def mfh() -> Iterator[BenchmarkDescription]:
     """Generates benchmark descriptions for the MF-Hartmann Benchmarks.
 
@@ -368,4 +432,5 @@ def mfpbench_benchmarks(datadir: Path | None = None) -> Iterator[BenchmarkDescri
 
     yield from mfh()
     yield from pd1(datadir)
+    yield from jahs(datadir)
     yield from lcbench_surrogate(datadir)

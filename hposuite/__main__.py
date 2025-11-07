@@ -2,11 +2,13 @@ from __future__ import annotations
 
 import argparse
 from pathlib import Path
+from typing import TYPE_CHECKING
 
-from hposuite.study import Study, create_study
-
+if TYPE_CHECKING:
+    from hposuite.study import Study
 
 def _study_from_yaml_config(yaml_config: Path) -> Study:
+    from hposuite.study import Study
     return Study.from_yaml(yaml_config)
 
 if __name__ == "__main__":
@@ -20,6 +22,12 @@ if __name__ == "__main__":
         "--output_dir", "-d",
         type=Path,
         help="Results directory",
+    )
+    parser.add_argument(
+        "--data_dir", "-data",
+        type=Path,
+        default=Path("./data"),
+        help="Directory where benchmark data is stored",
     )
     parser.add_argument(
         "--study_config", "-cfg",
@@ -102,9 +110,15 @@ if __name__ == "__main__":
     )
     args = parser.parse_args()
 
+    import hposuite.constants as consts
+    consts.DATA_DIR = args.data_dir.resolve()
+    if not consts.DATA_DIR.exists():
+        consts.DATA_DIR.mkdir(parents=True, exist_ok=True)
+
     if args.study_config:
         study = _study_from_yaml_config(args.study_config)
     else:
+        from hposuite import create_study
         study = create_study(
             output_dir=args.output_dir,
             name=args.study_name,

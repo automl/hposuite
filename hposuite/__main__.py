@@ -118,7 +118,7 @@ if __name__ == "__main__":
     if args.study_config:
         study = _study_from_yaml_config(args.study_config)
     else:
-        from hposuite import create_study
+        from hposuite.study import create_study
         study = create_study(
             output_dir=args.output_dir,
             name=args.study_name,

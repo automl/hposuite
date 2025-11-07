@@ -10,7 +10,6 @@ import neps
 import numpy as np
 from hpoglue import Config, Optimizer, Problem, Query, Result
 from hpoglue.env import Env
-from neps import AskAndTell, algorithms
 
 from hposuite.utils import set_priors_as_defaults
 
@@ -53,6 +52,7 @@ class NepsOptimizer(Optimizer):
         **kwargs: Any,
     ) -> None:
         """Initialize the optimizer."""
+        from neps import AskAndTell, algorithms
         self.problem = problem
         self.space = space
 

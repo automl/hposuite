@@ -429,6 +429,8 @@ def mfpbench_benchmarks(datadir: Path | None = None) -> Iterator[BenchmarkDescri
         datadir = Path(datadir).resolve()
     elif datadir is None:
         datadir = DATA_DIR
+    if not datadir.exists():
+        datadir.mkdir(parents=True, exist_ok=True)
 
     yield from mfh()
     yield from pd1(datadir)

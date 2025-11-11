@@ -266,7 +266,7 @@ class SMAC_BO(SMAC_Optimizer):
         facade: AbstractFacade = bo_facades[facade]
 
         acquisition_func = acq_funcs[acq_func](
-            **acq_func_kwargs
+            **acq_func_kwargs if acq_func_kwargs is not None else {}
         )
 
         super().__init__(
@@ -619,7 +619,7 @@ class SMAC_PiBO(SMAC_Optimizer):
         facade: AbstractFacade = bo_facades[facade]
 
         acquisition_func = acq_funcs[acq_func](
-            **acq_func_kwargs
+            **acq_func_kwargs if acq_func_kwargs is not None else {}
         )
 
         super().__init__(

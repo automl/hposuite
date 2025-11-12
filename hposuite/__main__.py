@@ -110,11 +110,6 @@ if __name__ == "__main__":
     )
     args = parser.parse_args()
 
-    import hposuite.constants as consts
-    consts.DATA_DIR = args.data_dir.resolve()
-    if not consts.DATA_DIR.exists():
-        consts.DATA_DIR.mkdir(parents=True, exist_ok=True)
-
     if args.study_config:
         study = _study_from_yaml_config(args.study_config)
     else:

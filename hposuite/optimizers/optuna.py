@@ -66,14 +66,14 @@ class OptunaOptimizer(Optimizer):
 
         self.optimizer: optuna.study.Study
         match problem.objectives:
-            case (_, objective):
+            case tuple():
                 self.optimizer = optuna.create_study(
                     sampler=TPESampler(seed=seed, **kwargs),
                     storage=None,
-                    pruner=None,  # TODO(eddiebergman): Figure out how to use this for MF
+                    pruner=None,
                     study_name=f"{problem.name}-{seed}",
                     load_if_exists=False,
-                    direction="minimize" if objective.minimize else "maximize",
+                    direction="minimize",
                 )
             case Mapping():
                 self.optimizer = optuna.create_study(
@@ -82,10 +82,6 @@ class OptunaOptimizer(Optimizer):
                     pruner=None,  # TODO(eddiebergman): Figure out how to use this for MF
                     study_name=f"{problem.name}-{seed}",
                     load_if_exists=False,
-                    directions=[
-                        "minimize" if obj.minimize else "maximize"
-                        for obj in problem.objectives.values()
-                    ],
                 )
             case _:
                 raise ValueError("Objective must be a string or a list of strings!")
